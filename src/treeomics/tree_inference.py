@@ -21,6 +21,7 @@ logger = logging.getLogger('treeomics')
 def create_compatible_tree(filepath, patient, min_absent_cov=0):
     """
     Create an evolutionary tree where most conflicting mutations have been ignored
+    due to the ambiguous binary classification of variants being present/absent
     :param filepath: tree is writen to the given file
     :param patient: data structure around the patient
     :param min_absent_cov: minimum coverage for absent variant otherwise status is unknown
@@ -31,7 +32,7 @@ def create_compatible_tree(filepath, patient, min_absent_cov=0):
 
     # infer the tree which as to ignore the least number of mutation
     # to derive a conflict-free tree
-    pers_tree = phylogeny.find_max_compatible_tree(min_absent_cov=min_absent_cov)
+    simple_tree = phylogeny.find_max_compatible_tree(min_absent_cov=min_absent_cov)
     caption = ('Phylogenetic tree illustrating the clonal evolution of cancer. '
                + 'The derivation of an evolutionary conflict-free tree required the exclusion '
                + 'of {} out of {} ({:.1%}) mutations.'.format(
@@ -42,10 +43,10 @@ def create_compatible_tree(filepath, patient, min_absent_cov=0):
     # TODO: show tree with mutation patterns determined by bayesian inference
 
     # create tikz figure
-    tikz.create_figure_file(pers_tree, tikz.TREE_ROOT, filepath,
+    tikz.create_figure_file(simple_tree, tikz.TREE_ROOT, filepath,
                             patient, caption, True)
     # add information about the ignored mutations and the position of the acquired mutations
-    latex.add_ignored_mut_info(filepath, phylogeny, pers_tree)
+    latex.add_ignored_mut_info(filepath, phylogeny, simple_tree)
 
     # ensure that the derived tree has the correct number of mutations on all leaves
     if logging.DEBUG == logger.getEffectiveLevel():

@@ -20,8 +20,6 @@ FDR = 0.01          # targeted false-discovery rate
 BI_E = 0.005         # sequencing error for bayesian inference
 BI_C0 = 0.5         # prior mixture parameter of delta function and uniform distribution for bayesian inference
 
-MIN_MAF = 0.025                  # minimal frequency used to calculate the p-value for variants believed to be absent
-
 # minimum reliability score of a incompatible mutation pattern that a subclone of different origin is considered
 MIN_SC_SCORE = 3.0
 

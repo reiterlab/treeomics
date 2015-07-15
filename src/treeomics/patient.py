@@ -1,4 +1,7 @@
+#!/usr/bin/python
+"""Data structure around sequencing data of a subject"""
 __author__ = 'jreiter'
+__date__ = 'April, 2014'
 
 import logging
 from collections import defaultdict, Counter
@@ -7,7 +10,7 @@ import re
 import heapq
 import numpy as np
 import settings
-from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN, EPSILON
+from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
 import utils.maf_data as data_utils
 from utils.vcf_parser import read_vcf_files
 from utils.data_tables import read_mutation_table
@@ -100,7 +103,7 @@ class Patient(object):
         self.sim_coff = None        # Jaccard similarity coefficient between any pair of samples
 
     def read_raw_data(self, read_table, cov_table, dis_cov_table, false_positive_rate, false_discovery_rate,
-                      min_absent_cov, min_sa_cov, min_sa_maf, min_maf=0.025, excluded_columns=set(),
+                      min_absent_cov, min_sa_cov, min_sa_maf, excluded_columns=set(), min_maf=0.25,
                       error_rate=0.01, c0=0.5):
         """
         Read raw sequencing data from tsv files
@@ -112,11 +115,9 @@ class Patient(object):
         :param min_absent_cov: minimum coverage at a non-significantly mutated position for absence classification
         :param min_sa_cov: minimum median coverage per sample
         :param min_sa_maf: minimum median mutant allele frequency per sample
-        :param min_maf: assumed minimal mutant allele frequency for p-value absence calculation
-        :param excluded_columns:
+        :param excluded_columns: matched normal sample or other samples to be excluded from the analysis
         :param error_rate: sequencing error for bayesian inference
         :param c0: prior mixture parameter of delta function and uniform distribution for bayesian inference
-        :return:
         """
 
         # read sequencing data from tsv files
@@ -268,11 +269,9 @@ class Patient(object):
                 if line[0] == '#':
                     continue
 
-                # TODO: redo parsing with named tuples and csv file reader
                 # header
                 elif line.startswith("Position"):
                     self.sample_names = re_sample.findall(line)
-                    #self.sample_names = line.split('\t')[7:15]
                     logger.debug("Read sample ids: {}".format(self.sample_names))
                     col_chr = col_data_start = col_data_end = col_function = col_gene = col_pathway = -1
                     # Find columns with the sample data
@@ -360,14 +359,13 @@ class Patient(object):
             logger.info("Completed reading of allele frequencies at {} mutated positions. ".format(len(self.mut_keys)))
 
     def read_vcf_directory(self, vcf_directory, min_sa_cov, min_sa_maf, false_positive_rate,
-                           min_maf, false_discovery_rate, min_absent_cov, normal_sample_name=None):
+                           false_discovery_rate, min_absent_cov, normal_sample_name=None):
         """
         Read allele frequencies for all variants in the samples in the files of the given directory
         :param vcf_directory: directory with VCF files
         :param min_sa_cov: minimum median coverage per sample
         :param min_sa_maf: minimum median mutant allele frequency per sample
         :param false_positive_rate: false positive rate of the used sequencing technology
-        :param min_maf: assumed minimal mutant allele frequency for p-value absence calculation
         :param normal_sample_name: do not consider given normal sample
         :param false_discovery_rate: control the false-positives with the benjamini-hochberg procedure
         :param min_absent_cov: minimum coverage at a non-significantly mutated position for absence classification
@@ -376,20 +374,19 @@ class Patient(object):
 
         samples = read_vcf_files(vcf_directory, excluded_samples=[normal_sample_name])
 
-        processed_samples = self._process_samples(samples, min_sa_cov, min_sa_maf, false_positive_rate, min_maf,
+        processed_samples = self._process_samples(samples, min_sa_cov, min_sa_maf, false_positive_rate,
                                                   false_discovery_rate, min_absent_cov)
 
         return processed_samples
 
     def read_vcf_file(self, vcf_file, min_sa_cov, min_sa_maf, false_positive_rate,
-                      min_maf, false_discovery_rate, min_absent_cov, normal_sample_name=None):
+                      false_discovery_rate, min_absent_cov, normal_sample_name=None):
         """
         Read allele frequencies for all variants in the samples in the given VCF file
         :param vcf_file: path to vcf file
         :param min_sa_cov: minimum median coverage per sample
         :param min_sa_maf: minimum median mutant allele frequency per sample
         :param false_positive_rate: false positive rate of the used sequencing technology
-        :param min_maf: assumed minimal mutant allele frequency for p-value absence calculation
         :param false_discovery_rate: control the false-positives with the benjamini-hochberg procedure
         :param min_absent_cov: minimum coverage at a non-significantly mutated position for absence classification
         :param normal_sample_name:
@@ -397,12 +394,12 @@ class Patient(object):
         """
 
         samples = read_vcf_files(vcf_file, excluded_samples=[normal_sample_name])
-        processed_samples = self._process_samples(samples, min_sa_cov, min_sa_maf, false_positive_rate, min_maf,
+        processed_samples = self._process_samples(samples, min_sa_cov, min_sa_maf, false_positive_rate,
                                                   false_discovery_rate, min_absent_cov)
 
         return processed_samples
 
-    def _process_samples(self, samples, min_sa_cov, min_sa_maf, fpr, min_maf,
+    def _process_samples(self, samples, min_sa_cov, min_sa_maf, fpr,
                          false_discovery_rate, min_absent_cov):
         """
         Determine which variants are shared among the samples
@@ -412,7 +409,6 @@ class Patient(object):
         :param min_sa_cov: minimum median coverage per sample
         :param min_sa_maf: minimum median mutant allele frequency per sample
         :param fpr: false positive rate of the used sequencing technology
-        :param min_maf: assumed minimal mutant allele frequency for p-value absence calculation
         :param false_discovery_rate: control the false-positives with the benjamini-hochberg procedure
         :param min_absent_cov: minimum coverage at a non-significantly mutated position for absence classification
         :return: processed samples
@@ -462,11 +458,11 @@ class Patient(object):
 
                     if len(heap) == 0:
                         # process identical variants and remove them from the temporal list
-                        self._add_variant(tmp_vars, fpr, min_maf)
+                        self._add_variant(tmp_vars, fpr)
 
                 else:       # variant at different position
                     # process old identical variants and remove them from the temporal list
-                    self._add_variant(tmp_vars, fpr, min_maf)
+                    self._add_variant(tmp_vars, fpr)
 
                     # add the new variant to the list to process
                     tmp_vars.append((variant, sample_name))
@@ -563,12 +559,11 @@ class Patient(object):
 
         return len(self.discarded_samples) + self.n
 
-    def _add_variant(self, tmp_vars, fpr, min_maf):
+    def _add_variant(self, tmp_vars, fpr):
         """
         Process identical variants and remove them from the given list
         :param tmp_vars: list of identical variants in different samples
         :param fpr: false positive rate of the used sequencing technology
-        :param min_maf: assumed minimal mutant allele frequency for p-value absence calculation
         """
 
         # process identical variants
@@ -597,8 +592,6 @@ class Patient(object):
                     self.sample_mafs[sample_name].append(var.BAF)
 
                 self.present_p_values[sample_name][mut_key] = calculate_present_pvalue(var.AD[1], var.DP, fpr)
-
-                self.absent_p_values[sample_name][mut_key] = calculate_absent_pvalue(var.AD[1], var.DP, min_maf)
 
                 # get variant in the next called sample
                 if len(tmp_vars) > 0:
@@ -651,16 +644,16 @@ class Patient(object):
 
         # total number of exonic mutations if information is available
         if self.mut_functions is not None and len(self.mut_functions):
-            assert len(self.mut_functions) >= len(self.mutations.keys()), \
+            assert len(self.mut_functions) >= len(self.mutations), \
                 'Each mutation has an associated function: {} >= {}'.format(len(self.mut_functions),
-                                                                            len(self.mutations.keys()))
+                                                                            len(self.mutations))
             no_exonic_muts = sum(1 for mut_func in self.mut_functions if mut_func in settings.EXONIC_FILTER)
             logger.info('Number of exonic mutations {}/{} (={:.3f}).'.format(no_exonic_muts, len(self.mutations),
                         (float(no_exonic_muts) / len(self.mutations))))
 
         for mut_idx in range(len(self.mut_keys)):
             self.mutations[mut_idx] = frozenset(self.mutations[mut_idx])
-            #logger.debug("Mutation {} ({}) is present in: {}".format(self.mut_names[mut_idx],
+            # logger.debug("Mutation {} ({}) is present in: {}".format(self.mut_names[mut_idx],
             #            self.gene_names[mut_idx],
             #            (','.join(self.sample_names[sa_idx] for sa_idx in self.mutations[mut_idx]))))
 
@@ -716,7 +709,7 @@ class Patient(object):
                 cmuts[s1][s2] = len(self.common_muts[s1][s2])
                 self.add_muts[s1][s2] = self.samples[s1].difference(self.samples[s2])
 
-                #logger.debug('Sample {} has {} mutations in common with sample {} and {} in addition. '.format(
+                # logger.debug('Sample {} has {} mutations in common with sample {} and {} in addition. '.format(
                 #    self.sample_names[s1], cmuts[s1][s2], self.sample_names[s2], len(self.add_muts[s1][s2])))
 
             logger.info(('Sample {} has most ({}) mutations in common with sample(s) {}'
@@ -749,7 +742,7 @@ class Patient(object):
         for key, value in islice(sorted(self.clones.items(), key=lambda x: len(x[1]), reverse=True), 10):
             logger.debug('Clone {} shares mutations: {} '.format(str(key), value))
 
-        logger.info('Total number of clones (distinct mutation patterns): {}'.format(len(self.clones.keys())))
+        logger.info('Total number of clones (distinct mutation patterns): {}'.format(len(self.clones)))
 
     def _filter_samples(self, min_sa_cov, min_sa_maf):
 
@@ -839,12 +832,11 @@ class Patient(object):
 
                         elif self.data[mut_idx][s2_idx] == NEG_UNKNOWN:
                             # no indication of a mutation at this position but low coverage
-                            disagree += EPSILON
+                            pass
 
                     elif self.data[mut_idx][s1_idx] == 0:     # mutation absent
                         if self.data[mut_idx][s2_idx] > 0:
                             no_known_variants += 1
-                            #dm[s1_idx][s2_idx] += 1    # disagree
                             disagree += 1
 
                         elif self.data[mut_idx][s2_idx] == 0:   # agree
@@ -853,17 +845,17 @@ class Patient(object):
                         elif self.data[mut_idx][s2_idx] == POS_UNKNOWN:
                             # indication of a mutation at this position but insufficient mutant reads
                             # maybe penalize distance with two epsilon
-                            disagree += EPSILON
+                            pass
 
                     # mutation believed to be present but insufficient mutant reads
                     elif self.data[mut_idx][s1_idx] == POS_UNKNOWN:
                         if self.data[mut_idx][s2_idx] == 0:
-                            disagree += EPSILON
+                            pass
 
                     # mutation believed to be absent but insufficient coverage
                     elif self.data[mut_idx][s1_idx] == NEG_UNKNOWN:
                         if self.data[mut_idx][s2_idx] > 0:
-                            disagree += EPSILON
+                            pass
 
                 self.gen_dis[s1_idx][s2_idx] = disagree
                 self.sim_coff[s1_idx][s2_idx] = 1.0 if no_known_variants == 0 \

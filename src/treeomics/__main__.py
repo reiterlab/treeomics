@@ -185,9 +185,6 @@ def main():
     logger.info('False discovery rate for the statistical test: {}.'.format(fdr))
     min_absent_cov = args.min_absent_coverage
     logger.info('Minimum coverage for an absent variant: {} (otherwise unknown)'.format(min_absent_cov))
-    # to quantify the confidence of absent variants
-    min_maf = settings.MIN_MAF
-    logger.info('Minimal mutant allele frequency to quantify the confidence in absent variants: {}.'.format(min_maf))
 
     # take mutant read and coverage tables to calculate positives, negatives, and unknowns
     if args.mut_reads and args.mut_cov:
@@ -209,7 +206,7 @@ def main():
         patient = Patient(patient_name, min_absent_cov=min_absent_cov)
         read_no_samples = patient.read_raw_data(
             read_table, cov_table, dis_cov_table, fpr, fdr, min_absent_cov, args.min_median_coverage,
-            args.min_median_maf, min_maf=min_maf, error_rate=settings.BI_E, c0=settings.BI_C0,
+            args.min_median_maf, error_rate=settings.BI_E, c0=settings.BI_C0,
             excluded_columns={normal_sample_name})      # excluded (=normal) samples
         # 'LiM_2' Pam01
         # 'LiM_7', 'LiM_8', 'PT_18' Pam02
@@ -224,7 +221,9 @@ def main():
 
         patient_name = get_patients_name(vcf_file)
         patient = Patient(patient_name)
-        read_no_samples = patient.read_vcf_file(vcf_file, normal_sample_name=normal_sample_name)
+        read_no_samples = patient.read_vcf_file(vcf_file, args.min_median_coverage, args.min_median_maf,
+                                                fpr, fdr, args.min_absent_coverage,
+                                                normal_sample_name=normal_sample_name)
 
     elif args.directory:      # take path to the directory with all VCF files
         vcf_directory = args.directory
@@ -238,7 +237,7 @@ def main():
             vcf_directory[:-1] if vcf_directory.endswith('/') else vcf_directory)
         patient = Patient(patient_name)
         read_no_samples = patient.read_vcf_directory(vcf_directory, args.min_median_coverage, args.min_median_maf,
-                                                     fpr, min_maf, fdr, min_absent_cov, normal_sample_name)
+                                                     fpr, fdr, min_absent_cov, normal_sample_name)
 
     else:
         raise RuntimeError('No input files were provided!')
