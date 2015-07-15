@@ -1,11 +1,13 @@
-__author__ = 'jreiter'
+#!/usr/bin/python
+"""Helper functions to generate input files for circos plots"""
+__author__ = 'Johannes REITER'
 
 import logging
 import os
 from itertools import chain
 from plots.plots import _format_gene_name
 from phylogeny import CompatiblePhylogeny
-from max_lh_phylogeny import MaxLHPhylogeny
+from phylogeny.max_lh_phylogeny import MaxLHPhylogeny
 
 # get logger for application
 logger = logging.getLogger('treeomics')
@@ -105,7 +107,6 @@ def create_mutation_links_file(links_filename, phylogeny, mut_pos):
     :param links_filename: output filename
     :param phylogeny: data structure around the phylogenetic tree
     :param mut_pos: array of tuples with the mutation position: (chr, start_pos, end_pos)
-    :return:
     """
 
     logger.debug('Creating circos links file: {}'.format(links_filename))
@@ -143,18 +144,17 @@ def create_conflict_graph_files(cfg_nodes_filename, cfg_mutnode_labels_filename,
                                 cfg_links_filename, phylogeny, gene_names, driver_pathways, data=None,
                                 min_node_weight=None, max_no_mps=50):
     """
-
-    :param cfg_nodes_filename:
-    :param cfg_mutnode_labels_filename:
-    :param cfg_mutnode_data_filename:
-    :param cfg_links_filename:
-    :param phylogeny:
+    Create all input data files for circular conflict graph plots with circos
+    :param cfg_nodes_filename: path to output file circos nodes
+    :param cfg_mutnode_labels_filename: path to output file circos node labels
+    :param cfg_mutnode_data_filename: path to output file circos node data
+    :param cfg_links_filename: path to output file containing all links (conflicts) among the nodes
+    :param phylogeny: instance of the class phylogeny
     :param gene_names:
     :param driver_pathways:
     :param data:
     :param min_node_weight: minimal reliability score of a mutation pattern to be displayed
     :param max_no_mps: apply min_node_weight if there are more than this number of MPs in the data
-    :return:
     """
 
     # creates three data files: (i) basic nodes (clones), (ii) labels for mutations per node,
@@ -215,7 +215,7 @@ def _create_cfg_nodes_files(cfg_nodes_filename, cfg_mutnode_labels_filename, cfg
             # if there many nodes then don't show the ones with very small weights
 
             if len(phylogeny.cf_graph.nodes()) > max_no_mps and \
-                            phylogeny.cf_graph.node[node]['weight'] < min_node_weight:
+                    phylogeny.cf_graph.node[node]['weight'] < min_node_weight:
                 cfg_nodes_file.write('<{:.2f} 0 1 grey\n'.format(min_weight))
                 cfg_labels_file.write('n{} 0 1 {}-{} driver=0,conflicting=0,chosen=0,unknown=1\n'.format(
                     node_idx, node_idx+1, len(phylogeny.cf_graph.nodes())))
@@ -273,7 +273,7 @@ def _create_cfg_nodes_files(cfg_nodes_filename, cfg_mutnode_labels_filename, cfg
 
 
 def create_mlh_graph_files(res_nodes_filename, res_mutnode_labels_filename, res_mutnode_data_filename,
-                                data, phylogeny, gene_names, driver_pathways):
+                           data, phylogeny, gene_names, driver_pathways):
     """
     Create a space separated files with all mutation and their corresponding resolved mutation pattern
     The format is as given here:

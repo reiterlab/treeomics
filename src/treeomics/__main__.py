@@ -10,6 +10,7 @@ import settings
 import tree_inference as ti
 from utils.html_report import HTMLReport
 import plots.plots as plts
+import plots.mp_graph as mp_graph
 import plots.circos as circos
 import utils.tikz_tree
 import utils.analysis as analysis
@@ -305,7 +306,7 @@ def main():
             # create mutation pattern overview plot
             # show only the different patterns and not the individual variants
             # (convenient for large numbers of variants)
-            mp_graph_name = utils.mp_graph.create_mp_graph(
+            mp_graph_name = mp_graph.create_mp_graph(
                 fn_pattern, phylogeny, phylogeny.cfg_nodes, phylogeny.cfg_node_scores, output_directory=output_directory,
                 min_node_weight=settings.MIN_MP_SCORE, max_no_mps=settings.MAX_NO_MPS)
 
@@ -403,7 +404,7 @@ def main():
             # if there are less than 10000 edges in the conflict graph
             if args.mode == 1:
                 if phylogeny.cf_graph.size() < 50000:
-                    plots.circos.create_mutation_links_file(
+                    circos.create_mutation_links_file(
                         os.path.join(output_directory, 'fig_data_'+fn_pattern+'_conflicts.txt'),
                         phylogeny, patient.mut_positions)
                 else:
@@ -411,7 +412,7 @@ def main():
                                 'are {} edges in the graph.'.format(phylogeny.cf_graph.size()))
 
                 # create input data files for circular plots with circos: conflict graph
-                plots.circos.create_conflict_graph_files(
+                circos.create_conflict_graph_files(
                     os.path.join(output_directory, 'cfg_nodes_'+fn_pattern+'.txt'),
                     os.path.join(output_directory, 'cfg_mutnode_labels_'+fn_pattern+'.txt'),
                     os.path.join(output_directory, 'cfg_mutnode_data_'+fn_pattern+'.txt'),
@@ -421,7 +422,7 @@ def main():
 
             if args.mode == 2:
                 # create input data files for circular plots with circos: conflict graph
-                plots.circos.create_mlh_graph_files(
+                circos.create_mlh_graph_files(
                     os.path.join(output_directory, 'res_nodes_'+fn_pattern+'.txt'),
                     os.path.join(output_directory, 'res_mutnode_labels_'+fn_pattern+'.txt'),
                     os.path.join(output_directory, 'res_mutnode_data_'+fn_pattern+'.txt'),
