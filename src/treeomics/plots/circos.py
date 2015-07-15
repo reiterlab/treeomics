@@ -6,7 +6,7 @@ import logging
 import os
 from itertools import chain
 from plots.plots import _format_gene_name
-from phylogeny import CompatiblePhylogeny
+from phylogeny.simple_phylogeny import SimplePhylogeny
 from phylogeny.max_lh_phylogeny import MaxLHPhylogeny
 
 # get logger for application
@@ -448,7 +448,7 @@ def _create_mp_nodes_files(mp_nodes_filename, mp_mutnode_data_filename, phylogen
             mp_nodes_file.write('0 {} '.format(1))
             # write node color to the file which is given by the fact if the clone is
             # removed by the solution or kept
-            if ((isinstance(phylogeny, CompatiblePhylogeny) and node in phylogeny.compatible_nodes) or
+            if ((isinstance(phylogeny, SimplePhylogeny) and node in phylogeny.compatible_nodes) or
                     (isinstance(phylogeny, MaxLHPhylogeny) and node in phylogeny.compatible_nodes) or len(node) == 0):
                 mp_nodes_file.write('blue')       # prefix p for pure color, e.g. pblue
             elif node in phylogeny.conflicting_nodes:

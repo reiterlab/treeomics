@@ -122,7 +122,7 @@ def main():
     parser.add_argument("-m", "--mode", help="running mode: 1...fast (one mutation pattern per variant), "
                                              "2...complete (explore full solution space), "
                                              "3...separate conflicting subclones.",
-                        type=int, default=2)        # TODO: set default to 0
+                        type=int, default=1)        # TODO: set default to 0
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-v", "--vcf_file", help="path to the VCF file", type=str)
@@ -163,7 +163,7 @@ def main():
                         type=float, default=settings.BI_E)
 
     args = parser.parse_args()
-    plots_report = True    # for debugging
+    plots_report = False    # for debugging
     plots_paper = False
 
     if args.normal:
@@ -282,6 +282,7 @@ def main():
         mut_table_name = None
         col_labels = None
 
+    patient.analyze_data()
     # create raw data analysis file
     analysis.create_data_analysis_file(patient, os.path.join(output_directory, 'data_'+fn_pattern+'.txt'))
     # utils.analysis.print_genetic_distance_table(patient)
@@ -304,8 +305,8 @@ def main():
 
         if args.mode == 1:   # find evolutionary incompatible mutation patterns based on standard binary classification
 
-            phylogeny = ti.create_compatible_tree(os.path.join(output_directory, 'fig_btree_'+fn_pattern+'.tex'),
-                                                  patient, min_absent_cov=min_absent_cov)
+            phylogeny = ti.infer_max_compatible_tree(os.path.join(output_directory, 'fig_btree_'+fn_pattern+'.tex'),
+                                                     patient)
 
             if plots_report:
                 # create mutation pattern overview plot
@@ -345,7 +346,7 @@ def main():
 
             # determine mutation patterns based on standard binary classification to generate an overview graph
             if plots_report:
-                si_phylogeny = ti.create_compatible_tree(os.path.join(output_directory, 'fig_btree_'+fn_pattern+'.tex'),
+                si_phylogeny = ti.infer_max_compatible_tree(os.path.join(output_directory, 'fig_btree_'+fn_pattern+'.tex'),
                                                          patient, min_absent_cov=min_absent_cov)
 
                 # create mutation pattern overview plot
@@ -374,7 +375,7 @@ def main():
         elif args.mode == 3:    # separate subclones based on incompatible mutation patterns
 
             raise RuntimeError('Not yet implemented')
-            si_phylogeny = ti.create_compatible_tree(os.path.join(output_directory, 'fig_pptree_'+fn_pattern+'.tex'),
+            si_phylogeny = ti.infer_max_compatible_tree(os.path.join(output_directory, 'fig_pptree_'+fn_pattern+'.tex'),
                                                      patient, min_absent_cov=min_absent_cov)
 
             # create mutation pattern overview plot
@@ -392,9 +393,9 @@ def main():
                                                  patient, args.min_sc_score, min_absent_cov=min_absent_cov)
 
         # generate analysis file to provide an overview about the derived results
-        utils.analysis.create_analysis_file(patient, args.min_median_coverage,
-                                            os.path.join(output_directory, 'analysis_'+fn_pattern+'.txt'),
-                                            phylogeny, comp_node_frequencies, args.down)
+        analysis.create_analysis_file(patient, args.min_median_coverage,
+                                      os.path.join(output_directory, 'analysis_'+fn_pattern+'.txt'),
+                                      phylogeny, comp_node_frequencies, args.down)
 
         # create input data file for circos conflict graph plots
         if plots_paper:

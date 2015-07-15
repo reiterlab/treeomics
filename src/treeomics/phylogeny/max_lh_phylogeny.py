@@ -53,7 +53,7 @@ class MaxLHPhylogeny(Phylogeny):
         self.no_incompatible_positions = None
         self.incompatible_positions = None
 
-        self.resolved_tree = True
+        self.mlh_tree = None
 
     def infer_max_lh_tree(self):
         """
@@ -133,10 +133,10 @@ class MaxLHPhylogeny(Phylogeny):
                 self.mlh_absent_mutations.add(mut_idx)
 
         # construct a phylogenetic tree from the maximum likelihood mutation patterns
-        self.resolved_tree = self.infer_evolutionary_tree(self.shared_mlh_mps, self.mlh_founders,
-                                                          self.mlh_unique_mutations)
+        self.mlh_tree = self.infer_evolutionary_tree(self.shared_mlh_mps, self.mlh_founders,
+                                                     self.mlh_unique_mutations)
 
-        return self.resolved_tree
+        return self.mlh_tree
 
 
 def infer_ml_graph_nodes(log_p0, sample_names, gene_names):

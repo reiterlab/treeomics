@@ -2,9 +2,9 @@ __author__ = 'jreiter'
 
 import logging
 from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
-from phylogeny import ResolvedPhylogeny, CompatiblePhylogeny
-from max_lh_phylogeny import MaxLHPhylogeny
-from subclonal_phylogeny import SubclonalPhylogeny
+from phylogeny.simple_phylogeny import SimplePhylogeny
+from phylogeny.max_lh_phylogeny import MaxLHPhylogeny
+#from subclonal_phylogeny import SubclonalPhylogeny
 import numpy as np
 from collections import defaultdict
 from itertools import cycle, chain
@@ -15,7 +15,6 @@ from copy import deepcopy
 import math
 from utils.statistics import calculate_present_pvalue, calculate_absent_pvalue
 from matplotlib import rcParams
-from matplotlib.patches import FancyBboxPatch
 from matplotlib import cm
 
 # get logger for application
@@ -105,7 +104,7 @@ def hinton(data, filename, row_labels=None, column_labels=None, displayed_mutati
 
             ax.text(x_pos * width+(width/2)+0.2, label_y_pos+(height+y_spacing) * (len(data[mut_idx])),
                     _format_gene_name(column_labels[mut_idx], max_length=12),
-                    rotation='vertical', horizontalalignment='center', verticalalignment='bottom', fontsize=8)
+                    rotation='vertical', horizontalalignment='right', verticalalignment='bottom', fontsize=8)
 
     ax.autoscale_view()
 
@@ -134,17 +133,14 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
     label_y_pos = 0
     cb_width = 30.0
 
-    if isinstance(phylogeny, CompatiblePhylogeny):
+    if isinstance(phylogeny, SimplePhylogeny):
         displayed_mutations = [mut_idx for mut_idx in phylogeny.conflicting_mutations]
-    elif isinstance(phylogeny, ResolvedPhylogeny):
-        displayed_mutations = [mut_idx for mut_idx, samples in phylogeny.incompatible_positions.items()
-                               if any(patient.data[mut_idx][sa_idx] >= 0 for sa_idx in samples)]
     elif isinstance(phylogeny, MaxLHPhylogeny):
         displayed_mutations = [mut_idx for mut_idx, samples in chain(phylogeny.false_positives.items(),
                                                                      phylogeny.false_negatives.items())]
-    elif isinstance(phylogeny, SubclonalPhylogeny):
-        logger.warning('Illustrative mutation table not yet implemented for subclonal detections.')
-        return
+    # elif isinstance(phylogeny, SubclonalPhylogeny):
+    #     logger.warning('Illustrative mutation table not yet implemented for subclonal detections.')
+    #     return
     else:
         logger.error('Could not create illustrative mutation table of incompatible mutation patterns. ')
         logger.error('Phylogeny object is of wrong type! ')
@@ -282,8 +278,8 @@ def boxplot(filename, patient):
         data.append(patient.sample_mafs[sample_name])
         upper_labels.append(len(patient.sample_mafs[sample_name]))
 
-    bp = plt.boxplot(data, notch=0, showfliers=False, sym='+', vert=1, whis=1.5, meanprops=meanpointprops,
-                     meanline=False, showmeans=True)
+    plt.boxplot(data, notch=0, showfliers=False, sym='+', vert=1, whis=1.5, meanprops=meanpointprops,
+                meanline=False, showmeans=True)
 
     bp_ax.set_ylim([0, 1.0])
     bp_ax.set_title(patient.name)

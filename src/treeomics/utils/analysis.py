@@ -94,7 +94,7 @@ def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None,
                     ', '.join(patient.mut_keys[m] for m in patient.shared_muts[shared])))
 
         # if phylogeny is not None:
-        if isinstance(phylogeny, CompatiblePhylogeny) and phylogeny.compatible_tree is not None:
+        if isinstance(phylogeny, SimplePhylogeny) and phylogeny.compatible_tree is not None:
             # how many mutations are are compatible on an evolutionary tree
             analysis_file.write('# Phylogeny: {:.2%} ({} / {}) of all mutations are compatible '
                                 'on an evolutionary tree. \n'.format(
@@ -104,10 +104,11 @@ def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None,
             # evidence for contradictions in the current evolutionary theory of cancer???
             # single cell sequencing will be need to shade light into this puzzle
             no_shared_muts = sum(len(patient.shared_muts[shared]) for shared in range(2, len(patient.sample_names)))
-            analysis_file.write('# Phylogeny: {:.2%} ({} / {}) of all shared (excluding unique and founding) '
-                                'mutations are conflicting. \n'.format(
-                                float(len(phylogeny.conflicting_mutations)) / no_shared_muts,
-                                len(phylogeny.conflicting_mutations), no_shared_muts))
+            analysis_file.write(
+                '# Phylogeny: {:.2%} ({} / {}) of all shared (excluding unique and founding) '
+                + 'mutations are conflicting. \n'.format(
+                    float(len(phylogeny.conflicting_mutations)) / no_shared_muts,
+                    len(phylogeny.conflicting_mutations), no_shared_muts))
 
             # write robustness analysis to file
             if comp_node_frequencies is not None:
@@ -122,7 +123,7 @@ def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None,
                             '{:.3f}'.format(
                                 comp_node_frequencies[fr][node]) for fr in sorted(comp_node_frequencies.keys()))))
 
-        if isinstance(phylogeny, ResolvedPhylogeny) and phylogeny.resolved_tree is not None:
+        if isinstance(phylogeny, MaxLHPhylogeny) and phylogeny.mlh_tree is not None:
             # how many positions are evolutionarily incompatible
             analysis_file.write('# Resolved phylogeny: {} suspicious evolutionarily incompatible positions. \n'
                                 .format(phylogeny.no_incompatible_positions))

@@ -11,11 +11,10 @@ import heapq
 import numpy as np
 import settings
 from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
-import utils.maf_data as data_utils
 from utils.vcf_parser import read_vcf_files
 from utils.data_tables import read_mutation_table
-from utils.statistics import calculate_present_pvalue, calculate_absent_pvalue, find_significant_mutations
-from utils.maf_data import get_shared_mutations, get_present_mutations
+from utils.statistics import calculate_present_pvalue, find_significant_mutations
+from utils.vaf_data import get_shared_mutations, get_present_mutations, calculate_p_values
 from utils.statistics import get_p0
 
 # get logger for application
@@ -103,7 +102,7 @@ class Patient(object):
         self.sim_coff = None        # Jaccard similarity coefficient between any pair of samples
 
     def read_raw_data(self, read_table, cov_table, dis_cov_table, false_positive_rate, false_discovery_rate,
-                      min_absent_cov, min_sa_cov, min_sa_maf, excluded_columns=set(), min_maf=0.25,
+                      min_absent_cov, min_sa_cov, min_sa_maf, excluded_columns=set(),
                       error_rate=0.01, c0=0.5):
         """
         Read raw sequencing data from tsv files
@@ -151,8 +150,7 @@ class Patient(object):
                     self.sample_dis_phred_coverages[sample_name].append(self.dis_phred_coverage[mut_key][sample_name])
 
         # calculate p-values for presence and absence for all given variants
-        self.present_p_values, self.absent_p_values = data_utils.calculate_p_values(
-            self.mut_reads, self.phred_coverage, false_positive_rate, min_maf)
+        self.present_p_values = calculate_p_values(self.mut_reads, self.phred_coverage, false_positive_rate)
 
         # remove low quality samples
         self.discarded_samples = self._filter_samples(min_sa_cov, min_sa_maf)
@@ -604,7 +602,7 @@ class Patient(object):
                 self.mut_reads[mut_key][sample_name] = -1       # -1 = unknown which is different from 0
                 self.phred_coverage[mut_key][sample_name] = -1   # -1 = unknown which is different from 0
 
-    def analyze_data(self, exonic_mutations_only=False):
+    def analyze_data(self):
         """
         Process data and apply various filters
         """
@@ -613,16 +611,6 @@ class Patient(object):
         # Look at the average/median frequency of founder mutations
         # Filter mutations out with less than half of the average founder mutation frequency
         # data_utils.remove_contradicting_mutations(self.data)
-
-        if exonic_mutations_only:
-            # total number of exonic mutations if information is available
-            if len(self.mut_functions):
-                assert len(self.mut_functions) == self.mutations, 'Each mutation has an associated function.'
-                self.data = data_utils.filter_mutation_functions(self.data, self.mut_functions, settings.EXONIC_FILTER)
-                logger.info('Mutations with other functions then '+str(settings.EXONIC_FILTER)
-                            + ' have been filtered out.')
-            else:
-                logger.warn('Exonic filter can not be applied. Function information is missing in the data file. ')
 
         # determine in which samples each mutation is present (positives)
         for mut in range(len(self.data)):

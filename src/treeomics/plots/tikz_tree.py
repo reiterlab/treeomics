@@ -4,9 +4,8 @@ import logging
 import copy
 import networkx as nx
 import utils.latex_output as latex_output
-from phylogeny import TREE_ROOT
-import settings
-from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN, EPSILON
+from phylogeny.phylogeny import TREE_ROOT
+from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
 
 # get logger for application
 logger = logging.getLogger('treeomics')

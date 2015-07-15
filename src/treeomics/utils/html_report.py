@@ -6,7 +6,6 @@ __date__ = 'March 6, 2015'
 import logging
 import numpy as np
 import datetime
-from utils.maf_data import get_present_mutations
 from utils.int_settings import VERSION
 
 
@@ -356,7 +355,7 @@ class HTMLReport(object):
             self.file.write(self._inds[self._ind]
                             + '<b>Incompatible mutation patterns in patient {}.</b>\n'.format(pat.name))
 
-            present_mutations = get_present_mutations(pat.data, include_unknowns=False)
+            present_mutations = pat.present_mutations
             self.file.write(self._inds[self._ind]
                             + 'Treeomics identified {} incompatible mutation patterns '.format(
                 len(phylogeny.conflicting_mutations)) + '(out of {} investigated variants; {:.1%}).'.format(
@@ -454,7 +453,7 @@ class HTMLReport(object):
             self.file.write(self._inds[self._ind]
                             + '<b>Mutation patterns of putative artifacts in patient {}.</b>\n'.format(pat.name))
 
-            present_mutations = get_present_mutations(pat.data, include_unknowns=False)
+            present_mutations = pat.present_mutations
             self.file.write(self._inds[self._ind]
                             + 'Treeomics identified {} putative artifacts '.format(no_putative_artifacts)
                             + '(out of {} investigated variants; {:.1%}).'.format(
