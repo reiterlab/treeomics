@@ -49,7 +49,7 @@ def hinton(data, filename, row_labels=None, column_labels=None, displayed_mutati
     y_length = len(data[0]) * (height+y_spacing) - y_spacing + (label_y_pos + 20 if column_labels is not None else 0)
 
     # create new figure
-    fig = plt.figure(figsize=(x_length / 20.0, y_length / 20.0), dpi=150)
+    plt.figure(figsize=(x_length / 20.0, y_length / 20.0), dpi=150)
 
     ax = plt.axes([0, 1, 1, 1])
 
@@ -65,7 +65,6 @@ def hinton(data, filename, row_labels=None, column_labels=None, displayed_mutati
             if maf > 0:     # mutation is present
                 priorities[mut_idx] += 3 * (4 ** (len(data[mut_idx])-sa_idx-1))
             elif maf == POS_UNKNOWN:
-                #priorities[mut_idx] += 2 * (4 ** (len(data[mut_idx])-sa_idx-1))
                 # merge the two unknown categories when variants are displayed
                 priorities[mut_idx] += 1 * (4 ** (len(data[mut_idx])-sa_idx-1))
             elif maf == NEG_UNKNOWN:
@@ -82,18 +81,10 @@ def hinton(data, filename, row_labels=None, column_labels=None, displayed_mutati
         for sa_idx, maf in enumerate(data[mut_idx]):
             if maf > 0:     # mutation is present
                 color = 'blue'
-                # if maf > 0.3:
-                #     color = cm.winter(0)
-                # else:
-                #     color = (2 * (0.5 - maf) * 0.3, 2 * (0.5 - maf) * 0.6, 1.0)
-                #     color = cm.winter(int((1-(maf/0.3))*255))
             elif maf == POS_UNKNOWN:
-                #color = (0.7, 0.7, 0.9)
-                #color = 'green'
                 # merge the two unknown categories when variants are displayed
                 color = (0.9, 0.75, 0.75)
             elif maf == NEG_UNKNOWN:
-                #color = (0.9, 0.65, 0.65)
                 # merge the two unknown categories when variants are displayed
                 color = (0.9, 0.75, 0.75)
             else:
@@ -122,7 +113,7 @@ def hinton(data, filename, row_labels=None, column_labels=None, displayed_mutati
     plt.savefig(filename+'.png', dpi=150, bbox_inches='tight', transparent=True)
     logger.info('Generated mutation table plot: {}'.format(filename+'.pdf'))
 
-    #plt.show(block=True)
+    # plt.show(block=True)
 
 
 def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, column_labels=None):
@@ -143,7 +134,6 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
     label_y_pos = 0
     cb_width = 30.0
 
-    displayed_mutations = None
     if isinstance(phylogeny, CompatiblePhylogeny):
         displayed_mutations = [mut_idx for mut_idx in phylogeny.conflicting_mutations]
     elif isinstance(phylogeny, ResolvedPhylogeny):
@@ -279,12 +269,11 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
 def boxplot(filename, patient):
     """
     Create box plot of the mutant allele frequencies in each sample
-    :param filename:
-    :param patient:
+    :param filename: name of the output file
+    :param patient: instance of the class patient
     """
 
     bp_fig, bp_ax = plt.subplots(figsize=(len(patient.sample_mafs)*0.56, 4))
-    #meanlineprops = dict(linestyle=':', linewidth=1.0, color='black')
     meanpointprops = dict(marker='o', markeredgecolor='black', markersize=4, markerfacecolor='none')
 
     data = []
@@ -378,7 +367,6 @@ def clustered_table(filename, patient, clusters, row_labels=None, column_labels=
             if maf > 0:     # mutation is present
                 priorities[mut_idx] += 3 * (4 ** (len(patient.data[mut_idx])-i-1))
             elif maf == POS_UNKNOWN:
-                #priorities[mut_idx] += 2 * (4 ** (len(patient.data[mut_idx])-i-1))
                 # merge the two unknown categories when variants are displayed
                 priorities[mut_idx] += 1 * (4 ** (len(patient.data[mut_idx])-i-1))
             elif maf == NEG_UNKNOWN:
@@ -398,12 +386,9 @@ def clustered_table(filename, patient, clusters, row_labels=None, column_labels=
             if maf > 0:     # mutation is present
                 color = 'blue'
             elif maf == POS_UNKNOWN:
-                #color = (0.7, 0.7, 0.9)
-                #color = 'green'
                 # merge the two unknown categories when variants are displayed
                 color = (0.9, 0.75, 0.75)
             elif maf == NEG_UNKNOWN:
-                #color = (0.9, 0.65, 0.65)
                 # merge the two unknown categories when variants are displayed
                 color = (0.9, 0.75, 0.75)
             else:
@@ -415,15 +400,7 @@ def clustered_table(filename, patient, clusters, row_labels=None, column_labels=
 
     # add sample name labels
     if row_labels is not None:
-        #for i, row_name in enumerate(reversed(den['ivl'])):
-            # ax_hin.text(label_x_pos, (height+y_spacing) * (len(row_labels) - i - 1)+1, row_name,
-            #             horizontalalignment='right', verticalalignment='bottom', fontsize=12)
         for i, sa_idx in enumerate(reversed(den['leaves'])):
-            # rect = plt.Rectangle([label_x_pos-row_label_rect_width+1, (height+y_spacing) * (len(row_labels) - i - 1)],
-            #                      row_label_rect_width, row_label_rect_height,
-            #                      facecolor='none', edgecolor=edge_color)
-            # ax_hin.add_patch(rect)
-
             ax_hin.text(label_x_pos, (height+y_spacing) * (len(row_labels) - i - 1)+0.5,
                         row_labels[sa_idx].replace('_', ' '),
                         horizontalalignment='right', verticalalignment='bottom', fontsize=12)
@@ -440,12 +417,10 @@ def clustered_table(filename, patient, clusters, row_labels=None, column_labels=
     ax_dg.autoscale_view()
     ax_hin.autoscale_view()
 
-    #fig.set_figheight(y_length / 16.0)
-    #fig.set_figwidth(x_length / 16.0)
     plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
     logger.info('Generated combined mutation table and dendrogram {}'.format(filename))
 
-    #plt.show(block=True)
+    # plt.show(block=True)
 
 
 def reads_plot(filename, patient):
@@ -453,8 +428,7 @@ def reads_plot(filename, patient):
     Create scatter plot of the number of mutant reads over the coverage
     Each sample in a different color
     :param filename: path to the output file of the created figure
-    :param patient: data
-    :return:
+    :param patient: instance of class patient
     """
     # create scatter plot of the number of mutant reads over the coverage
     # each sample in a different color
@@ -476,7 +450,6 @@ def reads_plot(filename, patient):
             else:
                 y_mut_reads.append(1)
 
-            #colors.append(float(sa_idx) / (patient.n - 1))
             colors.append(plt.cm.jet(1. * sa_idx / (patient.n - 1)))
 
     plt.scatter(x_coverages, y_mut_reads, c=colors, s=10, marker="x")
@@ -488,11 +461,10 @@ def reads_plot(filename, patient):
     bp_ax.set_xlabel('Coverage')
     bp_ax.set_ylabel('Variant reads')
 
-    #bp_fig.canvas.draw()
     plt.show(block=False)
     x_labels = [item.get_text() for item in bp_ax.get_xticklabels()]
-    #x_labels[1] = r'$\leq 10^0$'
-    #x_labels[1] = '$\\mathdefault{\leq 10^{0}}$'
+    # x_labels[1] = r'$\leq 10^0$'
+    # x_labels[1] = '$\\mathdefault{\leq 10^{0}}$'
     x_labels[1] = '$\\mathdefault{\leq 1}$'
     bp_ax.set_xticklabels(x_labels)
     y_labels = [item.get_text() for item in bp_ax.get_yticklabels()]
@@ -510,21 +482,19 @@ def reads_plot(filename, patient):
     plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
     logger.info('Generated scatter plot about sequencing reads {}'.format(filename))
 
-    #plt.show(block=True)
+    # plt.show(block=True)
 
 
 def p_value_present_plot(filename, patient, false_positive_rate):
     """
     Create plot with the p-values in each sample
     :param filename: path to the output file of the created figure
-    :param patient: data
-    :return:
+    :param patient: instance of class patient
     """
     bp_fig, bp_ax = plt.subplots(figsize=(5.6, 3))
 
     x_values = []
     y_values = []
-    #colors = []
 
     for mut_key in patient.mut_reads.keys():
         for sa_idx, sample_name in enumerate(patient.mut_reads[mut_key].keys(), 0):
@@ -534,26 +504,23 @@ def p_value_present_plot(filename, patient, false_positive_rate):
                                                                     false_positive_rate), 10)
                 x_values.append(present_p_value)
                 y_values.append(patient.n-sa_idx)
-                #colors.append(plt.cm.jet(1. * sa_idx / (patient.n - 1)))
+                # colors.append(plt.cm.jet(1. * sa_idx / (patient.n - 1)))
 
-    #plt.scatter(x_values, y_values, c=colors, s=10, marker="x")
     plt.scatter(x_values, y_values, c='black', s=10, marker="x")
 
     bp_ax.set_xlim([-5, 0])
-    #bp_ax.set_xlabel('$\\mathdefault{\log_{10} \ (\mathrm{p-value})}$')
+    # bp_ax.set_xlabel('$\\mathdefault{\log_{10} \ (\mathrm{p-value})}$')
     bp_ax.set_xlabel(r'log$_{10}$ p-value')
     bp_ax.set_ylim([0.5, patient.n + 0.5])
     bp_ax.set_yticks(np.arange(1, patient.n+1, 1.0))
     y_labels = [item.get_text() for item in bp_ax.get_yticklabels()]
 
     for sa_idx, sample_name in enumerate(patient.sample_names):
-        #y_labels[patient.n-sa_idx-1] = sample_name[5:]
         bp_ax.text(-5.6, patient.n-sa_idx-0.1, sample_name[5:], horizontalalignment='left',
                    color='black', fontsize=10)
 
     bp_ax.set_yticklabels(y_labels)
 
-    #bp_ax.add_patch(Rectangle((-2.5, 0.5), 2.5, patient.n + 0.5, facecolor="grey", alpha=0.2))
     plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
     logger.info('Generated scatter plot about p-values of possibly present variants {}'.format(filename))
 
@@ -562,15 +529,14 @@ def p_value_absent_plot(filename, patient, min_maf):
     """
     Create plot with the p-values in each sample
     :param filename: path to the output file of the created figure
-    :param patient: data
-    :return:
+    :param patient: instance of class patient
     """
     # create plot with the p-values in each sample
     bp_fig, bp_ax = plt.subplots(figsize=(5.6, 3))
 
     x_values = []
     y_values = []
-    #colors = []
+    # colors = []
 
     for mut_idx in range(len(patient.mut_keys)):
         mut_key = patient.mut_keys[mut_idx]
@@ -585,11 +551,9 @@ def p_value_absent_plot(filename, patient, min_maf):
                                       10)
             x_values.append(absent_p_value)
             y_values.append(patient.n-sa_idx)
-            #colors.append(plt.cm.jet(1. * sa_idx / (patient.n - 1)))
+            # colors.append(plt.cm.jet(1. * sa_idx / (patient.n - 1)))
 
-    #plt.scatter(x_values, y_values, c=colors, s=10, marker="x")
     plt.scatter(x_values, y_values, c='black', s=10, marker="x")
-    #plt.scatter(x_values, y_values, c='red', s=10, marker="o", facecolors='none', edgecolors='r', label='absent')
 
     bp_ax.set_xlim([-5, 0])
     #bp_ax.set_xlabel('$\\mathdefault{\log_{10} \ (\mathrm{p-value})}$')
@@ -599,14 +563,12 @@ def p_value_absent_plot(filename, patient, min_maf):
     y_labels = [item.get_text() for item in bp_ax.get_yticklabels()]
 
     for sa_idx, sample_name in enumerate(patient.sample_names):
-        #y_labels[patient.n-sa_idx-1] = sample_name[5:]
         bp_ax.text(-5.6, patient.n-sa_idx-0.1, sample_name.replace('_', ' '), horizontalalignment='left',
                    color='black', fontsize=10)
 
     bp_ax.set_yticklabels(y_labels)
-    leg = bp_ax.legend(loc='lower left', fontsize=10, frameon=True)
+    bp_ax.legend(loc='lower left', fontsize=10, frameon=True)
 
-    #bp_ax.add_patch(Rectangle((-2.5, 0.5), 2.5, patient.n + 0.5, facecolor="grey", alpha=0.2))
     plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
     logger.info('Generated scatter plot about p-values of possibly absent variants {}'.format(filename))
 
@@ -614,9 +576,9 @@ def p_value_absent_plot(filename, patient, min_maf):
 def robustness_plot(filename, comp_node_frequencies):
     """
     Generate a plot about the reproducability of MPs when only a fraction of the variants are used
-    :param filename:
-    :param comp_node_frequencies:
-    :return:
+    :param filename: path to the output file of the created figure
+    :param comp_node_frequencies: frequencies of the mutation patterns of how often they were reproduced with a
+                                  a subset of the variants
     """
 
     fig, ax = plt.subplots(figsize=(5.6, 4))
@@ -647,11 +609,6 @@ def robustness_plot(filename, comp_node_frequencies):
                          'k:', lw=1,
                          color=plt.cm.jet(1. * mp_ids[node] / (len(comp_node_frequencies[sample_fraction].keys()) - 1)))
 
-        # if last_fraction is not None:
-        #     plt.plot([last_fraction/100.0, sample_fraction/100.0],
-        #              [np.mean([f for f in comp_node_frequencies[last_fraction].values()]),
-        #               np.mean([f for f in comp_node_frequencies[sample_fraction].values()])],
-        #              'k--', lw=2, color='red')
         last_fraction = sample_fraction
 
     plots = dict()

@@ -15,8 +15,16 @@ logger = logging.getLogger('treeomics')
 
 
 class HTMLReport(object):
+    """
+    Generates an HTML formatted file providing an overview about the data and the results
+    """
 
     def __init__(self, file_path, patient_name):
+        """
+        Opens the output file
+        :param file_path: path to the output file of the created HTML report
+        :param patient_name: name of the subject
+        """
 
         self.file = open(file_path, 'w')
         self.patient_name = patient_name
@@ -25,6 +33,9 @@ class HTMLReport(object):
         self._inds = ['\t'*i for i in range(10)]    # indentation
 
     def start_report(self):
+        """
+        Add HTML header and other basics to the report
+        """
 
         # write HTML page header
         self.file.write('<!DOCTYPE html>\n')
@@ -63,6 +74,11 @@ class HTMLReport(object):
         self.file.write(self._inds[self._ind]+'</div>\n')
 
     def add_sequencing_information(self, patient, mut_table_path=None):
+        """
+        Adds basic information about the provided sequencing data and if provided add a mutation table plot
+        :param patient: instance of class patient
+        :param mut_table_path: path to the generated mutation table plot
+        """
 
         self.file.write(self._inds[self._ind]+'<h4>Input data</h4>\n')
 
@@ -180,7 +196,7 @@ class HTMLReport(object):
         """
         Add tables providing the Jaccard similarity coefficient and the genetic distance between all pairs of
         samples to the HTML report.
-        :param patient:
+        :param patient: instance of class patient
         """
 
         self.file.write(self._inds[self._ind]+'<h4>Genetic similarity</h4>\n')
@@ -246,6 +262,12 @@ class HTMLReport(object):
         self.file.write(self._inds[self._ind]+'</br>\n\n')
 
     def add_mp_overview_graph(self, patient, phylogeny, mp_graph_name):
+        """
+        Add mutation pattern overview plot to the HTML report
+        :param patient: instance of class patient
+        :param phylogeny: instance of class phylogeny (either SimplePhylogeny or MaxLHPhylogeny)
+        :param mp_graph_name: path to the mutation pattern overview plot file
+        """
 
         self.file.write(self._inds[self._ind]+'<h4>Mutation pattern overview graph</h4>\n')
 
@@ -299,10 +321,6 @@ class HTMLReport(object):
         self.file.write(self._inds[self._ind] + '<table class="table table-striped" '
                         + 'style="text-align: center;width:98%;max-width:800px;font-size:9pt">\n')
         self._ind += 1      # indentation level increases by 1
-
-        # add table caption
-        # self.file.write(self._inds[self._ind]
-        #                 + '<caption>Evolutionarily incompatible mutation patterns.</caption>\n')
 
         col_names = ['Variant'] + pat.sample_names
         header = ''.join('<th class="text-center">{}</th>'.format(col_name.replace('_', ' ')) for col_name in col_names)
@@ -468,6 +486,14 @@ class HTMLReport(object):
             self.file.write(self._inds[self._ind]+'</div>\n')
 
     def end_report(self, fpr, fdr, min_absent_cov, min_median_cov, min_median_maf):
+        """
+        Add used parameter values, HTML file footer, and close the file
+        :param fpr: false-positive rate
+        :param fdr: false-discovery rate
+        :param min_absent_cov: Minimum coverage for a variant to be called absent
+        :param min_median_cov: minimum median coverage of a sample to pass filtering
+        :param min_median_maf: minimum median variant allele frequency of a sample to pass filtering
+        """
 
         if self.file is not None:
 

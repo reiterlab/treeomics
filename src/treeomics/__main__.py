@@ -9,9 +9,10 @@ from patient import Patient
 import settings
 import tree_inference as ti
 from utils.html_report import HTMLReport
-import plots.circos
+import plots.plots as plts
+import plots.circos as circos
 import utils.tikz_tree
-import utils.analysis
+import utils.analysis as analysis
 import utils.mp_graph
 import utils.latex_output
 
@@ -68,8 +69,8 @@ def init_output(patient_name=None):
 
 def get_patients_name(name):
     """
-    Infer patient name from input file
-    :param name:
+    Guess/extract patient name from input file
+    :param name: input filename
     :return: patient name
     """
     # extract patient's name from filename or path
@@ -158,7 +159,8 @@ def main():
                         help="minimum reliability score of a mutation pattern with putative subclones",
                         type=float, default=settings.MIN_SC_SCORE)
 
-    parser.add_argument("-e", "--errorrate", help="data error rate for bayesian inference", type=float)
+    parser.add_argument("-e", "--errorrate", help="data error rate for bayesian inference",
+                        type=float, default=settings.BI_E)
 
     args = parser.parse_args()
     plots = True    # for debugging
@@ -243,41 +245,44 @@ def main():
     output_directory = init_output(patient_name=patient_name)
     # create output filename pattern
     fn_pattern = get_output_fn_template(patient.name, read_no_samples, fpr, fdr,
-                                         min_absent_cov, args.min_median_coverage, args.min_median_maf,
-                                         bi_e=settings.BI_E, bi_c0=settings.BI_C0)
+                                        min_absent_cov, args.min_median_coverage, args.min_median_maf,
+                                        bi_e=settings.BI_E, bi_c0=settings.BI_C0)
     fn_pattern += '_s' if args.mode == 1 else ''
 
-    # generate scatter plot about raw sequencing data (mutant reads vs. coverage)
-    # plots.reads_plot(os.path.join(output_directory, 'fig_reads_'+patient.name+'.pdf'), patient)
+    if plots:   # deactivate plot generation for debugging
+        # generate scatter plot about raw sequencing data (mutant reads vs. coverage)
+        # plots.reads_plot(os.path.join(output_directory, 'fig_reads_'+patient.name+'.pdf'), patient)
 
-    # generate box plots with MAFs per sample
-    # plots.boxplot(os.path.join(output_directory, 'fig_mafs_'+patient.name+'.pdf'), patient)
+        # generate box plots with MAFs per sample
+        # plots.boxplot(os.path.join(output_directory, 'fig_mafs_'+patient.name+'.pdf'), patient)
 
-    # generate scatter plot about p-values of possibly present variants
-    # plots.p_value_present_plot(os.path.join(output_directory, 'fig_p-present_'+patient.name+'.pdf'),
-    #                            patient, fpr)
-    # generate scatter plot about p-values of possibly present variants
-    # plots.p_value_absent_plot(os.path.join(output_directory, 'fig_p-absent_'+patient.name+'.pdf'),
-    #                           patient, min_maf)
+        # generate scatter plot about p-values of possibly present variants
+        # plots.p_value_present_plot(os.path.join(output_directory, 'fig_p-present_'+patient.name+'.pdf'),
+        #                            patient, fpr)
+        # generate scatter plot about p-values of possibly present variants
+        # plots.p_value_absent_plot(os.path.join(output_directory, 'fig_p-absent_'+patient.name+'.pdf'),
+        #                           patient, min_maf)
 
-    # generate mutation table plot
-    # show only mutations which are present in at least one sample
-    if patient.gene_names is not None:
-        col_labels = patient.gene_names
-    else:
-        col_labels = [mut_key for mut_key in patient.mut_keys]
+        # generate mutation table plot
+        # show only mutations which are present in at least one sample
+        if patient.gene_names is not None:
+            col_labels = patient.gene_names
+        else:
+            col_labels = [mut_key for mut_key in patient.mut_keys]
 
-    if len(col_labels) < 1000 and plots:
-        mut_table_name = 'mut_table_'+fn_pattern
-        plots.hinton(patient.data, os.path.join(output_directory, mut_table_name),
-                     row_labels=patient.sample_names, column_labels=col_labels,
-                     displayed_mutations=patient.present_mutations)
+        if len(col_labels) < 1000 and plots:
+            mut_table_name = 'mut_table_'+fn_pattern
+            plts.hinton(patient.data, os.path.join(output_directory, mut_table_name),
+                        row_labels=patient.sample_names, column_labels=col_labels,
+                        displayed_mutations=patient.present_mutations)
+        else:
+            mut_table_name = None
+            logger.warn('There are too many variants to create a mutation table plot: {}'.format(len(col_labels)))
     else:
         mut_table_name = None
-        logger.warn('There are too many variants to create a mutation table plot: {}'.format(len(col_labels)))
 
     # create raw data analysis file
-    utils.analysis.create_data_analysis_file(patient, os.path.join(output_directory, 'data_'+fn_pattern+'.txt'))
+    analysis.create_data_analysis_file(patient, os.path.join(output_directory, 'data_'+fn_pattern+'.txt'))
     # utils.analysis.print_genetic_distance_table(patient)
 
     # create HTML analysis report
