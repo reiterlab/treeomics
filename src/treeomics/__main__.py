@@ -163,7 +163,7 @@ def main():
                         type=float, default=settings.BI_E)
 
     args = parser.parse_args()
-    plots_report = False    # for debugging
+    plots_report = True    # for debugging
     plots_paper = False
 
     if args.normal:
@@ -206,7 +206,7 @@ def main():
         patient = Patient(patient_name, min_absent_cov=min_absent_cov)
         read_no_samples = patient.read_raw_data(
             read_table, cov_table, dis_cov_table, fpr, fdr, min_absent_cov, args.min_median_coverage,
-            args.min_median_maf, error_rate=settings.BI_E, c0=settings.BI_C0,
+            args.min_median_maf, error_rate=args.error_rate, c0=settings.BI_C0,
             excluded_columns={normal_sample_name})      # excluded (=normal) samples
         # 'LiM_2' Pam01
         # 'LiM_7', 'LiM_8', 'PT_18' Pam02
@@ -346,8 +346,8 @@ def main():
 
             # determine mutation patterns based on standard binary classification to generate an overview graph
             if plots_report:
-                si_phylogeny = ti.infer_max_compatible_tree(os.path.join(output_directory, 'fig_btree_'+fn_pattern+'.tex'),
-                                                         patient, min_absent_cov=min_absent_cov)
+                si_phylogeny = ti.infer_max_compatible_tree(
+                    os.path.join(output_directory, 'fig_btree_'+fn_pattern+'.tex'), patient)
 
                 # create mutation pattern overview plot
                 # show only the different patterns and not the individual variants
@@ -376,7 +376,7 @@ def main():
 
             raise RuntimeError('Not yet implemented')
             si_phylogeny = ti.infer_max_compatible_tree(os.path.join(output_directory, 'fig_pptree_'+fn_pattern+'.tex'),
-                                                     patient, min_absent_cov=min_absent_cov)
+                                                        patient, min_absent_cov=min_absent_cov)
 
             # create mutation pattern overview plot
             # show only the different patterns and not the individual variants
