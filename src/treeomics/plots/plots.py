@@ -172,8 +172,8 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
     absent_color = (1.0, 0.3, 0.3)
     unknown_color = (0.9, 0.75, 0.75)
 
-    for x_pos, mut_idx in enumerate(sorted(displayed_mutations,
-                                           key=lambda k: (column_labels[k].lower() if column_labels is not None else k))):
+    for x_pos, mut_idx in enumerate(
+            sorted(displayed_mutations, key=lambda k: (column_labels[k].lower() if column_labels is not None else k))):
 
         for sa_idx, maf in enumerate(patient.data[mut_idx]):
 

@@ -1,3 +1,5 @@
+#!/usr/bin/python
+"""Main file to run treeomics"""
 __author__ = 'jreiter'
 __date__ = 'March 31, 2014'
 
@@ -12,10 +14,7 @@ from utils.html_report import HTMLReport
 import plots.plots as plts
 import plots.mp_graph as mp_graph
 import plots.circos as circos
-import utils.tikz_tree
 import utils.analysis as analysis
-import utils.mp_graph
-import utils.latex_output
 
 
 # create logger for application
@@ -164,7 +163,8 @@ def main():
                         type=float, default=settings.BI_E)
 
     args = parser.parse_args()
-    plots = True    # for debugging
+    plots_report = True    # for debugging
+    plots_paper = False
 
     if args.normal:
         normal_sample_name = args.normal
@@ -250,7 +250,7 @@ def main():
                                         bi_e=settings.BI_E, bi_c0=settings.BI_C0)
     fn_pattern += '_s' if args.mode == 1 else ''
 
-    if plots:   # deactivate plot generation for debugging
+    if plots_report:   # deactivate plot generation for debugging
         # generate scatter plot about raw sequencing data (mutant reads vs. coverage)
         # plots.reads_plot(os.path.join(output_directory, 'fig_reads_'+patient.name+'.pdf'), patient)
 
@@ -271,7 +271,7 @@ def main():
         else:
             col_labels = [mut_key for mut_key in patient.mut_keys]
 
-        if len(col_labels) < 1000 and plots:
+        if len(col_labels) < 1000 and plots_report:
             mut_table_name = 'mut_table_'+fn_pattern
             plts.hinton(patient.data, os.path.join(output_directory, mut_table_name),
                         row_labels=patient.sample_names, column_labels=col_labels,
@@ -281,6 +281,7 @@ def main():
             logger.warn('There are too many variants to create a mutation table plot: {}'.format(len(col_labels)))
     else:
         mut_table_name = None
+        col_labels = None
 
     # create raw data analysis file
     analysis.create_data_analysis_file(patient, os.path.join(output_directory, 'data_'+fn_pattern+'.txt'))
@@ -293,35 +294,41 @@ def main():
         patient, mut_table_path=mut_table_name+'.png' if mut_table_name is not None else None)
     html_report.add_similarity_information(patient)
 
-    # create evolutionary trees based on two different evolutionary principles (depends on input parameter)
-    if args.mode == 1 or args.mode == 2 or args.mode == 6:
+    # ############################################################################################
+    # infer evolutionary compatible mutation patterns and subsequently evolutionary trees based on
+    # different principles divided into three modes
+    # ############################################################################################
+    if args.mode == 1 or args.mode == 2 or args.mode == 3:
 
         phylogeny = None
         comp_node_frequencies = None
 
-        if args.mode == 1:   # find evolutionary incompatible mutations and remove the unreliable ones
-            phylogeny = ti.create_compatible_tree(os.path.join(output_directory, 'fig_pptree_'+fn_pattern+'.tex'),
+        if args.mode == 1:   # find evolutionary incompatible mutation patterns based on standard binary classification
+
+            phylogeny = ti.create_compatible_tree(os.path.join(output_directory, 'fig_btree_'+fn_pattern+'.tex'),
                                                   patient, min_absent_cov=min_absent_cov)
 
-            # create mutation pattern overview plot
-            # show only the different patterns and not the individual variants
-            # (convenient for large numbers of variants)
-            mp_graph_name = mp_graph.create_mp_graph(
-                fn_pattern, phylogeny, phylogeny.cfg_nodes, phylogeny.cfg_node_scores, output_directory=output_directory,
-                min_node_weight=settings.MIN_MP_SCORE, max_no_mps=settings.MAX_NO_MPS)
+            if plots_report:
+                # create mutation pattern overview plot
+                # show only the different patterns and not the individual variants
+                # (convenient for large numbers of variants)
+                mp_graph_name = mp_graph.create_mp_graph(
+                    fn_pattern, phylogeny, phylogeny.cfg_nodes, phylogeny.cfg_node_scores,
+                    output_directory=output_directory, min_node_weight=settings.MIN_MP_SCORE,
+                    max_no_mps=settings.MAX_NO_MPS)
 
-            if mp_graph_name is not None:
-                html_report.add_mp_overview_graph(patient, phylogeny, mp_graph_name)
+                if mp_graph_name is not None:
+                    html_report.add_mp_overview_graph(patient, phylogeny, mp_graph_name)
 
-            # illustrative mutation table plot of incompatible mutation patterns
-            x_length, y_length = plots.create_incompatible_mp_table(
-                patient, os.path.join(output_directory, settings.incomp_mps_plot_prefix+fn_pattern),
-                phylogeny, row_labels=patient.sample_names, column_labels=col_labels)
+                # illustrative mutation table plot of incompatible mutation patterns
+                x_length, y_length = plts.create_incompatible_mp_table(
+                    patient, os.path.join(output_directory, settings.incomp_mps_plot_prefix+fn_pattern),
+                    phylogeny, row_labels=patient.sample_names, column_labels=col_labels)
 
-            # add information about evolutionarily incompatible mutation patterns to the HTML report
-            html_report.add_inc_mp_information(
-                phylogeny, incomp_mps_plot_filepath=settings.incomp_mps_plot_prefix+fn_pattern+'.png',
-                plot_width=x_length*7)
+                # add information about evolutionarily incompatible mutation patterns to the HTML report
+                html_report.add_inc_mp_information(
+                    phylogeny, incomp_mps_plot_filepath=settings.incomp_mps_plot_prefix+fn_pattern+'.png',
+                    plot_width=x_length*7)
 
             # do mutation pattern robustness analysis through down-sampling
             if args.down > 0:
@@ -331,32 +338,33 @@ def main():
                     comp_node_frequencies = phylogeny.validate_node_robustness(args.down)
 
                     # generate mutation pattern robustness plot
-                    plots.robustness_plot(os.path.join(output_directory,
-                                                       'robustness_{}_{}.pdf'.format(args.down, fn_pattern)),
-                                          comp_node_frequencies)
+                    plts.robustness_plot(
+                        os.path.join(output_directory, 'robustness_{}_{}.pdf'.format(args.down, fn_pattern)),
+                        comp_node_frequencies)
 
-        elif args.mode == 2:     # find likely sequencing artifacts and resolve those
-            pp_phylogeny = ti.create_compatible_tree(os.path.join(output_directory, 'fig_pptree_'+fn_pattern+'.tex'),
-                                                     patient, min_absent_cov=min_absent_cov)
+        elif args.mode == 2:     # find likely sequencing artifacts based on a bayesian inference model
 
-            # create mutation pattern overview plot
-            # show only the different patterns and not the individual variants
-            # (convenient for large numbers of variants)
-            mp_graph_name = utils.mp_graph.create_mp_graph(
-                fn_pattern, pp_phylogeny, pp_phylogeny.cfg_nodes, pp_phylogeny.cfg_node_scores,
-                output_directory=output_directory, min_node_weight=settings.MIN_MP_SCORE,
-                max_no_mps=settings.MAX_NO_MPS)
+            # determine mutation patterns based on standard binary classification to generate an overview graph
+            if plots_report:
+                si_phylogeny = ti.create_compatible_tree(os.path.join(output_directory, 'fig_btree_'+fn_pattern+'.tex'),
+                                                         patient, min_absent_cov=min_absent_cov)
 
-            if mp_graph_name is not None:
-                html_report.add_mp_overview_graph(patient, pp_phylogeny, mp_graph_name)
+                # create mutation pattern overview plot
+                # show only the different patterns and not the individual variants
+                # (convenient for large numbers of variants)
+                mp_graph_name = mp_graph.create_mp_graph(
+                    fn_pattern, si_phylogeny, si_phylogeny.cfg_nodes, si_phylogeny.cfg_node_scores,
+                    output_directory=output_directory, min_node_weight=settings.MIN_MP_SCORE,
+                    max_no_mps=settings.MAX_NO_MPS)
 
-            # phylogeny = ti.create_resolved_tree(os.path.join(output_directory, 'fig_restree_'+fn_pattern+'.tex'),
-            #                                     patient)
+                if mp_graph_name is not None:
+                    html_report.add_mp_overview_graph(patient, si_phylogeny, mp_graph_name)
+
             phylogeny = ti.create_max_lh_tree(os.path.join(output_directory, 'fig_mlhtree_'+fn_pattern+'.tex'),
                                               patient)
 
-            # illustrative mutation table plot of incompatible mutation patterns
-            x_length, y_length = plots.create_incompatible_mp_table(
+            # illustrative mutation table plot of incompatible mutation patterns and their putative artifacts
+            x_length, y_length = plts.create_incompatible_mp_table(
                 patient, os.path.join(output_directory, settings.artifacts_plot_prefix+fn_pattern),
                 phylogeny, row_labels=patient.sample_names, column_labels=col_labels)
             # add information about putative false-positives and false-negatives to the HTML report
@@ -364,42 +372,43 @@ def main():
                 phylogeny, artifacts_plot_filepath=settings.artifacts_plot_prefix+fn_pattern+'.png',
                 plot_width=x_length*7)
 
-        elif args.mode == 6:
+        elif args.mode == 3:    # separate subclones based on incompatible mutation patterns
 
-            pp_phylogeny = ti.create_compatible_tree(os.path.join(output_directory, 'fig_pptree_'+fn_pattern+'.tex'),
+            raise RuntimeError('Not yet implemented')
+            si_phylogeny = ti.create_compatible_tree(os.path.join(output_directory, 'fig_pptree_'+fn_pattern+'.tex'),
                                                      patient, min_absent_cov=min_absent_cov)
 
             # create mutation pattern overview plot
             # show only the different patterns and not the individual variants
             # (convenient for large numbers of variants)
-            mp_graph_name = utils.mp_graph.create_mp_graph(
-                fn_pattern, pp_phylogeny, pp_phylogeny.cfg_nodes, pp_phylogeny.cfg_node_weights,
+            mp_graph_name = mp_graph.create_mp_graph(
+                fn_pattern, si_phylogeny, si_phylogeny.cfg_nodes, si_phylogeny.cfg_node_weights,
                 output_directory=output_directory, min_node_weight=settings.MIN_MP_SCORE,
                 max_no_mps=settings.MAX_NO_MPS)
 
             if mp_graph_name is not None:
-                html_report.add_mp_overview_graph(patient, pp_phylogeny, mp_graph_name)
+                html_report.add_mp_overview_graph(patient, si_phylogeny, mp_graph_name)
 
             phylogeny = ti.create_subclonal_tree(os.path.join(output_directory, 'fig_sctree_'+fn_pattern+'.tex'),
                                                  patient, args.min_sc_score, min_absent_cov=min_absent_cov)
 
+        # generate analysis file to provide an overview about the derived results
         utils.analysis.create_analysis_file(patient, args.min_median_coverage,
                                             os.path.join(output_directory, 'analysis_'+fn_pattern+'.txt'),
                                             phylogeny, comp_node_frequencies, args.down)
 
-        # create input data file for circular plots with circos
-        if plots:
-            plots.circos.create_raw_data_file(os.path.join(output_directory, 'fig_data_'+fn_pattern+'_mutdata.txt'),
-                                              patient.mutations, patient.mut_positions, data=patient.data,
-                                              sample_names=patient.sample_names)
+        # create input data file for circos conflict graph plots
+        if plots_paper:
+            circos.create_raw_data_file(os.path.join(output_directory, 'fig_data_'+fn_pattern+'_mutdata.txt'),
+                                        patient.mutations, patient.mut_positions, data=patient.data,
+                                        sample_names=patient.sample_names)
 
             # create labels file if gene names are available
             # typically not available in VCF files
             if len(patient.gene_names):
-                plots.circos.create_mutation_labels_file(os.path.join(output_directory,
-                                                                      'fig_data_'+fn_pattern+'_mutlabels.txt'),
-                                                         patient.mutations, patient.gene_names, patient.mut_positions,
-                                                         patient.driver_pathways)
+                circos.create_mutation_labels_file(
+                    os.path.join(output_directory, 'fig_data_'+fn_pattern+'_mutlabels.txt'),
+                    patient.mutations, patient.gene_names, patient.mut_positions, patient.driver_pathways)
 
             # if there are less than 10000 edges in the conflict graph
             if args.mode == 1:
@@ -423,9 +432,9 @@ def main():
             if args.mode == 2:
                 # create input data files for circular plots with circos: conflict graph
                 circos.create_mlh_graph_files(
-                    os.path.join(output_directory, 'res_nodes_'+fn_pattern+'.txt'),
-                    os.path.join(output_directory, 'res_mutnode_labels_'+fn_pattern+'.txt'),
-                    os.path.join(output_directory, 'res_mutnode_data_'+fn_pattern+'.txt'),
+                    os.path.join(output_directory, 'mlh_nodes_'+fn_pattern+'.txt'),
+                    os.path.join(output_directory, 'mlh_mutnode_labels_'+fn_pattern+'.txt'),
+                    os.path.join(output_directory, 'mlh_mutnode_data_'+fn_pattern+'.txt'),
                     patient.data, phylogeny, patient.gene_names, patient.driver_pathways)
 
     else:
@@ -433,7 +442,7 @@ def main():
 
     # finalize HTML report
     html_report.end_report(fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_maf)
-    logger.info('Treeomics finished analysis.')
+    logger.info('Treeomics finished evolutionary analysis.')
 
 if __name__ == '__main__':
 

@@ -20,7 +20,6 @@ def create_raw_data_file(raw_data_filename, mutations, mut_pos, data=None, sampl
     :param raw_data_filename: output filename
     :param mutations: dictionary with all mutations mapping to the set of samples where it is present
     :param mut_pos: array of tuples with the mutation position (chr, start_pos, end_pos)
-    :return:
     """
 
     logger.debug('Creating raw mutation data file: {}'.format(raw_data_filename))
