@@ -13,7 +13,8 @@ from subprocess import call
 logger = logging.getLogger('treeomics')
 
 
-def create_mp_graph(fn_pattern, phylogeny, mps, mp_weights, output_directory='', min_node_weight=None, max_no_mps=50):
+def create_mp_graph(fn_pattern, phylogeny, mps, mp_weights, output_directory='',
+                    min_node_weight=None, max_no_mps=50, pars_informative=False):
     """
     Create mutation pattern overview plot showing only the different patterns and not the individual variants
     :param fn_pattern: common name template for output files
@@ -23,6 +24,7 @@ def create_mp_graph(fn_pattern, phylogeny, mps, mp_weights, output_directory='',
     :param output_directory: path to the output directory for the generated files
     :param min_node_weight: minimal reliability score of a mutation pattern to be displayed
     :param max_no_mps: apply min_node_weight if there are more than this number of MPs in the data
+    :param pars_informative: show only parsimony informative mutation patterns
     """
 
     if min_node_weight is None:
@@ -43,13 +45,12 @@ def create_mp_graph(fn_pattern, phylogeny, mps, mp_weights, output_directory='',
     circos.create_mp_graph_files(
         os.path.join(data_dir, 'mp_nodes_'+fn_pattern+'.txt'),
         os.path.join(data_dir, 'mp_mutnode_data_'+fn_pattern+'.txt'),
-        os.path.join(data_dir, 'mp_links_'+fn_pattern+'.txt'),
-        phylogeny, mps, mp_weights, min_node_weight=min_node_weight, max_no_mps=max_no_mps)
+        os.path.join(data_dir, 'mp_links_'+fn_pattern+'.txt'), phylogeny, mps, mp_weights,
+        min_node_weight=min_node_weight, max_no_mps=max_no_mps, pars_infor=pars_informative)
 
     _create_mp_gr_confs(phylogeny, output_directory, fn_pattern)
 
-    mp_filename = 'fig_mp_{}{}.png'.format(phylogeny.patient.name,
-                                           '_unknown' if phylogeny.patient.min_absent_cov > 0 else '')
+    mp_filename = 'fig_mp_{}.png'.format(phylogeny.patient.name)
     mp_cmd = 'circos -outputfile {}'.format(mp_filename)
     return_code = call(mp_cmd, shell=True, cwd=output_directory)
 

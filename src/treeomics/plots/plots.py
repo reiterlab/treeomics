@@ -131,7 +131,7 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
     y_spacing = 1
     label_x_pos = -2
     label_y_pos = 0
-    cb_width = 30.0
+    cb_width = 35.0
 
     if isinstance(phylogeny, SimplePhylogeny):
         displayed_mutations = [mut_idx for mut_idx in phylogeny.conflicting_mutations]

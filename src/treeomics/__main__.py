@@ -159,7 +159,7 @@ def main():
                         help="minimum reliability score of a mutation pattern with putative subclones",
                         type=float, default=settings.MIN_SC_SCORE)
 
-    parser.add_argument("-e", "--errorrate", help="data error rate for bayesian inference",
+    parser.add_argument("-e", "--error_rate", help="data error rate for bayesian inference",
                         type=float, default=settings.BI_E)
 
     args = parser.parse_args()
@@ -313,7 +313,7 @@ def main():
                 # show only the different patterns and not the individual variants
                 # (convenient for large numbers of variants)
                 mp_graph_name = mp_graph.create_mp_graph(
-                    fn_pattern, phylogeny, phylogeny.cfg_nodes, phylogeny.cfg_node_scores,
+                    fn_pattern, phylogeny, phylogeny.nodes, phylogeny.node_scores,
                     output_directory=output_directory, min_node_weight=settings.MIN_MP_SCORE,
                     max_no_mps=settings.MAX_NO_MPS)
 

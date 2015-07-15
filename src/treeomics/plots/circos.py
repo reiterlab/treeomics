@@ -370,7 +370,7 @@ def create_mlh_graph_files(res_nodes_filename, res_mutnode_labels_filename, res_
 
 
 def create_mp_graph_files(mp_nodes_filename, mp_mutnode_data_filename, mp_links_filename,
-                          phylogeny, mps, mp_weights, min_node_weight=0.25, max_no_mps=50):
+                          phylogeny, mps, mp_weights, min_node_weight=0.25, max_no_mps=50, pars_infor=False):
     """
     Create the circos data files for the mutation pattern overview graph
     :param mp_nodes_filename: output filename for the nodes
@@ -382,19 +382,19 @@ def create_mp_graph_files(mp_nodes_filename, mp_mutnode_data_filename, mp_links_
     :param min_node_weight: minimal reliability score of a mutation pattern to be displayed
                             if there are more than max_no_mps of MPs
     :param max_no_mps: apply min_node_weight if there are more than this number of MPs
-    :return:
+    :param pars_infor: show only parsimony informative mutation patterns
     """
 
     # creates three data files: (i) basic nodes (clones), (ii) labels for mutations per node,
     # (iii) mutation pattern per node
-    mp_nodes = _create_mp_nodes_files(mp_nodes_filename, mp_mutnode_data_filename, phylogeny,
-                                      mps, mp_weights, min_node_weight=min_node_weight, max_no_mps=max_no_mps)
+    mp_nodes = _create_mp_nodes_files(mp_nodes_filename, mp_mutnode_data_filename, phylogeny, mps, mp_weights,
+                                      min_node_weight=min_node_weight, max_no_mps=max_no_mps, pars_infor=pars_infor)
 
     _create_cfg_links_file(mp_links_filename, phylogeny, mp_nodes)
 
 
 def _create_mp_nodes_files(mp_nodes_filename, mp_mutnode_data_filename, phylogeny, mps, mp_weights,
-                           min_node_weight=0.25, max_no_mps=50):
+                           min_node_weight=0.25, max_no_mps=50, pars_infor=False):
     """
     Create a space separated file with all nodes (clones) in the mutation pattern overview graph
     The format is as given here:
@@ -408,7 +408,8 @@ def _create_mp_nodes_files(mp_nodes_filename, mp_mutnode_data_filename, phylogen
     :param min_node_weight: minimal reliability score of a mutation pattern to be displayed
                             if there are more than max_no_mps of MPs
     :param max_no_mps: apply min_node_weight if there are more than this number of MPs
-    :return: mp_nodes: mapping from clones (nodes) to node id in the circos files
+    :param pars_infor: show only parsimony informative mutation patterns
+    :return: mp_nodes: mapping from mutation patterns (nodes) to node id in the circos files
     """
 
     logger.debug('Creating circos mutation pattern overview graph nodes files: {}, {}'.format(
@@ -428,6 +429,10 @@ def _create_mp_nodes_files(mp_nodes_filename, mp_mutnode_data_filename, phylogen
         # and generate the circus input with the node size according to the
         # the number of mutations in the clone
         for node_idx, node in enumerate(sorted(mps, key=lambda k: -mp_weights[k]), 1):
+
+            if pars_infor:
+                if len(node) < 2:
+                    continue
 
             mp_nodes[node] = node_idx
             # write node id to file
