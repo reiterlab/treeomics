@@ -3,7 +3,7 @@
 __author__ = 'jreiter'
 
 import logging
-from phylogeny.phylogeny import TREE_ROOT
+from phylogeny.phylogeny_utils import TREE_ROOT
 
 # get logger for application
 logger = logging.getLogger('treeomics')

@@ -11,7 +11,7 @@ from patient import Patient
 import settings
 import tree_inference as ti
 from utils.html_report import HTMLReport
-import plots.plots as plts
+import plots.plots_utils as plts
 import plots.mp_graph as mp_graph
 import plots.circos as circos
 import utils.analysis as analysis
@@ -122,7 +122,7 @@ def main():
     parser.add_argument("-m", "--mode", help="running mode: 1...fast (one mutation pattern per variant), "
                                              "2...complete (explore full solution space), "
                                              "3...separate conflicting subclones.",
-                        type=int, default=1)        # TODO: set default to 0
+                        type=int, default=2)        # TODO: set default to 0
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-v", "--vcf_file", help="path to the VCF file", type=str)

@@ -12,7 +12,7 @@ import numpy as np
 import networkx as nx
 import sys
 import phylogeny.cplex_solver as cps
-from phylogeny.phylogeny import Phylogeny
+from phylogeny.phylogeny_utils import Phylogeny
 
 
 # get logger for application

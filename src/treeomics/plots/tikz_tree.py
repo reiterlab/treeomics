@@ -4,7 +4,7 @@ import logging
 import copy
 import networkx as nx
 import utils.latex_output as latex_output
-from phylogeny.phylogeny import TREE_ROOT
+from phylogeny.phylogeny_utils import TREE_ROOT
 from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
 
 # get logger for application

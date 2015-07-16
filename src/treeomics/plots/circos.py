@@ -5,7 +5,7 @@ __author__ = 'Johannes REITER'
 import logging
 import os
 from itertools import chain
-from plots.plots import _format_gene_name
+from plots.plots_utils import _format_gene_name
 from phylogeny.simple_phylogeny import SimplePhylogeny
 from phylogeny.max_lh_phylogeny import MaxLHPhylogeny
 

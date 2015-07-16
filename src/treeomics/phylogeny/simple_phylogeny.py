@@ -9,8 +9,8 @@ import sys
 import numpy as np
 from collections import defaultdict
 from itertools import islice
-from phylogeny.phylogeny import Phylogeny, create_conflict_graph
 import phylogeny.cplex_solver as cps
+from phylogeny.phylogeny_utils import Phylogeny, create_conflict_graph
 # import conflict_solver as cf
 
 
