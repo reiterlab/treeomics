@@ -90,7 +90,7 @@ class Patient(object):
 
         # holds a dictionary with a frozenset of samples mapping to a set of mutations
         # present in exactly the same set
-        self.clones = None
+        self.mps = None         # mutation patterns
         self.subclones = None
         self.sc_names = None
         self.updated_clones = None
@@ -716,7 +716,7 @@ class Patient(object):
                          + ' '.join((str((muts-len(self.founders)) if muts != -1 else -1)) for muts in cmuts[s1]))
 
         # clones are sharing its mutations in exactly the same samples (basis for the weighting scheme)
-        self.clones = defaultdict(set)
+        self.mps = defaultdict(set)
 
         # Compute all clones sharing mutations in exactly the same samples
         # Clones with mutations in all or only one sample are uninformative for
@@ -724,13 +724,13 @@ class Patient(object):
         for mut_idx, samples in self.mutations.items():
             # if 1 < len(samples) < len(self.sample_names):
             if 0 < len(samples):
-                self.clones[samples].add(mut_idx)
+                self.mps[samples].add(mut_idx)
 
         # show the 10 clones supported by the most mutations
-        for key, value in islice(sorted(self.clones.items(), key=lambda x: len(x[1]), reverse=True), 10):
+        for key, value in islice(sorted(self.mps.items(), key=lambda x: len(x[1]), reverse=True), 10):
             logger.debug('Clone {} shares mutations: {} '.format(str(key), value))
 
-        logger.info('Total number of clones (distinct mutation patterns): {}'.format(len(self.clones)))
+        logger.info('Total number of clones (distinct mutation patterns): {}'.format(len(self.mps)))
 
     def _filter_samples(self, min_sa_cov, min_sa_maf):
 

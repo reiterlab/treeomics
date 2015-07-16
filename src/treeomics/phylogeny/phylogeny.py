@@ -81,7 +81,8 @@ class Phylogeny(object):
         # prepare tree for meaningful output in the figures
         self._add_evolutionary_information(tree)
 
-        logger.info('Evolutionary tree from the given qualified set of clones as been inferred.')
+        logger.info('Inferred evolutionary tree from the compatible mutation patterns.')
+
         return tree
 
     def _add_evolutionary_information(self, tree):

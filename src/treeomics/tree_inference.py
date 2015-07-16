@@ -24,17 +24,19 @@ def infer_max_compatible_tree(filepath, patient):
     :return: evolutionary tree as graph
     """
 
-    phylogeny = SimplePhylogeny(patient, patient.clones)
+    phylogeny = SimplePhylogeny(patient, patient.mps)
 
     # infer the tree which as to ignore the least number of mutation
     # to derive a conflict-free tree
     simple_tree = phylogeny.find_max_compatible_tree()
+
+    # number of mutations inferred to be present in at least one sample
+    no_present_muts = len(phylogeny.compatible_mutations)+len(phylogeny.conflicting_mutations)
     caption = ('Phylogenetic tree illustrating the clonal evolution of cancer. '
                + 'The derivation of an evolutionary conflict-free tree required the exclusion '
                + 'of {} out of {} ({:.1%}) mutations.'.format(
-                 len(phylogeny.conflicting_mutations), len(get_present_mutations(patient.data, include_unknowns=False)),
-                 float(len(phylogeny.conflicting_mutations)) /
-                 len(get_present_mutations(patient.data, include_unknowns=False))))
+                 len(phylogeny.conflicting_mutations), no_present_muts,
+                 float(len(phylogeny.conflicting_mutations)) / no_present_muts))
 
     # TODO: show tree with mutation patterns determined by bayesian inference
 
@@ -74,7 +76,7 @@ def create_subclonal_tree(filepath, patient, min_sc_score, min_absent_cov=0):
     :param min_sc_score: minimum reliability score of  an incomp. mutation pattern that a subclone is considered
     :param min_absent_cov: minimum coverage for absent variant otherwise status is unknown
     """
-    phylogeny = SubclonalPhylogeny(patient, patient.clones)
+    phylogeny = SubclonalPhylogeny(patient, patient.mps)
 
     # infer the tree which as to ignore the least number of mutation
     # to derive a conflict-free tree
@@ -104,7 +106,7 @@ def create_max_lh_tree(file_path, patient):
     :return: evolutionary tree as graph
     """
 
-    mlh_pg = MaxLHPhylogeny(patient, patient.clones)
+    mlh_pg = MaxLHPhylogeny(patient, patient.mps)
 
     mlh_tree = mlh_pg.infer_max_lh_tree()
 

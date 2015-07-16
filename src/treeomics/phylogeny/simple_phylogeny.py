@@ -84,11 +84,20 @@ class SimplePhylogeny(Phylogeny):
         self.conflicting_mutations = set(mut for mp, muts in self.nodes.items() if len(mp) > 0 for mut in muts)
         self.compatible_mutations = [mut_idx for mut_idx in sorted(self.conflicting_mutations)]
 
+        founders = set()  # find all founding mutations according to the inferred solution
+        unique_mutations = defaultdict(set)  # find all private mutations for all samples
+
         # remove the minimum set of conflicting mutation patterns from the mutation lists
         # and compute the maximum compatible clones and mutation dictionaries
         for mp, muts in self.nodes.items():
             if mp not in self.conflicting_nodes and len(mp) > 0:
                 self.compatible_nodes[mp] = muts
+                if len(mp) == 1:      # unique (private) mutations
+                    for sa_idx in mp:
+                        unique_mutations[sa_idx] = muts
+                elif len(mp) == self.patient.n:
+
+                    founders = muts
 
         for compatible_clone, muts in self.compatible_nodes.items():
             for mut in muts:
@@ -102,16 +111,8 @@ class SimplePhylogeny(Phylogeny):
             len(self.conflicting_mutations), float(len(self.conflicting_mutations)) /
                 (len(self.compatible_mutations)+len(self.conflicting_mutations))))
 
-        # find all private mutations for all samples
-        unique_mutations = defaultdict(set)
-        for sample_idx in range(len(self.patient.sample_names)):
-            for unique_mut in self.patient.shared_muts[1]:
-                if unique_mut in self.patient.samples[sample_idx]:
-                    unique_mutations[sample_idx].add(unique_mut)
-
         # construct a phylogenetic tree from the conflict-free set of clones
-        self.compatible_tree = self.infer_evolutionary_tree(self.compatible_nodes, self.patient.founders.copy(),
-                                                            unique_mutations)
+        self.compatible_tree = self.infer_evolutionary_tree(self.compatible_nodes, founders, unique_mutations)
 
         return self.compatible_tree
 
