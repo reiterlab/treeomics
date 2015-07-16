@@ -225,7 +225,7 @@ def determine_graph_nodes(log_p0, sample_names, mut_keys, gene_names=None):
             node_scores[node] = -np.expm1(log_ml)
 
         logger.debug('Variant {} {} has pattern {} with probability {:.1e}.'.format(
-            mut_keys[mut_idx], '({})'.format(gene_names[mut_idx] if gene_names is not None else ''),
+            mut_keys[mut_idx], '({})'.format(gene_names[mut_idx]) if gene_names is not None else '',
             ', '.join(sample_names[sa_idx] for sa_idx in node), math.exp(log_ml)))
 
     # calculate the final reliability score of a mutation pattern of the probability that no mutation has that pattern
@@ -245,6 +245,7 @@ def determine_graph_nodes(log_p0, sample_names, mut_keys, gene_names=None):
     for node, score in islice(sorted(node_scores.items(), key=lambda k: -k[1]), 0, 50):
         if score < 0.001:
             break
-        logger.debug('Pattern {} has a reliability score of {:.2f}.'.format(node, score))
+        logger.debug('Pattern {} has a reliability score of {:.2f}.'.format(
+            ', '.join(sample_names[sa_idx] for sa_idx in node), score))
 
     return nodes, node_scores, mut_pattern_weights

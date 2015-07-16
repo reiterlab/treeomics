@@ -324,7 +324,8 @@ def main():
                 if mp_graph_name is not None:
                     html_report.add_mp_overview_graph(patient, phylogeny, mp_graph_name)
 
-                if phylogeny.conflicting_mutations < int_sets.MAX_MUTS_TABLE_PLOT:
+                # create plot only if there is enough space for all the incompatible mutations
+                if len(phylogeny.conflicting_mutations) < int_sets.MAX_MUTS_TABLE_PLOT:
                     # illustrative mutation table plot of incompatible mutation patterns
                     x_length, y_length = plts.create_incompatible_mp_table(
                         patient, os.path.join(output_directory, settings.incomp_mps_plot_prefix+fn_pattern),

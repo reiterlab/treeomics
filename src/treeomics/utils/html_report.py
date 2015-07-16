@@ -326,15 +326,24 @@ class HTMLReport(object):
         self.file.write(self._inds[self._ind]+header+'\n')
 
         # build up output data sequentially
-        for mut_idx in sorted(phylogeny.conflicting_mutations, key=lambda k: pat.gene_names[k].lower()):
+        if pat.gene_names is not None:
+            for mut_idx in sorted(phylogeny.conflicting_mutations, key=lambda k: pat.gene_names[k].lower()):
 
-            self.file.write(
-                self._inds[self._ind] + '<tr><td><em>{}</em> ({})</td> {} </tr>\n'.format(
-                    pat.gene_names[mut_idx], pat.mut_keys[mut_idx],
-                    ' '.join('<td> {}/{} </td>'.format(
-                        pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
-                        pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]) for sa_idx, sa_name in
-                        enumerate(sorted(pat.sample_names)))))
+                self.file.write(
+                    self._inds[self._ind] + '<tr><td><em>{}</em> ({})</td> {} </tr>\n'.format(
+                        pat.gene_names[mut_idx], pat.mut_keys[mut_idx],
+                        ' '.join('<td> {}/{} </td>'.format(
+                            pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                            pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]) for sa_idx, sa_name in
+                            enumerate(sorted(pat.sample_names)))))
+        else:
+            for mut_idx in sorted(phylogeny.conflicting_mutations, key=lambda k: pat.mut_keys[k].lower()):
+                self.file.write(
+                    self._inds[self._ind] + '<tr><td>{}</td> {} </tr>\n'.format(
+                        pat.mut_keys[mut_idx], ' '.join('<td> {}/{} </td>'.format(
+                            pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                            pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]) for sa_idx, sa_name in
+                            enumerate(sorted(pat.sample_names)))))
 
         self._ind -= 1      # indentation level decreases by 1
         self.file.write(self._inds[self._ind]+'</table>\n')
