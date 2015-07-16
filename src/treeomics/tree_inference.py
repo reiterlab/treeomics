@@ -38,8 +38,6 @@ def infer_max_compatible_tree(filepath, patient):
                  len(phylogeny.conflicting_mutations), no_present_muts,
                  float(len(phylogeny.conflicting_mutations)) / no_present_muts))
 
-    # TODO: show tree with mutation patterns determined by bayesian inference
-
     # create tikz figure
     tikz.create_figure_file(simple_tree, tikz.TREE_ROOT, filepath,
                             patient, caption, True)

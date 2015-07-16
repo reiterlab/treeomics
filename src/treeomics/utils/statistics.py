@@ -57,8 +57,8 @@ def find_significant_mutations(p_values, fdr):
         if p_value <= fdr * i / len(p_values):
             sig_muts.add(key)
         else:
-            logger.info('All variants with a p-value greater than {} (threshold: >{}) are not significantly mutated.'
-                        .format(p_value, fdr * i / len(p_values)))
+            logger.info('All variants with a p-value greater than {:.3e} (threshold: >{:.5e}) '.format(
+                p_value, fdr * i / len(p_values)) + 'are not significantly mutated.')
             break
 
     logger.info('{} variants out of {} are significantly mutated.'.format(len(sig_muts), len(p_values)))
@@ -79,7 +79,7 @@ def loglp(n, k, p, e):
     return k*math.log((p*(1-e) + (1-p)*e)) + (n-k)*math.log((p*e+(1-p)*(1-e)))
 
 
-def get_p0(n, k, e, c0):
+def get_log_p0(n, k, e, c0):
     """
     Returns the (log) probability that the variant is absent
     :param n: coverage (number of reads)

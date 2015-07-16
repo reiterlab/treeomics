@@ -96,53 +96,60 @@ def add_ignored_mut_info(filename, phylogeny, tree):
 
             latex_file.write('\\begin{comment} \n')
 
+            mut_keys = phylogeny.patient.mut_keys
             gene_names = phylogeny.patient.gene_names
             driver_pathways = phylogeny.patient.driver_pathways
 
             # print the list of mutations which need to be excluded from the derivation
-            # such that no deletions are necessary
-            if len(gene_names):
-                latex_file.write('\\noindent \n')
-                latex_file.write('\\textbf{Ignored mutations ('+str(len(phylogeny.conflicting_mutations))+'): } \n')
+            # such that all variants allow a perfect and persistent phylogeny
+            latex_file.write('\\noindent \n')
+            latex_file.write('\\textbf{Ignored mutations ('+str(len(phylogeny.conflicting_mutations))+'): } \n')
+            if gene_names is not None:
                 latex_file.write(', '.join(sorted('\\textcolor{orange}{'+gene_names[mut]+'} ('+driver_pathways[mut]
                                            + ')' for mut in phylogeny.conflicting_mutations if mut in driver_pathways)
                                            + sorted(gene_names[mut] for mut in phylogeny.conflicting_mutations
                                                     if mut not in driver_pathways)))
 
+            latex_file.write(', '.join(sorted('\\textcolor{orange}{'+mut_keys[mut]+'} ('+driver_pathways[mut]
+                                       + ')' for mut in phylogeny.conflicting_mutations if mut in driver_pathways)
+                                       + sorted(mut_keys[mut] for mut in phylogeny.conflicting_mutations
+                                                if mut not in driver_pathways)))
+
             # add a list with all edges and all their variation events
-            if len(gene_names):
-                latex_file.write('\n\n\\noindent \n')
-                latex_file.write('\\textbf{Variation events on each edge:} \n')
-                latex_file.write('\\footnotesize \n')
-                latex_file.write('\\begin{itemize} \n')
+            latex_file.write('\n\n\\noindent \n')
+            latex_file.write('\\textbf{Variation events on each edge:} \n')
+            latex_file.write('\\footnotesize \n')
+            latex_file.write('\\begin{itemize} \n')
 
-                # process edges in through a first in first out queue
-                fifo_queue = list()
+            # process edges in through a first in first out queue
+            fifo_queue = list()
 
-                # add edges to queue in level order
-                for child in tree.successors(TREE_ROOT):
-                    fifo_queue.append((TREE_ROOT, child))
+            # add edges to queue in level order
+            for child in tree.successors(TREE_ROOT):
+                fifo_queue.append((TREE_ROOT, child))
 
-                while len(fifo_queue):
+            while len(fifo_queue):
 
-                    # take first node of the first in first out queue and process it
-                    parent, child = fifo_queue.pop(0)
+                # take first node of the first in first out queue and process it
+                parent, child = fifo_queue.pop(0)
 
-                    latex_file.write('\t\\item \\textbf{'+str(tree.node[parent]['name'])
-                                     + ' to '+str(tree.node[child]['name'])+'}: ')
-                    if len(tree[parent][child]['muts']) > 0:
-                        latex_file.write(
-                            '\\\\ \nAcquired mutations: ' + ', '.join(
-                                sorted(('\\textcolor{orange}{'+gene_names[m]+'} (' + driver_pathways[m] + ')')
-                                       for m in tree[parent][child]['muts'] if m in driver_pathways)
-                                + sorted(gene_names[m] for m in tree[parent][child]['muts']
-                                         if m not in driver_pathways)))
-                        latex_file.write('\n\n')
+                latex_file.write('\t\\item \\textbf{'+str(tree.node[parent]['name'])
+                                 + ' to '+str(tree.node[child]['name'])+'}: ')
+                if len(tree[parent][child]['muts']) > 0:
+                    latex_file.write(
+                        '\\\\ \nAcquired mutations: ' + ', '.join(
+                            sorted(('\\textcolor{orange}{'+mut_keys[m]
+                                    + ('({)'.format(gene_names[m]) if gene_names is not None else '')
+                                    + '} (' + driver_pathways[m] + ')')
+                                   for m in tree[parent][child]['muts'] if m in driver_pathways)
+                            + sorted(mut_keys[m]+(' ({)'.format(gene_names[m]) if gene_names is not None else '')
+                                     for m in tree[parent][child]['muts'] if m not in driver_pathways)))
+                    latex_file.write('\n\n')
 
-                    if len(tree.successors(child)):
-                        # add edges to queue in level order
-                        for grandchild in tree.successors(child):
-                            fifo_queue.append((child, grandchild))
+                if len(tree.successors(child)):
+                    # add edges to queue in level order
+                    for grandchild in tree.successors(child):
+                        fifo_queue.append((child, grandchild))
 
                 latex_file.write('\\end{itemize} \n')
                 latex_file.write('\\end{comment} \n\n')

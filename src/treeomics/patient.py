@@ -9,13 +9,15 @@ from itertools import islice
 import re
 import heapq
 import numpy as np
+import math
 import settings
+import utils.int_settings as int_sets
 from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
 from utils.vcf_parser import read_vcf_files
 from utils.data_tables import read_mutation_table
 from utils.statistics import calculate_present_pvalue, find_significant_mutations
 from utils.vaf_data import get_shared_mutations, get_present_mutations, calculate_p_values
-from utils.statistics import get_p0
+from utils.statistics import get_log_p0
 
 # get logger for application
 logger = logging.getLogger('treeomics')
@@ -73,11 +75,11 @@ class Patient(object):
 
         self.n = 0      # read samples
         # holds the names for the numbered samples
-        self.sample_names = []
+        self.sample_names = None
         # holds the names of the numbered mutations
-        self.mut_keys = []
+        self.mut_keys = None
         # holds the gene names of the numbered mutations
-        self.gene_names = []
+        self.gene_names = None
         # holds the function of the numbered mutation, e.g. intronic, extronic, etc.
         self.mut_functions = []
         # holds the data about the mutation: chromosome, start position, and end position
@@ -177,6 +179,9 @@ class Patient(object):
         self.unknowns = [Counter() for _ in range(2)]
         self.negatives = Counter()
 
+        self.mut_keys = []
+        self.gene_names = []
+
         for mut_key, gene_name in gene_names.items():
 
             # add mutation name
@@ -233,8 +238,11 @@ class Patient(object):
 
                 # calculate posterior: log probability that VAF = 0
                 self.log_p0[len(self.mut_keys)-1].append(
-                    get_p0(self.phred_coverage[mut_key][sample_name], self.mut_reads[mut_key][sample_name],
+                    get_log_p0(self.phred_coverage[mut_key][sample_name], self.mut_reads[mut_key][sample_name],
                            self.bi_error_rate, self.bi_c0))
+                # logger.debug('p0: {;.2e}, k: {}, n: {}.'.format(
+                #     self.log_p0[len(self.mut_keys)-1], self.mut_reads[mut_key][sample_name],
+                #     self.phred_coverage[mut_key][sample_name]))
 
         for sample_name in self.sample_names:
             logger.info('Sample {} classifications: '.format(sample_name)
@@ -430,6 +438,9 @@ class Patient(object):
         heap = []
         tmp_vars = []
 
+        self.sample_names = []
+        self.mut_keys = []
+
         # take first variant from all samples
         for sample_name, sample in sorted(samples.items(), key=lambda x: x[0]):
             heapq.heappush(heap, (heapq.heappop(sample.variants), sample_name))
@@ -499,6 +510,9 @@ class Patient(object):
         self.unknowns = [Counter() for _ in range(2)]
         self.negatives = Counter()
 
+        # posterior log probability if no data was reported
+        non_log_p0 = math.log(int_sets.NO_DATA_P0)
+
         # - - - - - - - - CLASSIFY MUTATIONS - - - - - - - - -
         for mut_id, mut_key in enumerate(self.mut_keys):
 
@@ -533,9 +547,17 @@ class Patient(object):
                         self.unknowns[1][sample_name] += 1
 
                 # calculate posterior: log probability that VAF = 0
-                self.log_p0[mut_id].append(
-                    get_p0(self.phred_coverage[mut_key][sample_name], self.mut_reads[mut_key][sample_name],
-                           self.bi_error_rate, self.bi_c0))
+                if self.phred_coverage[mut_key][sample_name] < 0:   # no sequencing data in this sample
+                    self.log_p0[mut_id].append(non_log_p0)
+
+                else:                                               # calculate posterior according to prior and data
+                    self.log_p0[mut_id].append(
+                        get_log_p0(self.phred_coverage[mut_key][sample_name], self.mut_reads[mut_key][sample_name],
+                                   self.bi_error_rate, self.bi_c0))
+
+                # logger.debug('p0: {:.2e}, k: {}, n: {}.'.format(
+                #     self.log_p0[mut_id][len(self.log_p0[mut_id])-1], self.mut_reads[mut_key][sample_name],
+                #     self.phred_coverage[mut_key][sample_name]))
 
         for sample_name in self.sample_names:
             logger.info('Sample {} classifications: '.format(sample_name)

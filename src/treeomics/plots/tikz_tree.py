@@ -24,7 +24,8 @@ def create_figure_file(tree, tree_root_key, filename, patient, figure_caption, s
             latex_output.write_figure_header(latex_file, standalone)
 
             # generate tikz tree and write it to the opened file
-            _write_tikz_tree(tree, tree_root_key, latex_file, 0, patient, patient.gene_names)
+            _write_tikz_tree(tree, tree_root_key, latex_file, 0, patient,
+                             gene_names=patient.gene_names, mut_keys=patient.mut_keys)
 
             # generate latex file footers
             latex_output.write_figure_footer(latex_file, figure_caption, standalone)
@@ -36,7 +37,7 @@ def create_figure_file(tree, tree_root_key, filename, patient, figure_caption, s
         logger.exception("Unexpected error occurred during tikz file generation: ")
 
 
-def _write_tikz_tree(tree, cur_node, latex_file, level, patient, gene_names):
+def _write_tikz_tree(tree, cur_node, latex_file, level, patient, gene_names=None, mut_keys=None):
     """
     Run recursively through the tree and write the tree in tikz format to the opened file
     """
@@ -77,21 +78,16 @@ def _write_tikz_tree(tree, cur_node, latex_file, level, patient, gene_names):
 
             # mutations which have been acquired on the edge from the parent to this child
             if 'muts' in tree[cur_node][child] and len(tree[cur_node][child]['muts']) > 0:
-                if len(gene_names):
+                if gene_names is not None:
                     latex_file.write(pre+'\t% Acquired mutations ({}): '.format(len(tree[cur_node][child]['muts']))
                                      + ', '.join(sorted(gene_names[m] for m in tree[cur_node][child]['muts']))+'\n')
+                if mut_keys is not None:
+                    latex_file.write(pre+'\t% Acquired mutations ({}): '.format(len(tree[cur_node][child]['muts']))
+                                     + ', '.join(sorted(mut_keys[m] for m in tree[cur_node][child]['muts']))+'\n')
                 latex_file.write(pre+'\t% Acquired mutations ({}): '.format(len(tree[cur_node][child]['muts']))
                                  + ','.join(sorted((str(m) for m in tree[cur_node][child]['muts']), key=int))+'\n')
 
-            # mutations which have been lost on the edge from the parent to this child
-            if 'dels' in tree[cur_node][child] and len(tree[cur_node][child]['dels']) > 0:
-                if len(gene_names):
-                    latex_file.write(pre+'\t% Lost mutations ({}): '.format(len(tree[cur_node][child]['dels']))
-                                     + ', '.join(sorted(gene_names[m] for m in tree[cur_node][child]['dels']))+'\n')
-                latex_file.write(pre+'\t% Lost mutations ({}): '.format(len(tree[cur_node][child]['dels']))
-                                 + ','.join(sorted((str(m) for m in tree[cur_node][child]['dels']), key=int))+'\n')
-
-            _write_tikz_tree(tree, child, latex_file, level+1, patient, gene_names)
+            _write_tikz_tree(tree, child, latex_file, level+1, patient, gene_names=gene_names, mut_keys=mut_keys)
 
         latex_file.write(pre+']\n')
 

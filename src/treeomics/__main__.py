@@ -9,6 +9,7 @@ import os
 import argparse
 from patient import Patient
 import settings
+import utils.int_settings as int_sets
 import tree_inference as ti
 from utils.html_report import HTMLReport
 import plots.plots_utils as plts
@@ -210,8 +211,7 @@ def main():
         patient = Patient(patient_name, min_absent_cov=min_absent_cov)
         read_no_samples = patient.read_raw_data(
             read_table, cov_table, dis_cov_table, fpr, fdr, min_absent_cov, args.min_median_coverage,
-            args.min_median_maf, error_rate=args.error_rate, c0=settings.BI_C0,
-            excluded_columns={normal_sample_name})      # excluded (=normal) samples
+            args.min_median_maf, excluded_columns={normal_sample_name})      # excluded (=normal) samples
         # 'LiM_2' Pam01
         # 'LiM_7', 'LiM_8', 'PT_18' Pam02
         # 'LiM_5', 'LuM_2', 'LuM_3', 'PT_12' Pam03
@@ -274,7 +274,7 @@ def main():
         else:
             col_labels = [mut_key for mut_key in patient.mut_keys]
 
-        if len(col_labels) < 1000 and plots_report:
+        if len(col_labels) < int_sets.MAX_MUTS_TABLE_PLOT and plots_report:
             mut_table_name = 'mut_table_'+fn_pattern
             plts.hinton(patient.data, os.path.join(output_directory, mut_table_name),
                         row_labels=patient.sample_names, column_labels=col_labels,
@@ -324,15 +324,20 @@ def main():
                 if mp_graph_name is not None:
                     html_report.add_mp_overview_graph(patient, phylogeny, mp_graph_name)
 
-                # illustrative mutation table plot of incompatible mutation patterns
-                x_length, y_length = plts.create_incompatible_mp_table(
-                    patient, os.path.join(output_directory, settings.incomp_mps_plot_prefix+fn_pattern),
-                    phylogeny, row_labels=patient.sample_names, column_labels=col_labels)
+                if phylogeny.conflicting_mutations < int_sets.MAX_MUTS_TABLE_PLOT:
+                    # illustrative mutation table plot of incompatible mutation patterns
+                    x_length, y_length = plts.create_incompatible_mp_table(
+                        patient, os.path.join(output_directory, settings.incomp_mps_plot_prefix+fn_pattern),
+                        phylogeny, row_labels=patient.sample_names, column_labels=col_labels)
 
-                # add information about evolutionarily incompatible mutation patterns to the HTML report
-                html_report.add_inc_mp_information(
-                    phylogeny, incomp_mps_plot_filepath=settings.incomp_mps_plot_prefix+fn_pattern+'.png',
-                    plot_width=x_length*7)
+                    # add information about evolutionarily incompatible mutation patterns to the HTML report
+                    html_report.add_inc_mp_information(
+                        phylogeny, incomp_mps_plot_filepath=settings.incomp_mps_plot_prefix+fn_pattern+'.png',
+                        plot_width=x_length*7)
+                else:
+                    # too many evolutionarily incompatible mutation to create mutation table plot
+                    # add information about evolutionarily incompatible mutation patterns to the HTML report
+                    html_report.add_inc_mp_information(phylogeny)
 
             # do mutation pattern robustness analysis through down-sampling
             if args.down > 0:
