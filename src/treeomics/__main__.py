@@ -122,7 +122,7 @@ def main():
     parser.add_argument("-m", "--mode", help="running mode: 1...fast (one mutation pattern per variant), "
                                              "2...complete (explore full solution space), "
                                              "3...separate conflicting subclones.",
-                        type=int, default=2)        # TODO: set default to 0
+                        type=int, default=1)        # TODO: set default to 0
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-v", "--vcf_file", help="path to the VCF file", type=str)
@@ -185,6 +185,10 @@ def main():
     logger.info('False discovery rate for the statistical test: {}.'.format(fdr))
     min_absent_cov = args.min_absent_coverage
     logger.info('Minimum coverage for an absent variant: {} (otherwise unknown)'.format(min_absent_cov))
+
+    # ##########################################################################################################
+    # ############################################### LOAD DATA ################################################
+    # ##########################################################################################################
 
     # take mutant read and coverage tables to calculate positives, negatives, and unknowns
     if args.mut_reads and args.mut_cov:

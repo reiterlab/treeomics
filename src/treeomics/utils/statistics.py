@@ -106,7 +106,7 @@ def get_p0(n, k, e, c0):
             logger.debug("Posterior calculation yielded very large relative error")
 
     elif float(k)/n >= e:     # approximation is easy: gamma approximation
-        logger.debug("Using gamma approx")
+        # logger.debug("Using gamma approx")
         # approximate the integral to be performed as a beta function after a small change of variables
         nonzero_integral = gammaln(k+1) + gammaln(n-k+1) - gammaln(n+2) - math.log(1-2*e)
 

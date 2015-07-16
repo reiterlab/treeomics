@@ -26,7 +26,7 @@ class Patient(object):
     """ Patient: sample data processing
     """
 
-    def __init__(self, pat_name='Patient', min_absent_cov=0):
+    def __init__(self, pat_name='Patient', min_absent_cov=0, error_rate=0.01, c0=0.5):
         """
         Constructor
         """
@@ -41,6 +41,8 @@ class Patient(object):
 
         # posterior: log probability that VAF = 0
         self.log_p0 = defaultdict(list)
+        self.bi_error_rate = error_rate     # sequencing error rate for bayesian inference
+        self.bi_c0 = c0    # prior mixture parameter of delta function and uniform distribution for bayesian inference
 
         # raw sequencing data of the variants
         self.mut_reads = None
@@ -102,8 +104,7 @@ class Patient(object):
         self.sim_coff = None        # Jaccard similarity coefficient between any pair of samples
 
     def read_raw_data(self, read_table, cov_table, dis_cov_table, false_positive_rate, false_discovery_rate,
-                      min_absent_cov, min_sa_cov, min_sa_maf, excluded_columns=set(),
-                      error_rate=0.01, c0=0.5):
+                      min_absent_cov, min_sa_cov, min_sa_maf, excluded_columns=set()):
         """
         Read raw sequencing data from tsv files
         :param read_table: path to file with mutant reads
@@ -115,8 +116,6 @@ class Patient(object):
         :param min_sa_cov: minimum median coverage per sample
         :param min_sa_maf: minimum median mutant allele frequency per sample
         :param excluded_columns: matched normal sample or other samples to be excluded from the analysis
-        :param error_rate: sequencing error for bayesian inference
-        :param c0: prior mixture parameter of delta function and uniform distribution for bayesian inference
         """
 
         # read sequencing data from tsv files
@@ -235,7 +234,7 @@ class Patient(object):
                 # calculate posterior: log probability that VAF = 0
                 self.log_p0[len(self.mut_keys)-1].append(
                     get_p0(self.phred_coverage[mut_key][sample_name], self.mut_reads[mut_key][sample_name],
-                           error_rate, c0))
+                           self.bi_error_rate, self.bi_c0))
 
         for sample_name in self.sample_names:
             logger.info('Sample {} classifications: '.format(sample_name)
@@ -533,6 +532,11 @@ class Patient(object):
                         self.data[mut_id].append(NEG_UNKNOWN)
                         self.unknowns[1][sample_name] += 1
 
+                # calculate posterior: log probability that VAF = 0
+                self.log_p0[mut_id].append(
+                    get_p0(self.phred_coverage[mut_key][sample_name], self.mut_reads[mut_key][sample_name],
+                           self.bi_error_rate, self.bi_c0))
+
         for sample_name in self.sample_names:
             logger.info('Sample {} classifications: '.format(sample_name)
                         + '{} positives; {} negatives; {} unknowns;'.format(
@@ -715,7 +719,7 @@ class Patient(object):
             logger.debug(self.sample_names[s1]+': '
                          + ' '.join((str((muts-len(self.founders)) if muts != -1 else -1)) for muts in cmuts[s1]))
 
-        # clones are sharing its mutations in exactly the same samples (basis for the weighting scheme)
+        # mutation patterns are sharing its mutations in exactly the same samples (basis for the weighting scheme)
         self.mps = defaultdict(set)
 
         # Compute all clones sharing mutations in exactly the same samples
@@ -728,9 +732,9 @@ class Patient(object):
 
         # show the 10 clones supported by the most mutations
         for key, value in islice(sorted(self.mps.items(), key=lambda x: len(x[1]), reverse=True), 10):
-            logger.debug('Clone {} shares mutations: {} '.format(str(key), value))
+            logger.debug('Mutation pattern {} shares mutations: {} '.format(str(key), value))
 
-        logger.info('Total number of clones (distinct mutation patterns): {}'.format(len(self.mps)))
+        logger.info('Total number of distinct mutation patterns: {}'.format(len(self.mps)))
 
     def _filter_samples(self, min_sa_cov, min_sa_maf):
 

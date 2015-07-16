@@ -17,7 +17,7 @@ FPR = 0.0023       # calculated false-positive rate for targeted sequencing
 #FPR = 0.01          # assumed false-positive rate in Illumina WGS data
 #FPR = 0.005          # assumed false-positive rate in Gundem et al. 2015
 FDR = 0.01          # targeted false-discovery rate
-BI_E = 0.005         # sequencing error for bayesian inference
+BI_E = 0.005         # sequencing error rate for bayesian inference
 BI_C0 = 0.5         # prior mixture parameter of delta function and uniform distribution for bayesian inference
 
 # minimum reliability score of a incompatible mutation pattern that a subclone of different origin is considered
