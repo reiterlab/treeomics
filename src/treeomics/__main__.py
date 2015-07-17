@@ -123,7 +123,7 @@ def main():
     parser.add_argument("-m", "--mode", help="running mode: 1...fast (one mutation pattern per variant), "
                                              "2...complete (explore full solution space), "
                                              "3...separate conflicting subclones.",
-                        type=int, default=2)        # TODO: set default to 0
+                        type=int, default=2)
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-v", "--vcf_file", help="path to the VCF file", type=str)
@@ -356,19 +356,32 @@ def main():
                 si_phylogeny = ti.infer_max_compatible_tree(
                     os.path.join(output_directory, 'fig_btree_'+fn_pattern+'.tex'), patient)
 
+                # TODO: maybe take overview graph of maximum likelihood model
+                # # create mutation pattern overview plot
+                # # show only the different patterns and not the individual variants
+                # # (convenient for large numbers of variants)
+                # mp_graph_name = mp_graph.create_mp_graph(
+                #     fn_pattern, si_phylogeny, si_phylogeny.nodes, si_phylogeny.node_scores,
+                #     output_directory=output_directory, min_node_weight=settings.MIN_MP_SCORE,
+                #     max_no_mps=settings.MAX_NO_MPS)
+                #
+                # if mp_graph_name is not None:
+                #     html_report.add_mp_overview_graph(patient, si_phylogeny, mp_graph_name)
+
+            phylogeny = ti.create_max_lh_tree(os.path.join(output_directory, 'fig_mlhtree_'+fn_pattern+'.tex'),
+                                              patient)
+
+            if plots_report:
                 # create mutation pattern overview plot
                 # show only the different patterns and not the individual variants
                 # (convenient for large numbers of variants)
                 mp_graph_name = mp_graph.create_mp_graph(
-                    fn_pattern, si_phylogeny, si_phylogeny.nodes, si_phylogeny.node_scores,
+                    fn_pattern, phylogeny, phylogeny.node_scores.keys(), phylogeny.node_scores,
                     output_directory=output_directory, min_node_weight=settings.MIN_MP_SCORE,
                     max_no_mps=settings.MAX_NO_MPS)
 
                 if mp_graph_name is not None:
-                    html_report.add_mp_overview_graph(patient, si_phylogeny, mp_graph_name)
-
-            phylogeny = ti.create_max_lh_tree(os.path.join(output_directory, 'fig_mlhtree_'+fn_pattern+'.tex'),
-                                              patient)
+                    html_report.add_mp_overview_graph(patient, phylogeny, mp_graph_name)
 
             # illustrative mutation table plot of incompatible mutation patterns and their putative artifacts
             x_length, y_length = plts.create_incompatible_mp_table(

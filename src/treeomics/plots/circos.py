@@ -501,7 +501,11 @@ def _create_cfg_links_file(cfg_links_filename, phylogeny, cfg_nodes):
                 continue
 
             # write link to file
-            links_file.write('n{} 0 {} '.format(cfg_nodes[source], len(phylogeny.cf_graph.node[source]['muts'])))
-            links_file.write('n{} 0 {}\n'.format(cfg_nodes[sink], len(phylogeny.cf_graph.node[sink]['muts'])))
+            links_file.write('n{} 0 {} '.format(
+                cfg_nodes[source],
+                len(phylogeny.cf_graph.node[source]['muts']) if 'muts' in phylogeny.cf_graph.node[source] else '1'))
+            links_file.write('n{} 0 {}\n'.format(
+                cfg_nodes[sink],
+                len(phylogeny.cf_graph.node[sink]['muts'] if 'muts' in phylogeny.cf_graph.node[sink] else '1')))
 
         logger.info('Circos conflict graph links file created: {}'.format(os.path.abspath(cfg_links_filename)))

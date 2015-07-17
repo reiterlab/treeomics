@@ -24,5 +24,5 @@ BI_C0 = 0.5         # prior mixture parameter of delta function and uniform dist
 MIN_SC_SCORE = 3.0
 
 # Minimal reliability score of the MPs in the mutation pattern overview graph if there are many MPs
-MIN_MP_SCORE = 0.5
+MIN_MP_SCORE = 1.0
 MAX_NO_MPS = 20     # apply MIN_MP_WEIGHT if there are more than this number of MPs in the data

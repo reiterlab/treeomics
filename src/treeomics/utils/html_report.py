@@ -6,6 +6,7 @@ __date__ = 'March 6, 2015'
 import logging
 import numpy as np
 import datetime
+import math
 from utils.int_settings import VERSION
 
 
@@ -283,8 +284,13 @@ class HTMLReport(object):
         self.file.write(
             self._inds[self._ind]+'<b>Mutation pattern overview graph of {} samples in patient {}.</b>\n'.format(
                 len(patient.sample_names), patient.name))
-        self.file.write(self._inds[self._ind]+'Treeomics inferred {} distinct MPs (mutation patterns).\n'.format(
-            len(phylogeny.nodes.keys())))
+        self.file.write(
+            self._inds[self._ind]
+            + 'Simplistic binary present/absent classification lead to {} distinct MPs (mutation patterns).\n'
+            .format(len(phylogeny.mps.keys())))
+        self.file.write(
+            self._inds[self._ind] + 'Treeomics probabilistically considered {:.0f} MPs.\n'.format(
+                math.pow(2, len(patient.sample_names))))
         self.file.write(self._inds[self._ind]+'Each circular line represents a distinct sample. '
                         + 'Inner to outer lines denote: '
                         + ', '.join(sa_name.replace('_', ' ') for sa_name in patient.sample_names)

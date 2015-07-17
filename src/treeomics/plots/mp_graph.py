@@ -153,7 +153,7 @@ def _create_mp_gr_conf_cir(phylogeny, filepath, fn_pattern):
         f.write('<ideogram>'+'\n')
         f.write('<spacing>'+'\n')
         f.write('# spacing between ideograms'+'\n')
-        f.write('default = {}r'.format(max(0.01, 1.0/len(phylogeny.nodes)))+'\n')
+        f.write('default = {}r'.format(max(0.01, 1.0/len(phylogeny.mps)))+'\n')
         f.write('</spacing>'+'\n')
         f.write('\n')
 
