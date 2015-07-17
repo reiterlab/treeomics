@@ -139,10 +139,10 @@ def add_ignored_mut_info(filename, phylogeny, tree):
                     latex_file.write(
                         '\\\\ \nAcquired mutations: ' + ', '.join(
                             sorted(('\\textcolor{orange}{'+mut_keys[m]
-                                    + ('({)'.format(gene_names[m]) if gene_names is not None else '')
+                                    + ('({})'.format(gene_names[m]) if gene_names is not None else '')
                                     + '} (' + driver_pathways[m] + ')')
                                    for m in tree[parent][child]['muts'] if m in driver_pathways)
-                            + sorted(mut_keys[m]+(' ({)'.format(gene_names[m]) if gene_names is not None else '')
+                            + sorted(mut_keys[m]+(' ({})'.format(gene_names[m]) if gene_names is not None else '')
                                      for m in tree[parent][child]['muts'] if m not in driver_pathways)))
                     latex_file.write('\n\n')
 

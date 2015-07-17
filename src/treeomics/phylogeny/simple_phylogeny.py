@@ -96,7 +96,6 @@ class SimplePhylogeny(Phylogeny):
                     for sa_idx in mp:
                         unique_mutations[sa_idx] = muts
                 elif len(mp) == self.patient.n:
-
                     founders = muts
 
         for compatible_clone, muts in self.compatible_nodes.items():

@@ -123,7 +123,7 @@ def main():
     parser.add_argument("-m", "--mode", help="running mode: 1...fast (one mutation pattern per variant), "
                                              "2...complete (explore full solution space), "
                                              "3...separate conflicting subclones.",
-                        type=int, default=1)        # TODO: set default to 0
+                        type=int, default=2)        # TODO: set default to 0
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-v", "--vcf_file", help="path to the VCF file", type=str)
@@ -296,7 +296,7 @@ def main():
     html_report.start_report()
     html_report.add_sequencing_information(
         patient, mut_table_path=mut_table_name+'.png' if mut_table_name is not None else None)
-    html_report.add_similarity_information(patient)
+    # html_report.add_similarity_information(patient)       # not relevant for this report
 
     # ############################################################################################
     # infer evolutionary compatible mutation patterns and subsequently evolutionary trees based on
@@ -363,7 +363,7 @@ def main():
                 # show only the different patterns and not the individual variants
                 # (convenient for large numbers of variants)
                 mp_graph_name = mp_graph.create_mp_graph(
-                    fn_pattern, si_phylogeny, si_phylogeny.cfg_nodes, si_phylogeny.cfg_node_scores,
+                    fn_pattern, si_phylogeny, si_phylogeny.nodes, si_phylogeny.node_scores,
                     output_directory=output_directory, min_node_weight=settings.MIN_MP_SCORE,
                     max_no_mps=settings.MAX_NO_MPS)
 
