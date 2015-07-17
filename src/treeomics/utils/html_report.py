@@ -283,14 +283,16 @@ class HTMLReport(object):
         self.file.write(
             self._inds[self._ind]+'<b>Mutation pattern overview graph of {} samples in patient {}.</b>\n'.format(
                 len(patient.sample_names), patient.name))
-        self.file.write(self._inds[self._ind]+'Treeomics inferred {} distinct MPs (mutation patterns)\n.'.format(
+        self.file.write(self._inds[self._ind]+'Treeomics inferred {} distinct MPs (mutation patterns).\n'.format(
             len(phylogeny.nodes.keys())))
         self.file.write(self._inds[self._ind]+'Each circular line represents a distinct sample. '
                         + 'Inner to outer lines denote: '
                         + ', '.join(sa_name.replace('_', ' ') for sa_name in patient.sample_names)
                         + '. Marks on these lines denote present variants. \n')
-        self.file.write(self._inds[self._ind]+'Labels denote the MP reliability scores. '
-                                              'Red colored MPs are evolutionarily incompatible.\n')
+        self.file.write(
+            self._inds[self._ind]+'Labels denote the MP reliability scores. '
+            + 'Blue colored nodes (MPs) are evolutionarily compatible '
+            + 'and red colored nodes are evolutionarily incompatible.\n')
 
         self.file.write(self._inds[self._ind]+'</figcaption>\n')
         self.file.write(self._inds[self._ind]+'</div>\n')

@@ -45,6 +45,8 @@ class Patient(object):
         self.log_p0 = defaultdict(list)
         self.bi_error_rate = error_rate     # sequencing error rate for bayesian inference
         self.bi_c0 = c0    # prior mixture parameter of delta function and uniform distribution for bayesian inference
+        logger.info('Bayesian inference model uses an error rate of {} and p0 prior weight of {}.'.format(
+            self.bi_error_rate, self.bi_c0))
 
         # raw sequencing data of the variants
         self.mut_reads = None

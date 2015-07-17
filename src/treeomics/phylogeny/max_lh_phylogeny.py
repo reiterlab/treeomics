@@ -39,6 +39,7 @@ class MaxLHPhylogeny(Phylogeny):
         self.max_lh_mutations = None
 
         # false positives and false negatives compared to original classification
+        # likely technical or biological artifacts in the data
         self.false_positives = None
         self.false_negatives = None
         self.false_negative_unknowns = None
@@ -48,10 +49,6 @@ class MaxLHPhylogeny(Phylogeny):
         self.mlh_founders = None
         self.mlh_unique_mutations = None
         self.mlh_absent_mutations = None
-
-        # variables used for resolving technical and biological artifacts in the data
-        self.no_incompatible_positions = None
-        self.incompatible_positions = None
 
         self.mlh_tree = None
 

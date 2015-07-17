@@ -208,7 +208,7 @@ def main():
         if patient_name.find('_') != -1:
             patient_name = patient_name[:patient_name.find('_')]
         logger.debug('Patient name: {}'.format(patient_name))
-        patient = Patient(patient_name, min_absent_cov=min_absent_cov)
+        patient = Patient(patient_name, min_absent_cov=min_absent_cov, error_rate=args.error_rate, c0=settings.BI_C0)
         read_no_samples = patient.read_raw_data(
             read_table, cov_table, dis_cov_table, fpr, fdr, min_absent_cov, args.min_median_coverage,
             args.min_median_maf, excluded_columns={normal_sample_name})      # excluded (=normal) samples
@@ -224,7 +224,7 @@ def main():
             usage()
 
         patient_name = get_patients_name(vcf_file)
-        patient = Patient(patient_name)
+        patient = Patient(patient_name, error_rate=args.error_rate, c0=settings.BI_C0)
         read_no_samples = patient.read_vcf_file(vcf_file, args.min_median_coverage, args.min_median_maf,
                                                 fpr, fdr, args.min_absent_coverage,
                                                 normal_sample_name=normal_sample_name)
@@ -239,7 +239,7 @@ def main():
 
         patient_name = get_patients_name(
             vcf_directory[:-1] if vcf_directory.endswith('/') else vcf_directory)
-        patient = Patient(patient_name)
+        patient = Patient(patient_name, error_rate=args.error_rate, c0=settings.BI_C0)
         read_no_samples = patient.read_vcf_directory(vcf_directory, args.min_median_coverage, args.min_median_maf,
                                                      fpr, fdr, min_absent_cov, normal_sample_name)
 
@@ -250,7 +250,7 @@ def main():
     # create output filename pattern
     fn_pattern = get_output_fn_template(patient.name, read_no_samples, fpr, fdr,
                                         min_absent_cov, args.min_median_coverage, args.min_median_maf,
-                                        bi_e=settings.BI_E, bi_c0=settings.BI_C0)
+                                        bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0)
     fn_pattern += '_s' if args.mode == 1 else ''
 
     if plots_report:   # deactivate plot generation for debugging
@@ -263,9 +263,6 @@ def main():
         # generate scatter plot about p-values of possibly present variants
         # plots.p_value_present_plot(os.path.join(output_directory, 'fig_p-present_'+patient.name+'.pdf'),
         #                            patient, fpr)
-        # generate scatter plot about p-values of possibly present variants
-        # plots.p_value_absent_plot(os.path.join(output_directory, 'fig_p-absent_'+patient.name+'.pdf'),
-        #                           patient, min_maf)
 
         # generate mutation table plot
         # show only mutations which are present in at least one sample

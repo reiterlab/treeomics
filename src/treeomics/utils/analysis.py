@@ -96,10 +96,11 @@ def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None,
         # if phylogeny is not None:
         if isinstance(phylogeny, SimplePhylogeny) and phylogeny.compatible_tree is not None:
             # how many mutations are are compatible on an evolutionary tree
-            analysis_file.write('# Phylogeny: {:.2%} ({} / {}) of all mutations are compatible '
-                                'on an evolutionary tree. \n'.format(
-                                float(len(phylogeny.compatible_mutations)) / no_present_mutations,
-                                len(phylogeny.compatible_mutations), no_present_mutations))
+            analysis_file.write(
+                '# Phylogeny: {:.2%} ({} / {}) of all mutations are compatible on an evolutionary tree. \n'.format(
+                    float(len(phylogeny.compatible_mutations)) / no_present_mutations,
+                    len(phylogeny.compatible_mutations), no_present_mutations))
+
             # Percentage of conflicting mutations versus shared mutations (excluding unique and founder mutations)
             # evidence for contradictions in the current evolutionary theory of cancer???
             # single cell sequencing will be need to shade light into this puzzle
@@ -125,24 +126,24 @@ def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None,
 
         if isinstance(phylogeny, MaxLHPhylogeny) and phylogeny.mlh_tree is not None:
             # how many positions are evolutionarily incompatible
-            analysis_file.write('# Resolved phylogeny: {} suspicious evolutionarily incompatible positions. \n'
-                                .format(phylogeny.no_incompatible_positions))
-            for mut_idx, samples in phylogeny.incompatible_positions.items():
+            analysis_file.write(
+                '# Maximum likelihood phylogeny: {} putative false-positives and {} putative false-negatives. \n'
+                .format(len(phylogeny.false_positives), len(phylogeny.false_negatives)))
 
-                if sum(1 for sa_idx in samples if patient.data[mut_idx][sa_idx] > 0) > 0:
-                    analysis_file.write('# Mutation {} should not be present in samples {}\n'.format(
-                        patient.mut_keys[mut_idx], ', '.join(patient.sample_names[sa_idx] for sa_idx in samples
-                                                             if patient.data[mut_idx][sa_idx] > 0)))
+            # add information about false-positives
+            for mut_idx, samples in phylogeny.false_positives.items():
+                analysis_file.write('# Putative false-positive of variant {} in samples {}\n'.format(
+                    patient.mut_keys[mut_idx], ', '.join(patient.sample_names[sa_idx] for sa_idx in samples)))
 
-                if sum(1 for sa_idx in samples if patient.data[mut_idx][sa_idx] == 0) > 0:
-                    analysis_file.write('# Mutation {} is missing in samples {}\n'.format(
-                        patient.mut_keys[mut_idx], ', '.join(patient.sample_names[sa_idx] for sa_idx in samples
-                                                             if patient.data[mut_idx][sa_idx] == 0)))
+            # add information about false-negatives
+            for mut_idx, samples in phylogeny.false_negatives.items():
+                analysis_file.write('# Putative false-negative of variant {} in samples {}\n'.format(
+                    patient.mut_keys[mut_idx], ', '.join(patient.sample_names[sa_idx] for sa_idx in samples)))
 
-                if sum(1 for sa_idx in samples if patient.data[mut_idx][sa_idx] < 0) > 0:
-                    analysis_file.write('# Mutation {} was unknown and missing in samples {}\n'.format(
-                        patient.mut_keys[mut_idx], ', '.join(patient.sample_names[sa_idx] for sa_idx in samples
-                                                             if patient.data[mut_idx][sa_idx] < 0)))
+            # add information about false-negatives due to too low coverage (unknowns)
+            for mut_idx, samples in phylogeny.false_negative_unknowns.items():
+                analysis_file.write('# Putative present mutation of unknown variant {} in samples {}\n'.format(
+                    patient.mut_keys[mut_idx], ', '.join(patient.sample_names[sa_idx] for sa_idx in samples)))
 
         analysis_file.write('id\tname\t'+('\t'.join(
             'pres'+str(shared) for shared in range(len(patient.sample_names), 0, -1)))
@@ -234,12 +235,11 @@ def print_genetic_distance_table(patient):
 
                     elif patient.data[mut_idx][s2_idx] == NEG_UNKNOWN:
                         # no indication of a mutation at this position but low coverage
-                        disagree += settings.EPSILON
+                        pass
 
                 elif patient.data[mut_idx][s1_idx] == 0:     # mutation absent
                     if patient.data[mut_idx][s2_idx] > 0:
                         no_known_variants += 1
-                        #dm[s1_idx][s2_idx] += 1    # disagree
                         disagree += 1
 
                     elif patient.data[mut_idx][s2_idx] == 0:   # agree
@@ -248,17 +248,17 @@ def print_genetic_distance_table(patient):
                     elif patient.data[mut_idx][s2_idx] == POS_UNKNOWN:
                         # indication of a mutation at this position but insufficient mutant reads
                         # maybe penalize distance with two epsilon
-                        disagree += settings.EPSILON
+                        pass
 
                 # mutation believed to be present but insufficient mutant reads
                 elif patient.data[mut_idx][s1_idx] == POS_UNKNOWN:
                     if patient.data[mut_idx][s2_idx] == 0:
-                        disagree += settings.EPSILON
+                        pass
 
                 # mutation believed to be absent but insufficient coverage
                 elif patient.data[mut_idx][s1_idx] == NEG_UNKNOWN:
                     if patient.data[mut_idx][s2_idx] > 0:
-                        disagree += settings.EPSILON
+                        pass
 
             gds[s1_idx][s2_idx] = disagree
             homogeneity[s1_idx][s2_idx] = float(present_agree) / no_known_variants
