@@ -119,11 +119,11 @@ def _write_tikz_tree(tree, cur_node, latex_file, level, patient, gene_names=None
             node_name = node_name[5:]
 
         if acquired_muts > 0:
-            sample_text = '\\node[black,draw,text width=1.09cm,inner sep=2pt,align=center]{' + node_name + '\\\\'
-            sample_text += '\\small{'+'{}'.format(acquired_muts-lost_muts)+'}'
+            sample_text = '\\node[black,draw,text width=1.09cm,inner sep=2pt,align=center]{' + node_name
+            # sample_text += '\\\\ \\small{'+'{}'.format(acquired_muts-lost_muts)+'}'
         else:
-            sample_text = '\\node[black,draw,text width=1.09cm,inner sep=2pt,align=center]{' + node_name + '\\\\'
-            sample_text += '\\small{'+'{}'.format(reported_muts)+'}'
+            sample_text = '\\node[black,draw,text width=1.09cm,inner sep=2pt,align=center]{' + node_name
+            # sample_text += '\\\\ \\small{'+'{}'.format(reported_muts)+'}'
 
         latex_file.write(pre+sample_text+'}; '+' \n')
         if acquired_muts > 0:

@@ -352,25 +352,11 @@ def main():
         elif args.mode == 2:     # find likely sequencing artifacts based on a bayesian inference model
 
             # determine mutation patterns based on standard binary classification to generate an overview graph
-            if plots_report:
-                si_phylogeny = ti.infer_max_compatible_tree(
-                    os.path.join(output_directory, 'fig_btree_'+fn_pattern+'.tex'), patient)
-
-                # TODO: maybe take overview graph of maximum likelihood model
-                # # create mutation pattern overview plot
-                # # show only the different patterns and not the individual variants
-                # # (convenient for large numbers of variants)
-                # mp_graph_name = mp_graph.create_mp_graph(
-                #     fn_pattern, si_phylogeny, si_phylogeny.nodes, si_phylogeny.node_scores,
-                #     output_directory=output_directory, min_node_weight=settings.MIN_MP_SCORE,
-                #     max_no_mps=settings.MAX_NO_MPS)
-                #
-                # if mp_graph_name is not None:
-                #     html_report.add_mp_overview_graph(patient, si_phylogeny, mp_graph_name)
 
             phylogeny = ti.create_max_lh_tree(os.path.join(output_directory, 'fig_mlhtree_'+fn_pattern+'.tex'),
                                               patient)
 
+            # determine mutation patterns based on standard binary classification to generate an overview graph
             if plots_report:
                 # create mutation pattern overview plot
                 # show only the different patterns and not the individual variants
