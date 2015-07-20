@@ -215,7 +215,8 @@ def infer_ml_graph_nodes(log_p0, sample_names, gene_names):
             node_scores[node] = sys.float_info.min
         node_scores[node] = -math.log(node_scores[node])
 
-    for node, score in sorted(node_scores.items(), key=lambda k: -k[1]):
+    # Show nodes with high reliability score
+    for node, score in islice(sorted(node_scores.items(), key=lambda k: -k[1]), 0, 50):
         logger.info('Pattern {} has a reliability score of {:.2e}.'.format(node, score))
 
     return node_scores, mp_col_ids, mp_weights

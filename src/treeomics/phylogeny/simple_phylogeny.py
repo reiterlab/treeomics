@@ -242,8 +242,6 @@ def determine_graph_nodes(log_p0, sample_names, mut_keys, gene_names=None):
 
     # Show nodes with high reliability score
     for node, score in islice(sorted(node_scores.items(), key=lambda k: -k[1]), 0, 50):
-        if score < 0.001:
-            break
         logger.debug('Pattern {} has a reliability score of {:.2f}.'.format(
             ', '.join(sample_names[sa_idx] for sa_idx in node), score))
 
