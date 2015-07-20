@@ -104,7 +104,7 @@ def hinton(data, filename, row_labels=None, column_labels=None, displayed_mutati
 
             ax.text(x_pos * width+(width/2)+0.2, label_y_pos+(height+y_spacing) * (len(data[mut_idx])),
                     _format_gene_name(column_labels[mut_idx], max_length=12),
-                    rotation='vertical', horizontalalignment='right', verticalalignment='bottom', fontsize=8)
+                    rotation='vertical', horizontalalignment='center', verticalalignment='bottom', fontsize=8)
 
     ax.autoscale_view()
 
