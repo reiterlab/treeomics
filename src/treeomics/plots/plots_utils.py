@@ -137,7 +137,7 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
         displayed_mutations = [mut_idx for mut_idx in phylogeny.conflicting_mutations]
     elif isinstance(phylogeny, MaxLHPhylogeny):
         displayed_mutations = [mut_idx for mut_idx in
-                               set(phylogeny.false_positives.keys() + phylogeny.false_negatives.keys())]
+                               set(phylogeny.false_positives.keys()).union(set(phylogeny.false_negatives.keys()))]
     # elif isinstance(phylogeny, SubclonalPhylogeny):
     #     logger.warning('Illustrative mutation table not yet implemented for subclonal detections.')
     #     return
