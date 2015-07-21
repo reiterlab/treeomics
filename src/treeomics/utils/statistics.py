@@ -71,9 +71,9 @@ def loglp(n, k, p, e):
     The log likelihood of p, the true variant fraction
     :param n: total coverage
     :param k: variant count
-    :param p:
+    :param p: variant allele frequency
     :param e: sequencing error rate
-    :return:
+    :return: log likelihood of p
     """
 
     return k*math.log((p*(1-e) + (1-p)*e)) + (n-k)*math.log((p*e+(1-p)*(1-e)))
