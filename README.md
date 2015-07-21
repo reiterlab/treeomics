@@ -3,7 +3,7 @@ Treeomics reconstructs the phylogeny of a cancer with commonly available sequenc
  
 ========
 
-### The easiest way to run Treeomics:
+#### The easiest way to run Treeomics:
 1. Open a terminal and clone the repository from GitHub with ```git clone https://github.com/johannesreiter/treeomics.git```
 2. Go into the new folder with ```cd treeomics\src```
 3. Type the following command to run the simulation: ```python treeomics -r <mut-reads table> -s <coverage table> -O``` 
@@ -11,8 +11,7 @@ where ```<mut-reads table>``` is the path to a tab-separated-value file with the
 reads reporting a variant (row) in each sample (column) and ```<coverage table>``` is the path to a tab-separated-value 
 file with the sequencing depth at the position of this variant in each sample.
 
-Usage: ```python treeomics -r <mut-reads table> -s <coverage table> | -v vcf_file | "
-                "-d vcf_file_directory  [-n normal_sample_name] -O```
+Usage: ```python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf file directory> [-n <normal sample name>] -O```
 
 ##### Examples:
 Example 1: ```python treeomics -r input/Makohon2015/Pam03_mutant_reads.txt -s input/Makohon2015/Pam03_phredcoverage.txt```  
