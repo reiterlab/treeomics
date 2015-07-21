@@ -19,7 +19,12 @@ def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None,
                          no_replications=0):
     """"
     Create a file with the main data analysis results
+    :param patient: instance of the class around the sequencing data of a subject
     :param min_sa_cov: minimum median coverage per sample
+    :param analysis_filepath: path to the output analysis file
+    :param phylogeny: instance of the phylogeny class
+    :param comp_node_frequencies: frequency of reproduced identified patterns (if down-sampling was performed)
+    :param no_replications: number of replications per down-sampled fraction of variants (if down-sampling)
     """
 
     logger.debug('Create analysis output file: {}'.format(analysis_filepath))
@@ -56,12 +61,6 @@ def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None,
 
         analysis_file.write('# Median coverage in the used samples of patient {}: {} (mean: {:.2f})\n'.format(
             patient.name, np.median(coverages), np.mean(coverages)))
-
-        # total number of exonic mutations if information is available
-        if patient.mut_functions is not None and len(patient.mut_functions):
-            no_exonic_muts = sum(1 for mut_func in patient.mut_functions if mut_func in settings.EXONIC_FILTER)
-            analysis_file.write('# Number of exonic mutations {}/{} (={:.3f}). \n'.format(
-                no_exonic_muts, no_present_mutations, (float(no_exonic_muts) / no_present_mutations)))
 
         analysis_file.write('# The average number of mutations per sample in patient {} is {}.\n'.format(patient.name,
                             (float(sum(len(muts) for sa_idx, muts in patient.samples.items()))
@@ -146,19 +145,13 @@ def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None,
                     patient.mut_keys[mut_idx], ', '.join(patient.sample_names[sa_idx] for sa_idx in samples)))
 
         analysis_file.write('id\tname\t'+('\t'.join(
-            'pres'+str(shared) for shared in range(len(patient.sample_names), 0, -1)))
-            + '\t' + ('exonic\t' if patient.mut_functions is not None and len(patient.mut_functions) else '')+'\n')
+            'pres'+str(shared) for shared in range(len(patient.sample_names), 0, -1))) + '\t\n')
 
         for sa_idx, sa_name in enumerate(patient.sample_names):
             analysis_file.write(str(sa_idx+1)+'\t'+str(sa_name)+'\t'
                                 + '\t'.join((str(sum(1 for mut, samples in patient.mutations.items()
                                                  if mut in patient.samples[sa_idx] and len(samples) == shared)))
                                             for shared in range(len(patient.sample_names), 0, -1))+'\t\n')
-
-            # number of exonic mutations per sample if information is available
-            if patient.mut_functions is not None and len(patient.mut_functions):
-                analysis_file.write(str(sum(1 for mut in patient.samples[sa_idx]
-                                            if patient.mut_functions[mut] in settings.EXONIC_FILTER)) + '\t\n')
 
         logger.info('Created analysis file for patient {}: {} \n'.format(patient.name, analysis_filepath))
 
@@ -206,9 +199,8 @@ def create_data_analysis_file(patient, analysis_filepath):
 
 def print_genetic_distance_table(patient):
     """
-    Print the genetic distance among the samples and the homogeneity index (Jaccard similarity coefficient)
-    :param patient:
-    :return:
+    Print the genetic distance among the samples and the Jaccard similarity coefficient
+    :param patient: instance of class around sequencing data of a subject
     """
 
     gds = [[0 for _ in range(patient.n)] for _ in range(patient.n)]
