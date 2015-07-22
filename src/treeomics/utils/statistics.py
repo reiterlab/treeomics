@@ -89,6 +89,16 @@ def get_log_p0(n, k, e, c0):
     :return: log probability that the variant is absent
     """
 
+    #pseudoAlpha is the alpha parameter for the beta prior
+    #pseudoBeta is the beta parameter for the beta prior
+
+    pseudoAlpha = 2
+    pseudoBeta = 8
+
+    #the pseudocounts are added to n and k, but removed for the computation of p0 at the end
+    n = n + pseudoAlpha - 1 + pseudoBeta - 1
+    k = k + pseudoAlpha - 1
+
     def exploglp(p):
         return math.exp(loglp(n, k, p, e))
 
@@ -102,7 +112,7 @@ def get_log_p0(n, k, e, c0):
         integral = quad(exploglp, a=0, b=1, epsrel=rel_tol, epsabs=0)
         nonzero_integral = math.log(integral[0])
         error = integral[1]
-        if error/(nonzero_integral+error) > 0.5:
+        if error/(integral[0]+error) > 0.5:
             logger.debug("Posterior calculation yielded very large relative error")
 
     elif float(k)/n >= e:     # approximation is easy: gamma approximation
@@ -120,7 +130,7 @@ def get_log_p0(n, k, e, c0):
             logger.warn("Warning! Exceeded performance of numerical integration, using approximation")
             # nonzeroInt = gammaln(k+1) + gammaln(n-k+1) - gammaln(n+2) - math.log(1-2*e)
             # LINEAR APPROX nonzeroInt = loglp(n, k, 0, e) - math.log((2*e-1)*k/e+(n-k)/(1-e)*(1-2*e))
-            # SIMPSONS APPROX (UGH)
+            # SIMPSONS APPROX
             # This method approximates the integral using the first and second derivatives at 0
             # by estimating when a second order approximation crosses zero and integrating from 0
             # up to there (called xzero)
@@ -144,10 +154,14 @@ def get_log_p0(n, k, e, c0):
             nonzero_integral = math.log(integral[0])
 
         error = integral[1]
-        if error/(nonzero_integral+error) > 0.5:
+        if error/(integral[0]+error) > 0.5:
             logger.debug("Posterior calculation yielded very large relative error")
+    #carry along the beta function normalizing constant
+    nonzero_integral += math.log(1-c0) + gammaln(pseudoAlpha + pseudoBeta) - gammaln(pseudoAlpha) - gammaln(pseudoBeta)
+    #remove the pseudocounts for the delta function
+    zero_integral = math.log(c0) + loglp(n-pseudoAlpha + 1 - pseudoBeta + 1, k - pseudoAlpha + 1, 0, e)
 
-    nonzero_integral += math.log(1-c0)
-    zero_integral = math.log(c0) + loglp(n, k, 0, e)
 
+    #this could return 0, which is undesirable. Might be best to report both pieces
+    #consider returning (zero_integral, nonzero_integral) and computing mu_l_nu and E with these quantities to prevent underflow
     return zero_integral - logsumexp([zero_integral, nonzero_integral])
