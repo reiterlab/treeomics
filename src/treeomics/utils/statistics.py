@@ -162,6 +162,8 @@ def get_log_p0(n, k, e, c0):
     zero_integral = math.log(c0) + loglp(n-pseudoAlpha + 1 - pseudoBeta + 1, k - pseudoAlpha + 1, 0, e)
 
 
-    #this could return 0, which is undesirable. Might be best to report both pieces
-    #consider returning (zero_integral, nonzero_integral) and computing mu_l_nu and E with these quantities to prevent underflow
-    return zero_integral - logsumexp([zero_integral, nonzero_integral])
+    denom = logsumexp([zero_integral, nonzero_integral])
+
+    #this is p0, 1-p0 in log space
+    returnTuple = (zero_integral - denom, nonzero_integral - denom)
+    return returnTuple
