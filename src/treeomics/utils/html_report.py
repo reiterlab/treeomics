@@ -143,18 +143,18 @@ class HTMLReport(object):
                                               'that passed the filtering: {} </br>\n'.format(
                                               len(patient.present_mutations)))
 
-        self.file.write(self._inds[self._ind]+'The average number of variants per sample: {:.1f}. </br>\n'.format(
+        self.file.write(self._inds[self._ind]+'Mean number of variants per sample: {:.1f} </br>\n'.format(
                         (float(sum(len(muts) for sa_idx, muts in patient.samples.items()))
                          / len(patient.sample_names))))
 
-        self.file.write(self._inds[self._ind]+"{:.2%} ({}/{}) of all distinct variants are founders. </br>\n".format(
-            float(len(patient.founders))/len(patient.present_mutations), len(patient.founders),
-            len(patient.present_mutations)))
+        self.file.write(self._inds[self._ind]+"Founders (variants present in all samples): {} ({:.1%}) </br>\n".format(
+            len(patient.founders), float(len(patient.founders))/len(patient.present_mutations)))
         self.file.write(self._inds[self._ind]
-                        + 'In average {:.2%} ({:.1f}) variants are unique (private) per sample. </br>\n'
-                        .format((float(len(patient.shared_muts[1])) / len(patient.sample_names)) /
-                        (sum(len(muts) for sa_idx, muts in patient.samples.items()) / len(patient.sample_names)),
-                        float(len(patient.shared_muts[1])) / len(patient.sample_names)))
+                        + 'Mean number of unique (private) variants per sample: {:.1f} ({:.1%}) </br>\n'
+                        .format(float(len(patient.shared_muts[1])) / len(patient.sample_names),
+                                (float(len(patient.shared_muts[1])) / len(patient.sample_names)) /
+                        (sum(len(muts) for sa_idx, muts in patient.samples.items()) / len(patient.sample_names))))
+
         self._ind -= 1      # indentation level decreases by 1
         self.file.write(self._inds[self._ind]+'</p>\n')
 
@@ -176,10 +176,11 @@ class HTMLReport(object):
             self.file.write(self._inds[self._ind]+'Blue rectangles correspond to present variants, '
                             + 'red to absent variants, and light red to unknown mutation status '
                               '(due to low coverage).\n')
-            self.file.write(self._inds[self._ind]+'In total {} distinct variants were present in at least one sample, '
-                            .format(len(patient.present_mutations)) + '{} ({:.1%}) of those were founders, \n'.format(
-                            len(patient.founders), float(len(patient.founders))/len(patient.present_mutations))
-                            + 'and {} mutations were unique to single samples.'.format(len(patient.shared_muts[1])))
+            self.file.write(
+                self._inds[self._ind]+'In total {} distinct variants were classified as present in at least one sample'
+                    .format(len(patient.present_mutations)) + ', {} ({:.1%}) of those were founders, \n'.format(
+                    len(patient.founders), float(len(patient.founders))/len(patient.present_mutations))
+                + 'and {} mutations were unique to single samples.'.format(len(patient.shared_muts[1])))
 
             self.file.write(self._inds[self._ind]+'</figcaption>\n')
             self.file.write(self._inds[self._ind]+'</div>\n')

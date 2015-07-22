@@ -29,7 +29,7 @@ def solve_conflicting_phylogeny(cf_graph):
     objective_function = [data['weight'] for _, data in cf_graph.nodes_iter(data=True)]
 
     logger.debug('Objective function: ' + ', '.join(
-        '{}: {:.3f}'.format(var_idx, weight) for var_idx, weight in enumerate(objective_function, 1)))
+        '{}: {:.1e}'.format(var_idx, weight) for var_idx, weight in enumerate(objective_function, 1)))
 
     # column types
     ctypes = ['B' for _ in range(len(objective_function))]

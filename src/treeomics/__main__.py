@@ -306,7 +306,7 @@ def main():
 
         if args.mode == 1:   # find evolutionary incompatible mutation patterns based on standard binary classification
 
-            phylogeny = ti.infer_max_compatible_tree(os.path.join(output_directory, 'fig_btree_'+fn_pattern+'.tex'),
+            phylogeny = ti.infer_max_compatible_tree(os.path.join(output_directory, 'btree_'+fn_pattern+'.tex'),
                                                      patient)
 
             if plots_report:
@@ -353,7 +353,7 @@ def main():
 
             # determine mutation patterns based on standard binary classification to generate an overview graph
 
-            phylogeny = ti.create_max_lh_tree(os.path.join(output_directory, 'fig_mlhtree_'+fn_pattern+'.tex'),
+            phylogeny = ti.create_max_lh_tree(os.path.join(output_directory, 'mlhtree_'+fn_pattern+'.tex'),
                                               patient)
 
             # determine mutation patterns based on standard binary classification to generate an overview graph
@@ -381,7 +381,7 @@ def main():
         elif args.mode == 3:    # separate subclones based on incompatible mutation patterns
 
             raise RuntimeError('Not yet implemented')
-            si_phylogeny = ti.infer_max_compatible_tree(os.path.join(output_directory, 'fig_pptree_'+fn_pattern+'.tex'),
+            si_phylogeny = ti.infer_max_compatible_tree(os.path.join(output_directory, 'pptree_'+fn_pattern+'.tex'),
                                                         patient, min_absent_cov=min_absent_cov)
 
             # create mutation pattern overview plot
@@ -395,7 +395,7 @@ def main():
             if mp_graph_name is not None:
                 html_report.add_mp_overview_graph(patient, si_phylogeny, mp_graph_name)
 
-            phylogeny = ti.create_subclonal_tree(os.path.join(output_directory, 'fig_sctree_'+fn_pattern+'.tex'),
+            phylogeny = ti.create_subclonal_tree(os.path.join(output_directory, 'sctree_'+fn_pattern+'.tex'),
                                                  patient, args.min_sc_score, min_absent_cov=min_absent_cov)
 
         # generate analysis file to provide an overview about the derived results
