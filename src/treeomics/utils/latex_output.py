@@ -179,39 +179,72 @@ def add_artifact_info(file_path, phylogeny):
 
             pat = phylogeny.patient
 
-            # print putative false positives
-            for mut_idx, samples in sorted(phylogeny.false_positives.items(),
-                                           key=lambda x: pat.gene_names[x[0]]):
-                for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
-                    # putative false-positive
-                    latex_file.write('Putative false-positive {} ({}) in sample {}'.format(
-                        pat.gene_names[mut_idx], pat.mut_keys[mut_idx],
-                        pat.sample_names[sa_idx]))
-                    latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
-                        pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
-                        pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
 
-            # print putative false negatives
-            for mut_idx, samples in sorted(phylogeny.false_negatives.items(),
-                                           key=lambda x: pat.gene_names[x[0]]):
-                for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
-                    latex_file.write('Putative false-negative {} ({}) in sample {}'.format(
-                        pat.gene_names[mut_idx], pat.mut_keys[mut_idx],
-                        pat.sample_names[sa_idx]))
-                    latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
-                        pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
-                        pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
+            if pat.gene_names is not None:
+                # print putative false positives
+                for mut_idx, samples in sorted(phylogeny.false_positives.items(),
+                                               key=lambda x: pat.gene_names[x[0]]):
+                    for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
+                        # putative false-positive
+                        latex_file.write('Putative false-positive {} ({}) in sample {}'.format(
+                            pat.gene_names[mut_idx], pat.mut_keys[mut_idx],
+                            pat.sample_names[sa_idx]))
+                        latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
+                            pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                            pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
 
-            # print putative false negatives with too low coverage (unknowns)
-            for mut_idx, samples in sorted(phylogeny.false_negative_unknowns.items(),
-                                           key=lambda x: pat.gene_names[x[0]]):
-                for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
-                    latex_file.write('Putative positive unknown {} ({}) in sample {}'.format(
-                        pat.gene_names[mut_idx], pat.mut_keys[mut_idx],
-                        pat.sample_names[sa_idx]))
-                    latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
-                        pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
-                        pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
+                # print putative false negatives
+                for mut_idx, samples in sorted(phylogeny.false_negatives.items(),
+                                               key=lambda x: pat.gene_names[x[0]]):
+                    for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
+                        latex_file.write('Putative false-negative {} ({}) in sample {}'.format(
+                            pat.gene_names[mut_idx], pat.mut_keys[mut_idx],
+                            pat.sample_names[sa_idx]))
+                        latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
+                            pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                            pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
+
+                # print putative false negatives with too low coverage (unknowns)
+                for mut_idx, samples in sorted(phylogeny.false_negative_unknowns.items(),
+                                               key=lambda x: pat.gene_names[x[0]]):
+                    for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
+                        latex_file.write('Putative positive unknown {} ({}) in sample {}'.format(
+                            pat.gene_names[mut_idx], pat.mut_keys[mut_idx],
+                            pat.sample_names[sa_idx]))
+                        latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
+                            pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                            pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
+            else:
+                # print putative false positives
+                for mut_idx, samples in sorted(phylogeny.false_positives.items(),
+                                               key=lambda x: pat.mut_keys[x[0]]):
+                    for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
+                        # putative false-positive
+                        latex_file.write('Putative false-positive {} in sample {}'.format(
+                            pat.mut_keys[mut_idx], pat.sample_names[sa_idx]))
+                        latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
+                            pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                            pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
+
+                # print putative false negatives
+                for mut_idx, samples in sorted(phylogeny.false_negatives.items(),
+                                               key=lambda x: pat.mut_keys[x[0]]):
+                    for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
+                        latex_file.write('Putative false-negative {} in sample {}'.format(
+                            pat.mut_keys[mut_idx], pat.sample_names[sa_idx]))
+                        latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
+                            pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                            pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
+
+                # print putative false negatives with too low coverage (unknowns)
+                for mut_idx, samples in sorted(phylogeny.false_negative_unknowns.items(),
+                                               key=lambda x: pat.mut_keys[x[0]]):
+                    for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
+                        latex_file.write('Putative positive unknown {} in sample {}'.format(
+                            pat.mut_keys[mut_idx], pat.sample_names[sa_idx]))
+                        latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
+                            pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                            pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
 
             latex_file.write('\\end{comment} \n\n')
 

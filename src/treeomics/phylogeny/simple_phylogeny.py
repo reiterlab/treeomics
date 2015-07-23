@@ -57,28 +57,6 @@ class SimplePhylogeny(Phylogeny):
         # and solve this using integer linear programming
         self.conflicting_nodes, _ = cps.solve_conflicting_phylogeny(self.cf_graph)
 
-        # check that all low confidence (unknowns) absent mutation patterns except one are conflicting
-        # for mut_idx in unknown_muts.keys():   # keys denote the pattern where unknowns are absent
-        #     # find max confidence mutation pattern for unknown positions
-        #     mut_max_weight = dict()
-        #     mut_max_node = dict()
-        #     for unknown_node, weight in unknown_muts[mut_idx].items():
-        #         if unknown_node not in self.conflicting_nodes:
-        #             if mut_idx not in mut_max_weight.keys() or weight > mut_max_weight[mut_idx]:
-        #                 mut_max_weight[mut_idx] = weight
-        #                 mut_max_node[mut_idx] = unknown_node
-        #
-        #     # all possible unknown MPs are evolutionarily incompatible, choose the one without unknowns
-        #     if mut_idx not in mut_max_node:
-        #         mut_max_node[mut_idx] = self.patient.mutations[mut_idx]
-        #
-        #     # if multiple unknown mutation patterns are feasible, choose the one with the highest confidence
-        #     for unknown_node in unknown_muts[mut_idx].keys():
-        #         if unknown_node != mut_max_node[mut_idx]:
-        #             self.nodes[unknown_node].remove(mut_idx)
-        #             if len(self.nodes[unknown_node]) == 0:
-        #                 del self.nodes[unknown_node]
-
         self.compatible_nodes = dict()
 
         self.conflicting_mutations = set(mut for mp, muts in self.nodes.items() if len(mp) > 0 for mut in muts)

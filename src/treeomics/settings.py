@@ -21,7 +21,7 @@ BI_E = 0.005         # sequencing error rate for bayesian inference
 BI_C0 = 0.5         # prior mixture parameter of delta function and uniform distribution for bayesian inference
 
 # minimum reliability score of a incompatible mutation pattern that a subclone of different origin is considered
-MIN_SC_SCORE = 3.0
+MIN_SC_SCORE = 5.0
 
 # Minimal reliability score of the MPs in the mutation pattern overview graph if there are many MPs
 MIN_MP_SCORE = 1.0
