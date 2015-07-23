@@ -41,8 +41,8 @@ class Patient(object):
         # allele frequency data in each numbered sample
         self.data = defaultdict(list)
 
-        # posterior: log probability that VAF = 0
-        self.log_p0 = defaultdict(list)
+        # tuple posterior: log probability that VAF = 0, lob probability that VAF > 0
+        self.log_p01 = defaultdict(list)
         self.bi_error_rate = error_rate     # sequencing error rate for bayesian inference
         self.bi_c0 = c0    # prior mixture parameter of delta function and uniform distribution for bayesian inference
         logger.info('Bayesian inference model uses an error rate of {} and p0 prior weight of {}.'.format(
@@ -238,10 +238,10 @@ class Patient(object):
                         self.data[len(self.mut_keys)-1].append(NEG_UNKNOWN)
                         self.unknowns[1][sample_name] += 1
 
-                # calculate posterior: log probability that VAF = 0
-                self.log_p0[len(self.mut_keys)-1].append(
-                    get_log_p0(self.phred_coverage[mut_key][sample_name], self.mut_reads[mut_key][sample_name],
-                           self.bi_error_rate, self.bi_c0))
+                # calculate posterior: log probability that VAF = 0, log probability that VAF > 0
+                p0, p1 = get_log_p0(self.phred_coverage[mut_key][sample_name], self.mut_reads[mut_key][sample_name],
+                                    self.bi_error_rate, self.bi_c0)
+                self.log_p01[len(self.mut_keys)-1].append([p0, p1])
                 # logger.debug('p0: {;.2e}, k: {}, n: {}.'.format(
                 #     self.log_p0[len(self.mut_keys)-1], self.mut_reads[mut_key][sample_name],
                 #     self.phred_coverage[mut_key][sample_name]))
@@ -514,6 +514,7 @@ class Patient(object):
 
         # posterior log probability if no data was reported
         non_log_p0 = math.log(int_sets.NO_DATA_P0)
+        non_log_p1 = math.log(1.0 - int_sets.NO_DATA_P0)
 
         # - - - - - - - - CLASSIFY MUTATIONS - - - - - - - - -
         for mut_id, mut_key in enumerate(self.mut_keys):
@@ -550,12 +551,12 @@ class Patient(object):
 
                 # calculate posterior: log probability that VAF = 0
                 if self.phred_coverage[mut_key][sample_name] < 0:   # no sequencing data in this sample
-                    self.log_p0[mut_id].append(non_log_p0)
+                    self.log_p01[mut_id].append([non_log_p0, non_log_p1])
 
                 else:                                               # calculate posterior according to prior and data
-                    self.log_p0[mut_id].append(
-                        get_log_p0(self.phred_coverage[mut_key][sample_name], self.mut_reads[mut_key][sample_name],
-                                   self.bi_error_rate, self.bi_c0))
+                    p0, p1 = get_log_p0(self.phred_coverage[mut_key][sample_name], self.mut_reads[mut_key][sample_name],
+                                        self.bi_error_rate, self.bi_c0)
+                    self.log_p01[mut_id].append([p0, p1])
 
                 # logger.debug('p0: {:.2e}, k: {}, n: {}.'.format(
                 #     self.log_p0[mut_id][len(self.log_p0[mut_id])-1], self.mut_reads[mut_key][sample_name],

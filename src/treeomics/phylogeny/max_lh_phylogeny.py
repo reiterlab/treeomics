@@ -63,7 +63,7 @@ class MaxLHPhylogeny(Phylogeny):
 
         # compute various mutation patterns (nodes) and their reliability scores
         self.node_scores, self.mp_col_ids, self.mp_weights = infer_ml_graph_nodes(
-            self.patient.log_p0, self.patient.sample_names, self.patient.gene_names)
+            self.patient.log_p01, self.patient.sample_names, self.patient.mut_keys, gene_names=self.patient.gene_names)
 
         # create conflict graph which forms the input to the ILP
         self.cf_graph = create_conflict_graph_light(self.node_scores)
@@ -88,7 +88,8 @@ class MaxLHPhylogeny(Phylogeny):
                     self.max_lh_nodes[self.mp_col_ids[mp_col_idx]].add(mut_idx)
                     self.max_lh_mutations[mut_idx] = self.mp_col_ids[mp_col_idx]
                     logger.info('Max LH pattern of variant in {} is {} with log likelihood {:.1e}.'.format(
-                        self.patient.gene_names[mut_idx], self.mp_col_ids[mp_col_idx],
+                        self.patient.gene_names[mut_idx] if self.patient.gene_names is not None
+                        else self.patient.mut_keys[mut_idx], self.mp_col_ids[mp_col_idx],
                         self.mp_weights[mut_idx][mp_col_idx]))
 
                     # determine false positives and false negatives compared to original classification
@@ -136,12 +137,13 @@ class MaxLHPhylogeny(Phylogeny):
         return self.mlh_tree
 
 
-def infer_ml_graph_nodes(log_p0, sample_names, gene_names):
+def infer_ml_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None):
     """
     Infer maximum likelihood using bayesian inference for each possible mutation pattern
-    :param log_p0: posterior: log probability that VAF = 0
+    :param log_p01: posterior: log probability that VAF = 0, log probability that VAF > 0
     :param sample_names:
-    :param gene_names:
+    :param mut_keys: list with information about the variant
+    :param gene_names: list with the names of the genes in which the variant occurred
     :return dictionary of nodes and corresponding variants, pattern reliability scores, weights of patterns of variants
     """
 
@@ -150,7 +152,7 @@ def infer_ml_graph_nodes(log_p0, sample_names, gene_names):
     node_scores = dict()    # mutation patterns score summed over all variants
 
     # weight per inferred mutation pattern per variant given the p0's in each sample for a variant
-    mp_weights = np.empty([len(log_p0), math.pow(2, n)], dtype=np.float64)
+    mp_weights = np.empty([len(log_p01), math.pow(2, n)], dtype=np.float64)
     # mutation pattern to the corresponding column id in the weight matrix
     mp_col_ids = dict()
 
@@ -162,31 +164,35 @@ def infer_ml_graph_nodes(log_p0, sample_names, gene_names):
             node = frozenset(mp)        # create mutation pattern
             mp_col_ids[col_idx] = node
 
-            for mut_idx in range(len(log_p0)):
+            for mut_idx in range(len(log_p01)):
                 log_ml = 0.0                # log maximum likelihood of the inferred pattern
                 for sa_idx in node:                         # variant is present
-                    log_ml += math.log(-np.expm1(log_p0[mut_idx][sa_idx]))
+                    log_ml += log_p01[mut_idx][sa_idx][1]
                 for sa_idx in trunk_mp.difference(node):    # variant is absent
-                    log_ml += log_p0[mut_idx][sa_idx]
+                    log_ml += log_p01[mut_idx][sa_idx][0]
 
                 if log_ml == 0.0:   # numerical artifact, use approximation: ignore second order term
                     for sa_idx in node:                         # variant is present
-                        log_ml += math.exp(log_p0[mut_idx][sa_idx])     # sum probability
+                        log_ml += math.exp(log_p01[mut_idx][sa_idx][0])     # sum probability
                     for sa_idx in trunk_mp.difference(node):    # variant is absent
-                        log_ml += -np.expm1(log_p0[mut_idx][sa_idx])
+                        log_ml += math.exp(log_p01[mut_idx][sa_idx][1])
 
                     log_ml = np.log1p(-log_ml)      # calculates log(1+argument)
-                    logger.debug('Approximated log probability of variant {} having pattern {} by {:.2e}.'.format(
-                        gene_names[mut_idx], node, log_ml))
+                    if gene_names is not None:
+                        logger.debug('Approximated log probability of variant {} having pattern {} by {:.2e}.'.format(
+                            gene_names[mut_idx], node, log_ml))
+                    else:
+                        logger.debug('Approximated log probability of variant {} having pattern {} by {:.2e}.'.format(
+                            mut_keys[mut_idx], node, log_ml))
                     if log_ml == 0.0:
-                        if len(node) == 0 or len(node) == n:
-                            logger.debug('Underflow error. Set probability to minimal float value!')
+                        if len(node) == 0 or len(node) == 1 or len(node) == n:
+                            logger.debug('Underflow warning. Set probability to minimal float value!')
                         else:
                             logger.warn('Underflow error. Set probability to minimal float value!')
-                        log_ml = -sys.float_info.min
+                        log_ml = -1.0e-150
                     assert log_ml < 0.0, ('Underflow error while calculating the probability that the '
                                           + 'variant {} does not have pattern {}.'.format(
-                                            gene_names[mut_idx], ', '.join(sample_names[sa_idx] for sa_idx in node)))
+                                            mut_keys[mut_idx], ', '.join(sample_names[sa_idx] for sa_idx in node)))
 
                 # assign calculated log probability that this variant has this mutation pattern
                 mp_weights[mut_idx][col_idx] = log_ml
@@ -194,9 +200,9 @@ def infer_ml_graph_nodes(log_p0, sample_names, gene_names):
                 # calculate the probability of a mp that no variant has this mutation pattern
                 # product of (1 - the probability that a variant has this mp)
                 if node in node_scores.keys():
-                    node_scores[node] *= -np.expm1(log_ml)
+                    node_scores[node] -= math.log(-math.expm1(log_ml))
                 else:
-                    node_scores[node] = -np.expm1(log_ml)
+                    node_scores[node] = -math.log(-math.expm1(log_ml))
 
                 # logger.debug('Variant {} has pattern {} with probability {:.1e}.'.format(
                 #     gene_names[mut_idx], ', '.join(sample_names[sa_idx] for sa_idx in node), math.exp(log_ml)))
@@ -213,7 +219,7 @@ def infer_ml_graph_nodes(log_p0, sample_names, gene_names):
                 logger.debug('Underflow error for pattern {}. Set probability to minimal float value!'.format(
                     ', '.join(sample_names[sa_idx] for sa_idx in node)))
             node_scores[node] = sys.float_info.min
-        node_scores[node] = -math.log(node_scores[node])
+        # node_scores[node] = -math.log(node_scores[node])
 
     # Show nodes with high reliability score
     for node, score in itertools.islice(sorted(node_scores.items(), key=lambda k: -k[1]), 0, 50):

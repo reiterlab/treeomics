@@ -8,6 +8,7 @@ from scipy.stats import binom
 from scipy.misc import logsumexp
 from scipy.integrate import quad
 from scipy.special import gammaln
+import utils.int_settings as def_sets
 
 
 # get logger for application
@@ -79,25 +80,21 @@ def loglp(n, k, p, e):
     return k*math.log((p*(1-e) + (1-p)*e)) + (n-k)*math.log((p*e+(1-p)*(1-e)))
 
 
-def get_log_p0(n, k, e, c0):
+def get_log_p0(n, k, e, c0, pseudo_alpha=def_sets.PSEUDO_ALPHA, pseudo_beta=def_sets.PSEUDO_BETA):
     """
     Returns the (log) probability that the variant is absent
     :param n: coverage (number of reads)
     :param k: observed number of reads reporting the variant
     :param e: sequencing error rate
     :param c0: prior mixture parameter of delta function and uniform distribution
-    :return: log probability that the variant is absent
+    :param pseudo_alpha: alpha parameter for the beta prior
+    :param pseudo_beta: beta parameter for the beta prior
+    :return: tuple (log probability that variant is absent, log probability that variant is present)
     """
 
-    #pseudoAlpha is the alpha parameter for the beta prior
-    #pseudoBeta is the beta parameter for the beta prior
-
-    pseudoAlpha = 2
-    pseudoBeta = 8
-
-    #the pseudocounts are added to n and k, but removed for the computation of p0 at the end
-    n = n + pseudoAlpha - 1 + pseudoBeta - 1
-    k = k + pseudoAlpha - 1
+    # pseudocounts are added to n and k, but removed for the computation of p0 at the end
+    n = n + pseudo_alpha - 1 + pseudo_beta - 1
+    k = k + pseudo_alpha - 1
 
     def exploglp(p):
         return math.exp(loglp(n, k, p, e))
@@ -156,14 +153,15 @@ def get_log_p0(n, k, e, c0):
         error = integral[1]
         if error/(integral[0]+error) > 0.5:
             logger.debug("Posterior calculation yielded very large relative error")
-    #carry along the beta function normalizing constant
-    nonzero_integral += math.log(1-c0) + gammaln(pseudoAlpha + pseudoBeta) - gammaln(pseudoAlpha) - gammaln(pseudoBeta)
-    #remove the pseudocounts for the delta function
-    zero_integral = math.log(c0) + loglp(n-pseudoAlpha + 1 - pseudoBeta + 1, k - pseudoAlpha + 1, 0, e)
 
+    # carry along the beta function normalizing constant
+    nonzero_integral += (math.log(1-c0) + gammaln(pseudo_alpha + pseudo_beta)
+                         - gammaln(pseudo_alpha) - gammaln(pseudo_beta))
+    # remove the pseudocounts for the delta function
+    zero_integral = (math.log(c0) + loglp(n-pseudo_alpha + 1 - pseudo_beta + 1,
+                                          k - pseudo_alpha + 1, 0, e))
 
     denom = logsumexp([zero_integral, nonzero_integral])
 
-    #this is p0, 1-p0 in log space
-    returnTuple = (zero_integral - denom, nonzero_integral - denom)
-    return returnTuple
+    # return p0, 1-p0 in log space
+    return zero_integral - denom, nonzero_integral - denom
