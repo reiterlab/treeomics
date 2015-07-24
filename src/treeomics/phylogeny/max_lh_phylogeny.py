@@ -120,7 +120,12 @@ class MaxLHPhylogeny(Phylogeny):
                             self.mp_weights[mut_idx][mp_col_idx]))
 
                         # determine false positives and false negatives compared to original classification
-                        fps = self.patient.mutations[mut_idx].difference(self.col_ids_mp[mp_col_idx])
+                        fps = set(self.patient.mutations[mut_idx].difference(self.col_ids_mp[mp_col_idx]))
+
+                        # check if some of these false-positives are present in the newly created subclones
+                        for sc_idx, sa_idx in sc_sample_ids.items():
+                            if sc_idx in self.col_ids_mp[mp_col_idx] and sa_idx in fps:
+                                fps.remove(sa_idx)
                         if len(fps) > 0:
                             self.false_positives[mut_idx] = fps
 
@@ -152,64 +157,15 @@ class MaxLHPhylogeny(Phylogeny):
             # find parsimony-informative evolutionarily incompatible mps with high likelihood
             if min_mp_lh is not None:
 
-                updated_nodes, sc_sample_ids = self.find_subclonal_mps(min_score, sc_sample_ids)
-
-                if len(updated_nodes) == 0:
-                    logger.info('There are no more incompatible mutation patterns with a reliability score '
-                                'of at least {}.'.format(min_score))
-                    for n in sorted(self.conflicting_nodes, key=lambda k: -self.node_scores[k]):
-                        if self.node_scores[n] > 0.1:      # TODO: delete
-                            logger.debug('Conflicting MP {} (w: {:.2f})'.format(
-                                         ', '.join(self.patient.sc_names[sc_idx] for sc_idx in n), self.node_scores[n]))
+                sc_sample_ids, found_subclones = self.find_subclones(min_score, sc_sample_ids)
+                if not found_subclones:
+                    # not enough evidence for additional new subclones
                     break
-                else:
-                    anc = set()     # find the mutations present in the ancestor MP and assign them also to the new MP
-                    for old_mp, new_mp in updated_nodes.items():
-                        #self.patient.updated_mps[old_mp] = new_mp
-
-                        # update unknown nodes too
-                        # self.patient.subclones[new_mp] = self.patient.subclones[old_mp]
-                        # del self.patient.subclones[old_mp]
-
-                        if old_mp.issuperset(anc):
-                            anc = old_mp
-                        elif (len(old_mp.intersection(anc)) > 0 and
-                                len(old_mp.difference(anc)) > 0 and len(anc.difference(old_mp)) > 0):
-                            logger.warn('Putative subclones are evolutionary incompatible '
-                                        'to each other: {} <> {}'.format(anc, old_mp))
-
-                    logger.debug('{} is the parental mutation pattern of the putative subclones {}.'.format(
-                        anc, updated_nodes.keys()))
-
-                    # the mutations present in the direct ancestor of the identified
-                    # parent subclone should be present in all
-                    parental_mps = set()
-                    for sc in self.compatible_nodes:
-                        if sc.issuperset(anc):
-                            parental_mps.add(sc)
-                            logger.debug('Mutations present in {} should also be present in all putative subclones.'
-                                         .format(sc))
-
-                    # account for putative subclones in parental mutation patterns
-                    for a in parental_mps:
-                        # mutations of parental clone should also be present in new putative subclones
-                        par_mp = a.union(updated_nodes[anc])
-
-                        # update subclones in patient
-                        self.node_scores[par_mp] = self.node_scores[a]
-                        del self.node_scores[a]
-                        self.col_ids_mp[self.mp_col_ids[a]] = par_mp
-                        self.mp_col_ids[par_mp] = self.mp_col_ids[a]
-                        del self.mp_col_ids[a]
-
-                        logger.info('Updated parental mutation pattern from {} to {}'.format(
-                            ', '.join(self.patient.sc_names[sc_idx] for sc_idx in a),
-                            ', '.join(self.patient.sc_names[sc_idx] for sc_idx in par_mp)))
 
             else:           # no detection of subclones
                 break
 
-        if min_mp_lh is not None:
+        if len(sc_sample_ids) > 0:
             logger.info('{} putative subclones have been detected: {}'.format(
                         len(self.patient.sc_names)-len(self.patient.sample_names),
                         ', '.join(self.patient.sc_names[sc_idx] for sc_idx in range(len(self.patient.sample_names),
@@ -224,11 +180,11 @@ class MaxLHPhylogeny(Phylogeny):
         self.shared_mlh_mps = defaultdict(set)          # parsimony-informative mps
 
         for mut_idx, samples in self.max_lh_mutations.items():
-            if len(samples) == len(self.patient.sample_names):          # founder mut.
+            if len(samples) == len(self.patient.sample_names) + len(sc_sample_ids):          # founder mut.
                 self.mlh_founders.add(mut_idx)
-            elif 1 < len(samples) < len(self.patient.sample_names):     # shared mut.
+            elif 1 < len(samples) < len(self.patient.sample_names) + len(sc_sample_ids):     # shared mut.
                 self.shared_mlh_mps[frozenset(samples)].add(mut_idx)
-            elif len(samples) == 1:                                     # unique mut.
+            elif len(samples) == 1:                                                          # unique mut.
                 for sa_idx in samples:
                     self.mlh_unique_mutations[sa_idx].add(mut_idx)
             else:
@@ -239,6 +195,55 @@ class MaxLHPhylogeny(Phylogeny):
                                                      self.mlh_unique_mutations)
 
         return self.mlh_tree
+
+    def find_subclones(self, min_score, sc_sample_ids):
+
+        updated_nodes, sc_sample_ids = self.find_subclonal_mps(min_score, sc_sample_ids)
+
+        if len(updated_nodes) == 0:
+            logger.info('There are no more incompatible mutation patterns with a reliability score '
+                        'of at least {:.1e}.'.format(min_score))
+            return sc_sample_ids, False
+        else:
+            anc = set()     # find the mutations present in the ancestor MP and assign them also to the new MP
+            for old_mp, new_mp in updated_nodes.items():
+
+                if old_mp.issuperset(anc):
+                    anc = old_mp
+                elif (len(old_mp.intersection(anc)) > 0 and
+                        len(old_mp.difference(anc)) > 0 and len(anc.difference(old_mp)) > 0):
+                    logger.warn('Putative subclones are evolutionary incompatible '
+                                'to each other: {} <> {}'.format(anc, old_mp))
+
+            logger.debug('{} is the parental mutation pattern of the putative subclones {}.'.format(
+                anc, updated_nodes.keys()))
+
+            # the mutations present in the direct ancestor of the identified
+            # parent subclone should be present in all
+            parental_mps = set()
+            for sc in self.compatible_nodes:
+                if sc.issuperset(anc):
+                    parental_mps.add(sc)
+                    logger.debug('Mutations present in {} should also be present in all putative subclones.'
+                                 .format(sc))
+
+            # account for putative subclones in parental mutation patterns
+            for a in parental_mps:
+                # mutations of parental clone should also be present in new putative subclones
+                par_mp = a.union(updated_nodes[anc])
+
+                # update subclones in patient
+                self.node_scores[par_mp] = self.node_scores[a]
+                del self.node_scores[a]
+                self.col_ids_mp[self.mp_col_ids[a]] = par_mp
+                self.mp_col_ids[par_mp] = self.mp_col_ids[a]
+                del self.mp_col_ids[a]
+
+                logger.info('Updated parental mutation pattern from {} to {}'.format(
+                    ', '.join(self.patient.sc_names[sc_idx] for sc_idx in a),
+                    ', '.join(self.patient.sc_names[sc_idx] for sc_idx in par_mp)))
+
+            return sc_sample_ids, True
 
     def find_subclonal_mps(self, min_score, sc_sample_ids, max_sc_maf=0.6):
         """

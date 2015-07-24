@@ -25,4 +25,4 @@ MIN_MP_LH = 0.995
 
 # Minimal reliability score of the MPs in the mutation pattern overview graph if there are many MPs
 MIN_MP_SCORE = 0.0  # show only mutation patterns in the circos plots with a greater reliability score
-MAX_NO_MPS = 30     # show at most this number of mutation patterns in the circos plots
+MAX_NO_MPS = 25     # show at most this number of mutation patterns in the circos plots
