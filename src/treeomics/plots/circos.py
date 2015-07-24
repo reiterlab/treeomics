@@ -438,8 +438,8 @@ def _create_mp_nodes_files(mp_nodes_filename, mp_mutnode_data_filename, phylogen
             # write node id to file
             mp_nodes_file.write('chr - n'+str(node_idx)+' ')
 
-            # if there many nodes then don't show the ones with very small weights
-            if len(mps) > max_no_mps and mp_weights[node] < min_node_weight:
+            # show only a maximal number of mutation pattern having at at least some minimum reliability score
+            if node_idx > max_no_mps or mp_weights[node] < min_node_weight:
                 mp_nodes_file.write('<{:.2f} 0 1 grey\n'.format(min_node_weight))
                 del mp_nodes[node]
                 break
