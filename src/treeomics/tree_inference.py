@@ -96,17 +96,19 @@ def create_subclonal_tree(filepath, patient, min_sc_score, min_absent_cov=0):
     return phylogeny
 
 
-def create_max_lh_tree(file_path, patient):
+def create_max_lh_tree(file_path, patient, min_mp_lh=None):
     """
     Create an evolutionary tree based on the maximum likelihood mutation patterns of each variant
     :param file_path: tree is writen to the given file
     :param patient: data structure around the patient
+    :param min_mp_lh: minimum likelihood that at least one variant has an incompatible mp
+                      such that this mp is considered as a subclone; None if subclones should not be identified
     :return: evolutionary tree as graph
     """
 
     mlh_pg = MaxLHPhylogeny(patient, patient.mps)
 
-    mlh_tree = mlh_pg.infer_max_lh_tree()
+    mlh_tree = mlh_pg.infer_max_lh_tree(min_mp_lh=min_mp_lh)
 
     if mlh_tree is not None:
 

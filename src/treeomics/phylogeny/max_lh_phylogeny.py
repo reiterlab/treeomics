@@ -11,6 +11,7 @@ from itertools import combinations
 import numpy as np
 import networkx as nx
 import sys
+from copy import deepcopy
 import phylogeny.cplex_solver as cps
 from phylogeny.phylogeny_utils import Phylogeny
 
@@ -30,6 +31,8 @@ class MaxLHPhylogeny(Phylogeny):
         Phylogeny.__init__(self, patient, mps)
 
         # dictionary column ids in the mp_weights 2d array and the corresponding mutation pattern
+        self.col_ids_mp = None
+        # dictionary from mutation patterns to the above column ids
         self.mp_col_ids = None
         # 2d np array [mut_idx, mp_col_idx]
         self.mp_weights = None
@@ -37,6 +40,8 @@ class MaxLHPhylogeny(Phylogeny):
         # most likely but also compatible mutation pattern for each variant
         self.max_lh_nodes = None
         self.max_lh_mutations = None
+        # map from mut_idx to the weight of the highest ranked evolutionarily compatible MP
+        self.max_lh_weights = None
 
         # false positives and false negatives compared to original classification
         # likely technical or biological artifacts in the data
@@ -52,64 +57,163 @@ class MaxLHPhylogeny(Phylogeny):
 
         self.mlh_tree = None
 
-    def infer_max_lh_tree(self):
+    def infer_max_lh_tree(self, min_mp_lh=None):
         """
         Infer maximum likelihood tree via calculation reliability scores for each
         possible mutation pattern from the likelihood that no variant has this pattern
         The inferred solution represents the reliable and evolutionary compatible mutation patterns
         The mutation pattern of each variant is given by the mp maximizing its likelihood
+        :param min_mp_lh: minimum likelihood that at least one variant has an incompatible mp
+            such that this mp is considered as a subclone
         :return inferred evolutionary tree
         """
 
+        # convert minimum likelihood into minimum reliability score
+        if min_mp_lh is not None:
+            min_score = -math.log(1.0 - min_mp_lh)
+            self.patient.sc_names = deepcopy(self.patient.sample_names)
+        else:
+            min_score = None
+
+        # necessary to map from identified putative subclones to their original sample
+        sc_sample_ids = dict()
+
         # compute various mutation patterns (nodes) and their reliability scores
-        self.node_scores, self.mp_col_ids, self.mp_weights = infer_ml_graph_nodes(
+        self.node_scores, self.col_ids_mp, self.mp_col_ids, self.mp_weights = infer_ml_graph_nodes(
             self.patient.log_p01, self.patient.sample_names, self.patient.mut_keys, gene_names=self.patient.gene_names)
 
-        # create conflict graph which forms the input to the ILP
-        self.cf_graph = create_conflict_graph_light(self.node_scores)
+        while True:
+            # create conflict graph which forms the input to the ILP
+            self.cf_graph = create_conflict_graph_light(self.node_scores)
 
-        # translate the conflict graph into a minimum vertex cover problem
-        # and solve this using integer linear programming
-        self.conflicting_nodes, self.compatible_nodes = cps.solve_conflicting_phylogeny(self.cf_graph)
+            # translate the conflict graph into a minimum vertex cover problem
+            # and solve this using integer linear programming
+            self.conflicting_nodes, self.compatible_nodes = cps.solve_conflicting_phylogeny(self.cf_graph)
 
-        # find the most likely but also compatible mutation pattern for each variant
-        self.max_lh_nodes = defaultdict(set)
-        self.max_lh_mutations = dict()
-        self.false_positives = defaultdict(set)
-        self.false_negatives = defaultdict(set)
-        self.false_negative_unknowns = defaultdict(set)
+            # ##### assign each variant to the highest ranked evolutionarily compatible mutation pattern ########
 
-        for mut_idx in range(len(self.mp_weights)):
+            # maps from each evolutionarily compatible MP to the selected set of variants
+            self.max_lh_nodes = defaultdict(set)
+            # map from mut_idx to the highest ranked evolutionarily compatible MP
+            self.max_lh_mutations = dict()
+            # map from mut_idx to the weight of the highest ranked evolutionarily compatible MP
+            self.max_lh_weights = dict()
 
-            for mp_col_idx in np.argsort(self.mp_weights[mut_idx])[::-1]:       # sort by descending log probability
+            # dictionaries from mut_idx to putative artifacts
+            self.false_positives = defaultdict(set)
+            self.false_negatives = defaultdict(set)
+            self.false_negative_unknowns = defaultdict(set)
 
-                if self.mp_col_ids[mp_col_idx] in self.compatible_nodes:
-                    # found most likely pattern for this variant
-                    self.max_lh_nodes[self.mp_col_ids[mp_col_idx]].add(mut_idx)
-                    self.max_lh_mutations[mut_idx] = self.mp_col_ids[mp_col_idx]
-                    logger.info('Max LH pattern of variant in {} is {} with log likelihood {:.1e}.'.format(
-                        self.patient.gene_names[mut_idx] if self.patient.gene_names is not None
-                        else self.patient.mut_keys[mut_idx], self.mp_col_ids[mp_col_idx],
-                        self.mp_weights[mut_idx][mp_col_idx]))
+            # find the highest ranked evolutionarily compatible mutation pattern for each variant
+            for mut_idx in range(len(self.mp_weights)):
 
-                    # determine false positives and false negatives compared to original classification
-                    fps = self.patient.mutations[mut_idx].difference(self.mp_col_ids[mp_col_idx])
-                    if len(fps) > 0:
-                        self.false_positives[mut_idx] = fps
+                for mp_col_idx in np.argsort(self.mp_weights[mut_idx])[::-1]:       # sort by descending log probability
 
-                    # distinguish between real false negatives and variants classified as unknown
-                    for sa_idx in self.mp_col_ids[mp_col_idx].difference(self.patient.mutations[mut_idx]):
-                        if self.patient.data[mut_idx][sa_idx] < 0.0:      # unknown classified mutation
-                            self.false_negative_unknowns[mut_idx].add(sa_idx)
-                        else:
-                            self.false_negatives[mut_idx].add(sa_idx)
+                    if self.col_ids_mp[mp_col_idx] in self.compatible_nodes:
+                        # found most likely pattern for this variant
+                        self.max_lh_nodes[self.col_ids_mp[mp_col_idx]].add(mut_idx)
+                        self.max_lh_mutations[mut_idx] = self.col_ids_mp[mp_col_idx]
+                        self.max_lh_weights[mut_idx] = self.mp_weights[mut_idx][mp_col_idx]
+                        logger.info('Max LH pattern of variant in {} is {} with log likelihood {:.1e}.'.format(
+                            self.patient.gene_names[mut_idx] if self.patient.gene_names is not None
+                            else self.patient.mut_keys[mut_idx], self.col_ids_mp[mp_col_idx],
+                            self.mp_weights[mut_idx][mp_col_idx]))
 
+                        # determine false positives and false negatives compared to original classification
+                        fps = self.patient.mutations[mut_idx].difference(self.col_ids_mp[mp_col_idx])
+                        if len(fps) > 0:
+                            self.false_positives[mut_idx] = fps
+
+                        # distinguish between real false negatives and variants classified as unknown
+                        for sa_idx in self.col_ids_mp[mp_col_idx].difference(self.patient.mutations[mut_idx]):
+
+                            # map from identified putative subclones to their original sample
+                            if sa_idx in sc_sample_ids:
+                                sa_idx = sc_sample_ids[sa_idx]
+                                if sa_idx in self.patient.mutations[mut_idx]:
+                                    # mutation was already classified as present in original sample
+                                    # => no false-negative
+                                    continue
+                                # mutation was not classified as present in original sample
+                                # => must be a false-negative
+
+                            if self.patient.data[mut_idx][sa_idx] < 0.0:      # unknown classified mutation
+                                self.false_negative_unknowns[mut_idx].add(sa_idx)
+                            else:
+                                self.false_negatives[mut_idx].add(sa_idx)
+
+                        break
+
+            logger.info('Putative false-positives {}, putative false-negatives {}, put. false neg. unknowns {}'.format(
+                sum(len(fps) for mut_idx, fps in self.false_positives.items()),
+                sum(len(fns) for mut_idx, fns in self.false_negatives.items()),
+                sum(len(fns) for mut_idx, fns in self.false_negative_unknowns.items())))
+
+            # find parsimony-informative evolutionarily incompatible mps with high likelihood
+            if min_mp_lh is not None:
+
+                updated_nodes, sc_sample_ids = self.find_subclonal_mps(min_score, sc_sample_ids)
+
+                if len(updated_nodes) == 0:
+                    logger.info('There are no more incompatible mutation patterns with a reliability score '
+                                'of at least {}.'.format(min_score))
+                    for n in sorted(self.conflicting_nodes, key=lambda k: -self.node_scores[k]):
+                        if self.node_scores[n] > 0.1:      # TODO: delete
+                            logger.debug('Conflicting MP {} (w: {:.2f})'.format(
+                                         ', '.join(self.patient.sc_names[sc_idx] for sc_idx in n), self.node_scores[n]))
                     break
+                else:
+                    anc = set()     # find the mutations present in the ancestor MP and assign them also to the new MP
+                    for old_mp, new_mp in updated_nodes.items():
+                        #self.patient.updated_mps[old_mp] = new_mp
 
-        logger.info('Putative false-positives {}, putative false-negatives {}, put. false neg. unknowns {}'.format(
-            sum(len(fps) for mut_idx, fps in self.false_positives.items()),
-            sum(len(fns) for mut_idx, fns in self.false_negatives.items()),
-            sum(len(fns) for mut_idx, fns in self.false_negative_unknowns.items())))
+                        # update unknown nodes too
+                        # self.patient.subclones[new_mp] = self.patient.subclones[old_mp]
+                        # del self.patient.subclones[old_mp]
+
+                        if old_mp.issuperset(anc):
+                            anc = old_mp
+                        elif (len(old_mp.intersection(anc)) > 0 and
+                                len(old_mp.difference(anc)) > 0 and len(anc.difference(old_mp)) > 0):
+                            logger.warn('Putative subclones are evolutionary incompatible '
+                                        'to each other: {} <> {}'.format(anc, old_mp))
+
+                    logger.debug('{} is the parental mutation pattern of the putative subclones {}.'.format(
+                        anc, updated_nodes.keys()))
+
+                    # the mutations present in the direct ancestor of the identified
+                    # parent subclone should be present in all
+                    parental_mps = set()
+                    for sc in self.compatible_nodes:
+                        if sc.issuperset(anc):
+                            parental_mps.add(sc)
+                            logger.debug('Mutations present in {} should also be present in all putative subclones.'
+                                         .format(sc))
+
+                    # account for putative subclones in parental mutation patterns
+                    for a in parental_mps:
+                        # mutations of parental clone should also be present in new putative subclones
+                        par_mp = a.union(updated_nodes[anc])
+
+                        # update subclones in patient
+                        self.node_scores[par_mp] = self.node_scores[a]
+                        del self.node_scores[a]
+                        self.col_ids_mp[self.mp_col_ids[a]] = par_mp
+                        self.mp_col_ids[par_mp] = self.mp_col_ids[a]
+                        del self.mp_col_ids[a]
+
+                        logger.info('Updated parental mutation pattern from {} to {}'.format(
+                            ', '.join(self.patient.sc_names[sc_idx] for sc_idx in a),
+                            ', '.join(self.patient.sc_names[sc_idx] for sc_idx in par_mp)))
+
+            else:           # no detection of subclones
+                break
+
+        if min_mp_lh is not None:
+            logger.info('{} putative subclones have been detected: {}'.format(
+                        len(self.patient.sc_names)-len(self.patient.sample_names),
+                        ', '.join(self.patient.sc_names[sc_idx] for sc_idx in range(len(self.patient.sample_names),
+                                                                                    len(self.patient.sc_names)))))
 
         # find founders and unique mutations in updated mutation list
         # build up a dictionary of resolved clones where
@@ -136,6 +240,201 @@ class MaxLHPhylogeny(Phylogeny):
 
         return self.mlh_tree
 
+    def find_subclonal_mps(self, min_score, sc_sample_ids, max_sc_maf=0.6):
+        """
+        Identify evolutionarily incompatible mutation patterns with a reliability score greater than min_score which
+        where variants in some samples are subclonal
+        :param min_score: minimum reliability score of a mutation pattern with putative subclones
+        :param sc_sample_ids: map from identified putative subclones to their original sample
+        :param max_sc_maf: sum of median MAFs of conflicting MPs must be below this threshold
+        :return updated_nodes:
+        """
+
+        updated_nodes = dict()
+
+        # find incompatible mutation pattern with the highest reliability score
+        for mp in sorted(self.conflicting_nodes, key=lambda k: -self.node_scores[k]):
+
+            if self.node_scores[mp] < min_score:
+                # no incompatible mutation patterns with high reliability score exist
+                return updated_nodes, sc_sample_ids
+
+            # find highest ranked conflicting mutation pattern
+            hcmp = max(set(self.cf_graph.neighbors(mp)).difference(self.conflicting_nodes),
+                       key=lambda k: self.node_scores[k])
+            logger.info('Highest ranked evolutionary incompatible mutation pattern of MP {} (w: {:.1f}): {} (w: {:.1f})'
+                        .format(', '.join(self.patient.sc_names[sc] for sc in mp), self.cf_graph.node[mp]['weight'],
+                                ', '.join(self.patient.sc_names[sc] for sc in hcmp),
+                                self.cf_graph.node[hcmp]['weight']))
+
+            # infer samples with putative mixed subclones
+            msc_samples = mp.intersection(hcmp)
+
+            # check if all subsets (descendants) of these putative subclone are subclonal and hence have low MAFs
+            mafs_desc = defaultdict(list)
+
+            descendant_mps = dict()
+            for desc_mp in _subsets(msc_samples):
+                # is this pattern a subset (descendant)?
+                if desc_mp.issubset(msc_samples):  # TODO: delete
+                    descendant_mps[desc_mp] = None
+                else:
+                    raise RuntimeError('Should never happen!!!')
+
+            # for desc_mp in descendant_mps:
+            #     # infer variants for which the new pattern would be the highest ranked one
+            #     # note that smaller mean more likely (log space)
+            #     d_muts = [mut_idx for mut_idx in range(len(self.mp_weights))
+            #               if (self.mp_weights[mut_idx][self.mp_col_ids[desc_mp]] < self.max_lh_weights[mut_idx])
+            #               and all(self.mp_weights[mut_idx][self.mp_col_ids[desc_mp]]
+            #                       <= self.mp_weights[mut_idx][self.mp_col_ids[d_mp]] for d_mp in descendant_mps)]
+            #     descendant_mps[desc_mp] = d_muts
+            #     for s in desc_mp:
+            #         for mut_idx in d_muts:
+            #             mafs_desc[s].append(
+            #                 self.patient.data[mut_idx][s] if self.patient.data[mut_idx][s] > 0.0 else 0)
+
+            # check if the mutations of these patterns are subclonal in the common samples
+            mafs_mp = defaultdict(list)
+            mafs_hcmp = defaultdict(list)
+
+            # create new subclones if there is enough evidence
+            created_scs = dict()
+            # create new mutation pattern resulting from the new subclone
+            new_mp = set(mp)
+            for s in msc_samples:
+                mp_muts = [mut_idx for mut_idx in range(len(self.mp_weights))
+                           if (self.mp_weights[mut_idx][self.mp_col_ids[mp]] < self.max_lh_weights[mut_idx])]
+                for mut_idx in mp_muts:
+                    mafs_mp[s].append(self.patient.data[mut_idx][s] if self.patient.data[mut_idx][s] > 0 else 0)
+
+                hcmp_muts = [mut_idx for mut_idx in range(len(self.mp_weights))
+                             if (self.mp_weights[mut_idx][self.mp_col_ids[hcmp]] < self.max_lh_weights[mut_idx])]
+                for mut_idx in hcmp_muts:
+                    mafs_hcmp[s].append(self.patient.data[mut_idx][s] if self.patient.data[mut_idx][s] > 0 else 0)
+
+                # check if overlapping mutations are indeed subclonal supported by low MAFs
+                if np.median(mafs_mp[s]) + np.median(mafs_hcmp[s]) > max_sc_maf:
+                    logger.info('Found not enough evidence for subclones in sample {}. '.format(
+                        self.patient.sample_names[s]))
+                    logger.info('Median MAFs of subclones too high: {:.1%} and {:.1%}'.format(
+                        np.mean(mafs_mp[s]), np.mean(mafs_hcmp[s])))
+                    continue
+                elif s in mafs_desc.keys():
+                    if np.median(mafs_mp[s]) + np.median(mafs_desc[s]) > max_sc_maf:
+                        if len(mafs_desc[s]) < len(self.patient.data)/50.0:
+                            logger.info('In sample {} a few mutations have suspiciously high MAF (median: {:.1%}) '
+                                        'for being subclonal: {}'.format(self.patient.sample_names[s],
+                                                                         np.median(mafs_desc[s])))
+                        else:
+                            logger.info('Found not enough evidence for subclones in sample {}. '.format(
+                                self.patient.sample_names[s]))
+                            logger.info('Median MAFs of descending subclones too high: {:.1%} and {:.1%}'.format(
+                                np.mean(mafs_mp[s]), np.mean(mafs_desc[s])))
+                            continue
+                    else:
+                        if len(mafs_desc[s]) > 0:
+                            logger.info('Low MAFs of mutations in descending sample {} of putative subclone '.format(
+                                self.patient.sample_names[s])
+                                + 'provide additional evidence for its existance: median {:.1%}'.format(
+                                np.median(mafs_desc[s])))
+
+                # no contradicting evidence for subclone found
+                logger.info('Found some evidence for subclones in sample {}. '.format(self.patient.sc_names[s]))
+                logger.info('Median MAFs of subclones in the samples: {:.1%} and {:.1%}'.format(
+                    np.mean(mafs_mp[s]), np.mean(mafs_hcmp[s])))
+
+                # create new subclone in this sample and update mutation pattern
+                created_scs[s] = len(self.patient.sc_names)
+                sc_sample_ids[len(self.patient.sc_names)] = s
+                new_mp.remove(s)
+                new_mp.add(len(self.patient.sc_names))
+                # did a subclone of this sample already get generated
+                if '_SC' in self.patient.sc_names[s]:
+                    name = self.patient.sc_names[s][:self.patient.sc_names[s].find('_SC')]
+                else:
+                    name = self.patient.sc_names[s]
+                next_id = int(max(n.split('_SC')[1] if len(n.split('_SC')) > 1 else 0
+                                  for n in self.patient.sc_names if n.split('_SC')[0] == name))+1
+                self.patient.sc_names.append(name+'_SC'+str(next_id))
+
+            # update mutation patterns in the patient
+            if len(new_mp.difference(mp)) > 0:
+                new_mp = frozenset(new_mp)
+
+                # update subclones in patient
+                self.node_scores[new_mp] = self.node_scores[mp]
+                del self.node_scores[mp]
+                self.col_ids_mp[self.mp_col_ids[mp]] = new_mp
+                self.mp_col_ids[new_mp] = self.mp_col_ids[mp]
+                del self.mp_col_ids[mp]
+                updated_nodes[mp] = new_mp
+                logger.info('Created new subclones {}'.format(
+                            ', '.join(self.patient.sc_names[sc] for sc in new_mp.difference(mp))))
+                break
+
+        # check compatibility with other conflicting clones
+        for related_mp in sorted(self.conflicting_nodes, key=lambda k: -self.cf_graph.node[k]['weight']):
+            if related_mp == mp:
+                continue
+
+            # is this conflicting node evolutionary compatible with the previously identified one
+            if related_mp in self.cf_graph.neighbors(mp):
+                continue
+
+            # some of the new subclones have to be present in this conflicting node
+            if not any(new_sc in related_mp for new_sc in created_scs):
+                continue
+
+            # check if the MP (mutation pattern) would be evolutionary compatible if the subclones would be present
+            # find highest ranked conflicting mutation pattern
+            hcmp = max(set(self.cf_graph.neighbors(related_mp)).difference(self.conflicting_nodes),
+                       key=lambda k: self.cf_graph.node[k]['weight'])
+            # print('Highest ranked conflicting mutation pattern for {} (w: {:.1f}): {} (w: {:.1f})'.format(
+            #      rel_cn, cf_graph.node[rel_cn]['weight'], hcmp, cf_graph.node[hcmp]['weight']))
+
+            if (related_mp.intersection(hcmp)).issubset(created_scs):
+                logger.info('New subclone might also be present in this mutation pattern: {} (w: {:.1e})'.format(
+                            ', '.join(self.patient.sc_names[sc] for sc in related_mp), self.node_scores[related_mp]))
+                updated_nodes = self._update_mutation_pattern(related_mp, created_scs, updated_nodes)
+            else:
+                if self.node_scores[related_mp] > min_score/10.0:
+                    logger.debug('Generating the putative subclones in MP {} (w: {:.1e}) '.format(
+                        related_mp, self.node_scores[related_mp])
+                        + 'would not make it compatible to {} (w: {:.1e})'.format(hcmp, self.node_scores[hcmp]))
+
+        return updated_nodes, sc_sample_ids
+
+    def _update_mutation_pattern(self, old_mp, created_scs, updated_nodes):
+        """
+        Update previously incompatible MPs with newly identified SCs
+        :param old_mp: previous mutation pattern
+        :param created_scs: newly created SCs
+        :param updated_nodes:
+        :return mapping from old to updated MPs
+        """
+
+        new_mp = set(old_mp)
+        for new_sc in created_scs.keys():
+            if new_sc in new_mp:
+                new_mp.remove(new_sc)
+                new_mp.add(created_scs[new_sc])
+
+        new_mp = frozenset(new_mp)
+
+        # update subclones in patient
+        self.node_scores[new_mp] = self.node_scores[old_mp]
+        del self.node_scores[old_mp]
+        self.col_ids_mp[self.mp_col_ids[old_mp]] = new_mp
+        self.mp_col_ids[new_mp] = self.mp_col_ids[old_mp]
+        del self.mp_col_ids[old_mp]
+        updated_nodes[old_mp] = new_mp
+        logger.info('Replaced samples {} and updated mutation pattern (w: {:.1e}) to {}'.format(
+                    ', '.join(self.patient.sc_names[new_sc] for new_sc in created_scs.keys() if new_sc in old_mp),
+                    self.node_scores[new_mp], ', '.join(self.patient.sc_names[sc] for sc in new_mp)))
+
+        return updated_nodes
+
 
 def infer_ml_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None):
     """
@@ -155,6 +454,8 @@ def infer_ml_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None):
     mp_weights = np.empty([len(log_p01), math.pow(2, n)], dtype=np.float64)
     # mutation pattern to the corresponding column id in the weight matrix
     mp_col_ids = dict()
+    # column id to corresponding mutation pattern
+    col_ids_mp = dict()
 
     trunk_mp = frozenset([sa_idx for sa_idx in range(n)])
     col_idx = 0
@@ -162,7 +463,8 @@ def infer_ml_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None):
         for mp in combinations(range(n), no_pres_vars):  # generate all mps with length no_pres_vars
 
             node = frozenset(mp)        # create mutation pattern
-            mp_col_ids[col_idx] = node
+            col_ids_mp[col_idx] = node
+            mp_col_ids[node] = col_idx
 
             for mut_idx in range(len(log_p01)):
                 log_ml = 0.0                # log maximum likelihood of the inferred pattern
@@ -219,13 +521,15 @@ def infer_ml_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None):
                 logger.debug('Underflow error for pattern {}. Set probability to minimal float value!'.format(
                     ', '.join(sample_names[sa_idx] for sa_idx in node)))
             node_scores[node] = sys.float_info.min
-        # node_scores[node] = -math.log(node_scores[node])
+            raise('Underflow error for pattern {}. Set probability to minimal float value!'.format(
+                ', '.join(sample_names[sa_idx] for sa_idx in node)))
+            # should never happen, delete this check
 
     # Show nodes with high reliability score
     for node, score in itertools.islice(sorted(node_scores.items(), key=lambda k: -k[1]), 0, 50):
         logger.info('Pattern {} has a reliability score of {:.2e}.'.format(node, score))
 
-    return node_scores, mp_col_ids, mp_weights
+    return node_scores, col_ids_mp, mp_col_ids, mp_weights
 
 
 def create_conflict_graph_light(reliability_scores):
@@ -271,3 +575,15 @@ def create_conflict_graph_light(reliability_scores):
         cf_graph.order(), sum(data['weight'] for _, data in cf_graph.nodes_iter(data=True)), cf_graph.size()))
 
     return cf_graph
+
+
+def _subsets(mp):
+    """
+    Returns all subsets (descendant) mutation patterns of a given mutation pattern
+    :param mp: ancestor mp
+    :return: descendant mp
+    """
+
+    for l in range(len(mp)-1, 0, -1):
+        for descendant_mp in itertools.combinations(mp, l):
+            yield frozenset(descendant_mp)
