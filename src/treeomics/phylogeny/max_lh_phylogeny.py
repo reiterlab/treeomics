@@ -151,7 +151,7 @@ class MaxLHPhylogeny(Phylogeny):
                 else:
                     anc = set()     # find the mutations present in the ancestor MP and assign them also to the new MP
                     for old_mp, new_mp in updated_nodes.items():
-                        self.patient.updated_mps[old_mp] = new_mp
+                        #self.patient.updated_mps[old_mp] = new_mp
 
                         # update unknown nodes too
                         # self.patient.subclones[new_mp] = self.patient.subclones[old_mp]
@@ -412,7 +412,7 @@ class MaxLHPhylogeny(Phylogeny):
         self.mp_col_ids[new_mp] = self.mp_col_ids[old_mp]
         del self.mp_col_ids[old_mp]
         updated_nodes[old_mp] = new_mp
-        logger.info('Replaced samples {} and updated mutation pattern (w: {:.1f}) to {}'.format(
+        logger.info('Replaced samples {} and updated mutation pattern (w: {:.1e}) to {}'.format(
                     ', '.join(self.patient.sc_names[new_sc] for new_sc in created_scs.keys() if new_sc in old_mp),
                     self.node_scores[new_mp], ', '.join(self.patient.sc_names[sc] for sc in new_mp)))
 
