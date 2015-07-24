@@ -308,10 +308,12 @@ def create_mlh_graph_files(res_nodes_filename, res_mutnode_labels_filename, res_
         founders[founding_mp] = phylogeny.mlh_founders
         unique_mutations = dict()
         for sa_idx, muts in phylogeny.mlh_unique_mutations.items():
-            unique_mutations[frozenset([sa_idx])] = muts
+            if len(muts) > 0:
+                unique_mutations[frozenset([sa_idx])] = muts
 
         for node_idx, (mp, muts) in enumerate(
-                chain(founders.items(), phylogeny.shared_mlh_mps.items(), unique_mutations.items()), 1):
+                chain(founders.items(), sorted(phylogeny.shared_mlh_mps.items(), key=lambda k: -len(k[0])),
+                      sorted(unique_mutations.items(), key=lambda k: k[0])), 1):
 
             # write node id to file
             res_nodes_file.write('chr - n'+str(node_idx)+' ')

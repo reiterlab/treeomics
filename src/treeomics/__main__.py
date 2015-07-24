@@ -121,8 +121,7 @@ def main():
     parser = argparse.ArgumentParser(description='Infers the evolution of cancer.')
 
     parser.add_argument("-m", "--mode", help="running mode: 1...fast (one mutation pattern per variant), "
-                                             "2...complete (explore full solution space), "
-                                             "3...separate conflicting subclones.",
+                                             "2...complete (explore full solution space).",
                         type=int, default=2)
 
     group = parser.add_mutually_exclusive_group()
@@ -164,8 +163,8 @@ def main():
                         type=float, default=settings.BI_E)
 
     args = parser.parse_args()
-    plots_report = True    # for debugging
-    plots_paper = False
+    plots_report = True    # for debugging set to False
+    plots_paper = True
 
     if args.normal:
         normal_sample_name = args.normal
@@ -299,7 +298,7 @@ def main():
     # infer evolutionary compatible mutation patterns and subsequently evolutionary trees based on
     # different principles divided into three modes
     # ############################################################################################
-    if args.mode == 1 or args.mode == 2 or args.mode == 3:
+    if args.mode == 1 or args.mode == 2:
 
         phylogeny = None
         comp_node_frequencies = None
@@ -377,26 +376,6 @@ def main():
             html_report.add_artifacts_information(
                 phylogeny, artifacts_plot_filepath=settings.artifacts_plot_prefix+fn_pattern+'.png',
                 plot_width=x_length*7)
-
-        elif args.mode == 3:    # separate subclones based on incompatible mutation patterns
-
-            raise RuntimeError('Not yet implemented')
-            si_phylogeny = ti.infer_max_compatible_tree(os.path.join(output_directory, 'pptree_'+fn_pattern+'.tex'),
-                                                        patient, min_absent_cov=min_absent_cov)
-
-            # create mutation pattern overview plot
-            # show only the different patterns and not the individual variants
-            # (convenient for large numbers of variants)
-            mp_graph_name = mp_graph.create_mp_graph(
-                fn_pattern, si_phylogeny, si_phylogeny.cfg_nodes, si_phylogeny.cfg_node_weights,
-                output_directory=output_directory, min_node_weight=settings.MIN_MP_SCORE,
-                max_no_mps=settings.MAX_NO_MPS)
-
-            if mp_graph_name is not None:
-                html_report.add_mp_overview_graph(patient, si_phylogeny, mp_graph_name)
-
-            phylogeny = ti.create_subclonal_tree(os.path.join(output_directory, 'sctree_'+fn_pattern+'.tex'),
-                                                 patient, args.min_sc_score, min_absent_cov=min_absent_cov)
 
         # generate analysis file to provide an overview about the derived results
         analysis.create_analysis_file(patient, args.min_median_coverage,
