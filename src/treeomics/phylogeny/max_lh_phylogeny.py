@@ -64,7 +64,7 @@ class MaxLHPhylogeny(Phylogeny):
         The inferred solution represents the reliable and evolutionary compatible mutation patterns
         The mutation pattern of each variant is given by the mp maximizing its likelihood
         :param min_mp_lh: minimum likelihood that at least one variant has an incompatible mp
-                       such that this mp is considered as a subclone
+            such that this mp is considered as a subclone
         :return inferred evolutionary tree
         """
 
@@ -74,6 +74,9 @@ class MaxLHPhylogeny(Phylogeny):
             self.patient.sc_names = deepcopy(self.patient.sample_names)
         else:
             min_score = None
+
+        # necessary to map from identified putative subclones to their original sample
+        sc_sample_ids = dict()
 
         # compute various mutation patterns (nodes) and their reliability scores
         self.node_scores, self.col_ids_mp, self.mp_col_ids, self.mp_weights = infer_ml_graph_nodes(
@@ -123,6 +126,17 @@ class MaxLHPhylogeny(Phylogeny):
 
                         # distinguish between real false negatives and variants classified as unknown
                         for sa_idx in self.col_ids_mp[mp_col_idx].difference(self.patient.mutations[mut_idx]):
+
+                            # map from identified putative subclones to their original sample
+                            if sa_idx in sc_sample_ids:
+                                sa_idx = sc_sample_ids[sa_idx]
+                                if sa_idx in self.patient.mutations[mut_idx]:
+                                    # mutation was already classified as present in original sample
+                                    # => no false-negative
+                                    continue
+                                # mutation was not classified as present in original sample
+                                # => must be a false-negative
+
                             if self.patient.data[mut_idx][sa_idx] < 0.0:      # unknown classified mutation
                                 self.false_negative_unknowns[mut_idx].add(sa_idx)
                             else:
@@ -138,7 +152,7 @@ class MaxLHPhylogeny(Phylogeny):
             # find parsimony-informative evolutionarily incompatible mps with high likelihood
             if min_mp_lh is not None:
 
-                updated_nodes = self.find_subclonal_mps(min_score)
+                updated_nodes, sc_sample_ids = self.find_subclonal_mps(min_score, sc_sample_ids)
 
                 if len(updated_nodes) == 0:
                     logger.info('There are no more incompatible mutation patterns with a reliability score '
@@ -182,10 +196,10 @@ class MaxLHPhylogeny(Phylogeny):
                         par_mp = a.union(updated_nodes[anc])
 
                         # update subclones in patient
-                        self.node_scores[new_mp] = self.node_scores[a]
+                        self.node_scores[par_mp] = self.node_scores[a]
                         del self.node_scores[a]
-                        self.col_ids_mp[self.mp_col_ids[a]] = new_mp
-                        self.mp_col_ids[new_mp] = self.mp_col_ids[a]
+                        self.col_ids_mp[self.mp_col_ids[a]] = par_mp
+                        self.mp_col_ids[par_mp] = self.mp_col_ids[a]
                         del self.mp_col_ids[a]
 
                         logger.info('Updated parental mutation pattern from {} to {}'.format(
@@ -226,11 +240,12 @@ class MaxLHPhylogeny(Phylogeny):
 
         return self.mlh_tree
 
-    def find_subclonal_mps(self, min_score, max_sc_maf=0.6):
+    def find_subclonal_mps(self, min_score, sc_sample_ids, max_sc_maf=0.6):
         """
         Identify evolutionarily incompatible mutation patterns with a reliability score greater than min_score which
         where variants in some samples are subclonal
         :param min_score: minimum reliability score of a mutation pattern with putative subclones
+        :param sc_sample_ids: map from identified putative subclones to their original sample
         :param max_sc_maf: sum of median MAFs of conflicting MPs must be below this threshold
         :return updated_nodes:
         """
@@ -242,7 +257,7 @@ class MaxLHPhylogeny(Phylogeny):
 
             if self.node_scores[mp] < min_score:
                 # no incompatible mutation patterns with high reliability score exist
-                return updated_nodes
+                return updated_nodes, sc_sample_ids
 
             # find highest ranked conflicting mutation pattern
             hcmp = max(set(self.cf_graph.neighbors(mp)).difference(self.conflicting_nodes),
@@ -331,6 +346,7 @@ class MaxLHPhylogeny(Phylogeny):
 
                 # create new subclone in this sample and update mutation pattern
                 created_scs[s] = len(self.patient.sc_names)
+                sc_sample_ids[len(self.patient.sc_names)] = s
                 new_mp.remove(s)
                 new_mp.add(len(self.patient.sc_names))
                 # did a subclone of this sample already get generated
@@ -378,15 +394,16 @@ class MaxLHPhylogeny(Phylogeny):
             #      rel_cn, cf_graph.node[rel_cn]['weight'], hcmp, cf_graph.node[hcmp]['weight']))
 
             if (related_mp.intersection(hcmp)).issubset(created_scs):
-                logger.info('New subclone might also be present in this mutation pattern: {} (w: {:.1f})'.format(
+                logger.info('New subclone might also be present in this mutation pattern: {} (w: {:.1e})'.format(
                             ', '.join(self.patient.sc_names[sc] for sc in related_mp), self.node_scores[related_mp]))
                 updated_nodes = self._update_mutation_pattern(related_mp, created_scs, updated_nodes)
             else:
-                logger.debug('Generating the putative subclones in MP {} (w: {:.1f}) '.format(
-                    related_mp, self.node_scores[related_mp])
-                    + 'would not make it compatible to {} (w: {:.1f})'.format(hcmp, self.node_scores[hcmp]))
+                if self.node_scores[related_mp] > min_score/10.0:
+                    logger.debug('Generating the putative subclones in MP {} (w: {:.1e}) '.format(
+                        related_mp, self.node_scores[related_mp])
+                        + 'would not make it compatible to {} (w: {:.1e})'.format(hcmp, self.node_scores[hcmp]))
 
-        return updated_nodes
+        return updated_nodes, sc_sample_ids
 
     def _update_mutation_pattern(self, old_mp, created_scs, updated_nodes):
         """
