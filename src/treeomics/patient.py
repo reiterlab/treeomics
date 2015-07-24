@@ -97,6 +97,7 @@ class Patient(object):
         # holds a dictionary with a frozenset of samples mapping to a set of mutations
         # present in exactly the same set
         self.mps = None         # mutation patterns
+
         self.subclones = None
         self.sc_names = None
         self.updated_clones = None

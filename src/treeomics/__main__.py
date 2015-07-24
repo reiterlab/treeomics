@@ -158,7 +158,7 @@ def main():
 
     parser.add_argument("-u", "--min_sc_score",
                         help="minimum reliability score of a mutation pattern with putative subclones",
-                        type=float, default=settings.MIN_SC_SCORE)
+                        type=float, default=settings.MIN_MP_LH)
 
     parser.add_argument("-e", "--error_rate", help="data error rate for bayesian inference",
                         type=float, default=settings.BI_E)

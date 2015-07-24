@@ -20,9 +20,9 @@ FDR = 0.01          # targeted false-discovery rate
 BI_E = 0.005         # sequencing error rate for bayesian inference
 BI_C0 = 0.5         # prior mixture parameter of delta function and uniform distribution for bayesian inference
 
-# minimum reliability score of a incompatible mutation pattern that a subclone of different origin is considered
-MIN_SC_SCORE = 5.0
+# minimum likelihood that at least one variant has an incompatible mp such that this mp is considered as a subclone
+MIN_MP_LH = 0.995
 
 # Minimal reliability score of the MPs in the mutation pattern overview graph if there are many MPs
-MIN_MP_SCORE = 1.0
-MAX_NO_MPS = 20     # apply MIN_MP_WEIGHT if there are more than this number of MPs in the data
+MIN_MP_SCORE = 0.0  # show only mutation patterns in the circos plots with a greater reliability score
+MAX_NO_MPS = 30     # show at most this number of mutation patterns in the circos plots

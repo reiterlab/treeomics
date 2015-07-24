@@ -179,7 +179,6 @@ def add_artifact_info(file_path, phylogeny):
 
             pat = phylogeny.patient
 
-
             if pat.gene_names is not None:
                 # print putative false positives
                 for mut_idx, samples in sorted(phylogeny.false_positives.items(),
