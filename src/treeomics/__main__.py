@@ -353,8 +353,8 @@ def main():
 
             # determine mutation patterns based on standard binary classification to generate an overview graph
 
-            phylogeny = ti.create_max_lh_tree(os.path.join(output_directory, 'mlhtree_'+fn_pattern+'.tex'),
-                                              patient)
+            phylogeny = ti.create_max_lh_tree(os.path.join(output_directory, 'mlhtree_'+fn_pattern+'.tex'), patient,
+                                              min_mp_lh=settings.MIN_MP_LH if 0 < settings.MIN_MP_LH < 1 else None)
 
             # determine mutation patterns based on standard binary classification to generate an overview graph
             if plots_report:
