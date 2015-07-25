@@ -611,7 +611,7 @@ def robustness_plot(filename, comp_node_frequencies):
     for node, mp_id in sorted(mp_ids.items(), key=lambda k: k[1]):
         plots[mp_id] = plt.scatter(x_values[mp_id], y_values[mp_id],
                                    c=plt.cm.jet(1. * mp_id / (len(x_values.keys()) - 1)),
-                                   s=15, marker=markers.next(), facecolors='none',
+                                   s=15, marker=next(markers), facecolors='none',
                                    edgecolors=plt.cm.jet(1. * mp_id / (len(x_values.keys()) - 1)), label='present')
     plt.legend(plots.values(),
                [','.join(str(s) for s in node) for node, _ in sorted(mp_ids.items(), key=lambda k: k[1])],

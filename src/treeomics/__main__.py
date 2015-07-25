@@ -379,6 +379,19 @@ def main():
                 phylogeny, artifacts_plot_filepath=settings.artifacts_plot_prefix+fn_pattern+'.png',
                 plot_width=x_length*7)
 
+            # do mutation pattern robustness analysis through down-sampling
+            if args.down > 0:
+                if 0 < settings.MIN_MP_LH < 1:
+                    logger.error('Down-sampling analysis does not support subclone detection! ')
+                    logger.error('Please set MIN_MP_LH in settings.py to 1.')
+                else:
+                    comp_node_frequencies = phylogeny.validate_node_robustness(args.down)
+
+                    # generate mutation pattern robustness plot
+                    plts.robustness_plot(
+                        os.path.join(output_directory, 'robustness_{}_{}.pdf'.format(args.down, fn_pattern)),
+                        comp_node_frequencies)
+
         # generate analysis file to provide an overview about the derived results
         analysis.create_analysis_file(patient, args.min_median_coverage,
                                       os.path.join(output_directory, 'analysis_'+fn_pattern+'.txt'),

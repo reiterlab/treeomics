@@ -198,6 +198,54 @@ class MaxLHPhylogeny(Phylogeny):
 
         return self.mlh_tree
 
+    def validate_node_robustness(self, no_replications):
+        """
+        Validate the robustness of the identified most reliable mutation patterns
+        through down-sampling
+        :param no_replications: Number of replications for each used fraction of variants
+        :return observed frequencies of the mutation patterns in each used fraction of variants
+        """
+
+        # Most reliable mutation patterns need to be identified before
+        if self.compatible_nodes is None:
+            self.infer_max_lh_tree(min_mp_lh=1.0)
+
+        node_frequencies = cps.solve_downsampled_nodes(
+            self.cf_graph, self.mp_weights, self.col_ids_mp, no_replications)
+
+        comp_node_frequencies = defaultdict(dict)
+
+        # calculate the frequency with which compatible mutation patterns are reproduced
+        # when only a subset of variants are used
+        for sample_fraction in sorted(node_frequencies.keys()):
+            freq = 0
+            for node in self.compatible_nodes:
+
+                # consider only parsimony-informative MPs
+                if len(node) <= 1 or len(node) == len(self.patient.sample_names):
+                    continue
+
+                if node in node_frequencies[sample_fraction]:
+                    comp_node_frequencies[sample_fraction][node] = \
+                        float(node_frequencies[sample_fraction][node]) / no_replications
+                    freq += comp_node_frequencies[sample_fraction][node]
+                else:
+                    comp_node_frequencies[sample_fraction][node] = 0.0
+
+            logger.info('Fraction of confirmed mutation patterns with {}% of the variants: {:.1%}'.format(
+                sample_fraction, float(freq)))
+
+        # produce latex table for paper
+        # displayed_fractions = [10, 20, 50, 80, 90, 95]
+        # print('\\textbf Mutation pattern  & {} \\\\'.format(' & '.join(
+        #       '\\textbf {:.0f}$\%$'.format(fr) for fr in displayed_fractions)))
+        # for node in sorted(self.compatible_nodes.keys(), key=lambda k: -self.cf_graph.node[k]['weight']):
+        #
+        #     print('({}) & {} \\\\'.format(','.join(str(n+1) for n in sorted(node)), ' & '.join(
+        #         '{:.1f}$\%$'.format(comp_node_frequencies[fr][node]*100.0) for fr in displayed_fractions)))
+
+        return comp_node_frequencies
+
     def find_subclones(self, min_score):
 
         updated_nodes, self.sc_sample_ids = self.find_subclonal_mps(min_score)
@@ -252,7 +300,6 @@ class MaxLHPhylogeny(Phylogeny):
         Identify evolutionarily incompatible mutation patterns with a reliability score greater than min_score which
         where variants in some samples are subclonal
         :param min_score: minimum reliability score of a mutation pattern with putative subclones
-        :param sc_sample_ids: map from identified putative subclones to their original sample
         :param max_sc_maf: sum of median MAFs of conflicting MPs must be below this threshold
         :return updated_nodes:
         """

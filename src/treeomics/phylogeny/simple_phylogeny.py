@@ -101,13 +101,11 @@ class SimplePhylogeny(Phylogeny):
         :return observed frequencies of the mutation patterns in each used fraction of variants
         """
 
-        raise RuntimeError('Not yet supported in Bayesian Inference model.')
-
         # Most reliable mutation patterns need to be identified before
         if self.compatible_nodes is None:
             self.find_max_compatible_tree()
 
-        node_frequencies = cps.solve_downsampled_nodes(
+        node_frequencies = cps.solve_downsampled_binary_nodes(
             self.cf_graph, self.mp_weights, self.patient.shared_mutations,
             no_replications, len(self.patient.sample_names))
 
