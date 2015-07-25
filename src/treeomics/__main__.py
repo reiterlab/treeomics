@@ -164,7 +164,7 @@ def main():
 
     args = parser.parse_args()
     plots_report = True    # for debugging set to False
-    plots_paper = True
+    plots_paper = False
 
     if args.normal:
         normal_sample_name = args.normal
@@ -356,7 +356,9 @@ def main():
                                               min_mp_lh=settings.MIN_MP_LH if 0 < settings.MIN_MP_LH < 1 else None)
 
             # determine mutation patterns based on standard binary classification to generate an overview graph
-            if plots_report:
+            if plots_report and (len(phylogeny.false_positives)
+                                 + len(phylogeny.false_negatives)
+                                 + len(phylogeny.false_negative_unknowns) < int_sets.MAX_MUTS_TABLE_PLOT):
                 # create mutation pattern overview plot
                 # show only the different patterns and not the individual variants
                 # (convenient for large numbers of variants)

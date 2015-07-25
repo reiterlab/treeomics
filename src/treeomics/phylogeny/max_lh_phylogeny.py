@@ -36,6 +36,8 @@ class MaxLHPhylogeny(Phylogeny):
         self.mp_col_ids = None
         # 2d np array [mut_idx, mp_col_idx]
         self.mp_weights = None
+        # map from identified putative subclones to their original sample
+        self.sc_sample_ids = None
 
         # most likely but also compatible mutation pattern for each variant
         self.max_lh_nodes = None
@@ -76,7 +78,7 @@ class MaxLHPhylogeny(Phylogeny):
             min_score = None
 
         # necessary to map from identified putative subclones to their original sample
-        sc_sample_ids = dict()
+        self.sc_sample_ids = dict()
 
         # compute various mutation patterns (nodes) and their reliability scores
         self.node_scores, self.col_ids_mp, self.mp_col_ids, self.mp_weights = infer_ml_graph_nodes(
@@ -123,7 +125,7 @@ class MaxLHPhylogeny(Phylogeny):
                         fps = set(self.patient.mutations[mut_idx].difference(self.col_ids_mp[mp_col_idx]))
 
                         # check if some of these false-positives are present in the newly created subclones
-                        for sc_idx, sa_idx in sc_sample_ids.items():
+                        for sc_idx, sa_idx in self.sc_sample_ids.items():
                             if sc_idx in self.col_ids_mp[mp_col_idx] and sa_idx in fps:
                                 fps.remove(sa_idx)
                         if len(fps) > 0:
@@ -133,8 +135,8 @@ class MaxLHPhylogeny(Phylogeny):
                         for sa_idx in self.col_ids_mp[mp_col_idx].difference(self.patient.mutations[mut_idx]):
 
                             # map from identified putative subclones to their original sample
-                            if sa_idx in sc_sample_ids:
-                                sa_idx = sc_sample_ids[sa_idx]
+                            if sa_idx in self.sc_sample_ids:
+                                sa_idx = self.sc_sample_ids[sa_idx]
                                 if sa_idx in self.patient.mutations[mut_idx]:
                                     # mutation was already classified as present in original sample
                                     # => no false-negative
@@ -157,7 +159,7 @@ class MaxLHPhylogeny(Phylogeny):
             # find parsimony-informative evolutionarily incompatible mps with high likelihood
             if min_mp_lh is not None:
 
-                sc_sample_ids, found_subclones = self.find_subclones(min_score, sc_sample_ids)
+                self.sc_sample_ids, found_subclones = self.find_subclones(min_score)
                 if not found_subclones:
                     # not enough evidence for additional new subclones
                     break
@@ -165,7 +167,7 @@ class MaxLHPhylogeny(Phylogeny):
             else:           # no detection of subclones
                 break
 
-        if len(sc_sample_ids) > 0:
+        if len(self.sc_sample_ids) > 0:
             logger.info('{} putative subclones have been detected: {}'.format(
                         len(self.patient.sc_names)-len(self.patient.sample_names),
                         ', '.join(self.patient.sc_names[sc_idx] for sc_idx in range(len(self.patient.sample_names),
@@ -180,9 +182,9 @@ class MaxLHPhylogeny(Phylogeny):
         self.shared_mlh_mps = defaultdict(set)          # parsimony-informative mps
 
         for mut_idx, samples in self.max_lh_mutations.items():
-            if len(samples) == len(self.patient.sample_names) + len(sc_sample_ids):          # founder mut.
+            if len(samples) == len(self.patient.sample_names) + len(self.sc_sample_ids):          # founder mut.
                 self.mlh_founders.add(mut_idx)
-            elif 1 < len(samples) < len(self.patient.sample_names) + len(sc_sample_ids):     # shared mut.
+            elif 1 < len(samples) < len(self.patient.sample_names) + len(self.sc_sample_ids):     # shared mut.
                 self.shared_mlh_mps[frozenset(samples)].add(mut_idx)
             elif len(samples) == 1:                                                          # unique mut.
                 for sa_idx in samples:
@@ -196,14 +198,14 @@ class MaxLHPhylogeny(Phylogeny):
 
         return self.mlh_tree
 
-    def find_subclones(self, min_score, sc_sample_ids):
+    def find_subclones(self, min_score):
 
-        updated_nodes, sc_sample_ids = self.find_subclonal_mps(min_score, sc_sample_ids)
+        updated_nodes, self.sc_sample_ids = self.find_subclonal_mps(min_score)
 
         if len(updated_nodes) == 0:
             logger.info('There are no more incompatible mutation patterns with a reliability score '
                         'of at least {:.1e}.'.format(min_score))
-            return sc_sample_ids, False
+            return self.sc_sample_ids, False
         else:
             anc = set()     # find the mutations present in the ancestor MP and assign them also to the new MP
             for old_mp, new_mp in updated_nodes.items():
@@ -243,9 +245,9 @@ class MaxLHPhylogeny(Phylogeny):
                     ', '.join(self.patient.sc_names[sc_idx] for sc_idx in a),
                     ', '.join(self.patient.sc_names[sc_idx] for sc_idx in par_mp)))
 
-            return sc_sample_ids, True
+            return self.sc_sample_ids, True
 
-    def find_subclonal_mps(self, min_score, sc_sample_ids, max_sc_maf=0.6):
+    def find_subclonal_mps(self, min_score, max_sc_maf=0.6):
         """
         Identify evolutionarily incompatible mutation patterns with a reliability score greater than min_score which
         where variants in some samples are subclonal
@@ -262,7 +264,7 @@ class MaxLHPhylogeny(Phylogeny):
 
             if self.node_scores[mp] < min_score:
                 # no incompatible mutation patterns with high reliability score exist
-                return updated_nodes, sc_sample_ids
+                return updated_nodes, self.sc_sample_ids
 
             # find highest ranked conflicting mutation pattern
             hcmp = max(set(self.cf_graph.neighbors(mp)).difference(self.conflicting_nodes),
@@ -351,7 +353,7 @@ class MaxLHPhylogeny(Phylogeny):
 
                 # create new subclone in this sample and update mutation pattern
                 created_scs[s] = len(self.patient.sc_names)
-                sc_sample_ids[len(self.patient.sc_names)] = s
+                self.sc_sample_ids[len(self.patient.sc_names)] = s
                 new_mp.remove(s)
                 new_mp.add(len(self.patient.sc_names))
                 # did a subclone of this sample already get generated
@@ -408,7 +410,7 @@ class MaxLHPhylogeny(Phylogeny):
                         related_mp, self.node_scores[related_mp])
                         + 'would not make it compatible to {} (w: {:.1e})'.format(hcmp, self.node_scores[hcmp]))
 
-        return updated_nodes, sc_sample_ids
+        return updated_nodes, self.sc_sample_ids
 
     def _update_mutation_pattern(self, old_mp, created_scs, updated_nodes):
         """

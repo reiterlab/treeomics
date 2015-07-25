@@ -359,6 +359,9 @@ def create_mlh_graph_files(res_nodes_filename, res_mutnode_labels_filename, res_
                     else:                       # mutation data has not been changed
                         res_data_file.write(',resolved=0')
 
+                    # map from identified putative subclones to their original sample
+                    if sa_idx in phylogeny.sc_sample_ids:
+                        sa_idx = phylogeny.sc_sample_ids[sa_idx]
                     if data[mut_idx][sa_idx] < 0:
                         res_data_file.write(',unknown=1')
                     else:
