@@ -3,6 +3,7 @@
 __author__ = 'jreiter'
 
 import logging
+import itertools
 from phylogeny.phylogeny_utils import TREE_ROOT
 
 # get logger for application
@@ -207,7 +208,7 @@ def add_artifact_info(file_path, phylogeny):
                 for mut_idx, samples in sorted(phylogeny.false_negative_unknowns.items(),
                                                key=lambda x: pat.gene_names[x[0]]):
                     for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
-                        latex_file.write('Putative positive unknown {} ({}) in sample {}'.format(
+                        latex_file.write('Putative unknown false-negative {} ({}) in sample {}'.format(
                             pat.gene_names[mut_idx], pat.mut_keys[mut_idx],
                             pat.sample_names[sa_idx]))
                         latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
@@ -244,6 +245,35 @@ def add_artifact_info(file_path, phylogeny):
                         latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
                             pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
+
+            latex_file.write('\\end{comment} \n\n')
+
+            latex_file.write('\\begin{comment} \n')
+            # produce latex table for paper
+            latex_file.write(' & '.join('\\textbf{'+col_name.replace('_','~')+'}' for col_name in itertools.chain(
+                ['Sample'], pat.sample_names)) + '\\\\\n')
+            latex_file.write('\\hline \n')
+
+            ufns = [0 for _ in range(pat.n)]
+            for mut_idx, samples in phylogeny.false_negative_unknowns.items():
+                for sa_idx in samples:
+                    ufns[sa_idx] += 1
+            latex_file.write('\\textbf{Under-powered false-negatives} & '
+                             + ' & '.join('$'+str(f)+'$' for f in ufns) + ' \\\\\n')
+
+            fns = [0 for _ in range(pat.n)]
+            for mut_idx, samples in phylogeny.false_negatives.items():
+                for sa_idx in samples:
+                    fns[sa_idx] += 1
+            latex_file.write('\\textbf{Powered false-negatives} & '
+                             + ' & '.join('$'+str(f)+'$' for f in fns) + ' \\\\\n')
+
+            fps = [0 for _ in range(pat.n)]
+            for mut_idx, samples in phylogeny.false_positives.items():
+                for sa_idx in samples:
+                    fps[sa_idx] += 1
+            latex_file.write('\\textbf{False-positives} & '
+                             + ' & '.join('$'+str(f)+'$' for f in fps) + ' \\\\\n')
 
             latex_file.write('\\end{comment} \n\n')
 
