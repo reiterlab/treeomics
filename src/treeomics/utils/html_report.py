@@ -422,10 +422,12 @@ class HTMLReport(object):
             self._ind += 1      # indentation level increases by 1
 
             for mut_idx, samples in sorted(phylogeny.false_positives.items(),
-                                           key=lambda x: pat.gene_names[x[0]].lower()):
+                                           key=lambda x: pat.gene_names[x[0]].lower() if pat.gene_names is not None
+                                           else pat.mut_keys[x[0]]):
                 self.file.write(
-                    self._inds[self._ind] + '<li><em>{}</em> ({}) in samples: {} </li>\n'.format(
-                        pat.gene_names[mut_idx], pat.mut_keys[mut_idx],
+                    self._inds[self._ind] + '<li><em>{}</em> {} in samples: {} </li>\n'.format(
+                        pat.gene_names[mut_idx] if pat.gene_names is not None else pat.mut_keys[mut_idx],
+                        '({})'.format(pat.mut_keys[mut_idx]) if pat.gene_names is not None else '',
                         ', '.join('{} (reads: {}/{})'.format(
                             pat.sample_names[sa_idx].replace('_', ' '),
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
@@ -443,10 +445,12 @@ class HTMLReport(object):
             self._ind += 1      # indentation level increases by 1
 
             for mut_idx, samples in sorted(phylogeny.false_negatives.items(),
-                                           key=lambda x: pat.gene_names[x[0]].lower()):
+                                           key=lambda x: pat.gene_names[x[0]].lower() if pat.gene_names is not None
+                                           else pat.mut_keys[x[0]]):
                 self.file.write(
                     self._inds[self._ind]+'<li><em>{}</em> ({}) in samples: {} </li>\n'.format(
-                        pat.gene_names[mut_idx], pat.mut_keys[mut_idx],
+                        pat.gene_names[mut_idx] if pat.gene_names is not None else pat.mut_keys[mut_idx],
+                        '({})'.format(pat.mut_keys[mut_idx]) if pat.gene_names is not None else '',
                         ', '.join('{} (reads: {}/{})'.format(
                             pat.sample_names[sa_idx].replace('_', ' '),
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
