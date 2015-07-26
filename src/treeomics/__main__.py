@@ -356,9 +356,7 @@ def main():
                                               min_mp_lh=settings.MIN_MP_LH if 0 < settings.MIN_MP_LH < 1 else None)
 
             # determine mutation patterns based on standard binary classification to generate an overview graph
-            if plots_report and (len(phylogeny.false_positives)
-                                 + len(phylogeny.false_negatives)
-                                 + len(phylogeny.false_negative_unknowns) < int_sets.MAX_MUTS_TABLE_PLOT):
+            if plots_report:
                 # create mutation pattern overview plot
                 # show only the different patterns and not the individual variants
                 # (convenient for large numbers of variants)
@@ -370,14 +368,20 @@ def main():
                 if mp_graph_name is not None:
                     html_report.add_mp_overview_graph(patient, phylogeny, mp_graph_name)
 
-            # illustrative mutation table plot of incompatible mutation patterns and their putative artifacts
-            x_length, y_length = plts.create_incompatible_mp_table(
-                patient, os.path.join(output_directory, settings.artifacts_plot_prefix+fn_pattern),
-                phylogeny, row_labels=patient.sample_names, column_labels=col_labels)
-            # add information about putative false-positives and false-negatives to the HTML report
-            html_report.add_artifacts_information(
-                phylogeny, artifacts_plot_filepath=settings.artifacts_plot_prefix+fn_pattern+'.png',
-                plot_width=x_length*7)
+                # create plot only if there is enough space for all the incompatible mutations
+                if (len(phylogeny.false_positives) + len(phylogeny.false_negatives)
+                        + len(phylogeny.false_negative_unknowns) < int_sets.MAX_MUTS_TABLE_PLOT):
+
+                    # illustrative mutation table plot of incompatible mutation patterns and their putative artifacts
+                    x_length, y_length = plts.create_incompatible_mp_table(
+                        patient, os.path.join(output_directory, settings.artifacts_plot_prefix+fn_pattern),
+                        phylogeny, row_labels=patient.sample_names, column_labels=col_labels)
+                    # add information about putative false-positives and false-negatives to the HTML report
+                    html_report.add_artifacts_information(
+                        phylogeny, artifacts_plot_filepath=settings.artifacts_plot_prefix+fn_pattern+'.png',
+                        plot_width=x_length*7)
+                else:
+                    html_report.add_artifacts_information(phylogeny)
 
             # do mutation pattern robustness analysis through down-sampling
             if args.down > 0:

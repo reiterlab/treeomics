@@ -217,6 +217,8 @@ class MaxLHPhylogeny(Phylogeny):
 
         # calculate the frequency with which compatible mutation patterns are reproduced
         # when only a subset of variants are used
+        no_comp_pars_inf_mps = sum(1 for node in self.compatible_nodes
+                                   if 1 < len(node) < len(self.patient.sample_names))
         for sample_fraction in sorted(node_frequencies.keys()):
             freq = 0
             for node in self.compatible_nodes:
@@ -233,7 +235,7 @@ class MaxLHPhylogeny(Phylogeny):
                     comp_node_frequencies[sample_fraction][node] = 0.0
 
             logger.info('Fraction of confirmed mutation patterns with {}% of the variants: {:.1%}'.format(
-                sample_fraction, float(freq)))
+                sample_fraction, float(freq) / no_comp_pars_inf_mps))
 
         # produce latex table for paper
         # displayed_fractions = [10, 20, 50, 80, 90, 95]
