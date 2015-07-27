@@ -109,8 +109,6 @@ def get_log_p0(n, k, e, c0, pseudo_alpha=def_sets.PSEUDO_ALPHA, pseudo_beta=def_
         integral = quad(exploglp, a=0, b=1, epsrel=rel_tol, epsabs=0)
         nonzero_integral = math.log(integral[0])
         error = integral[1]
-        if error/(integral[0]+error) > 0.5:
-            logger.debug("Posterior calculation yielded very large relative error")
 
     elif float(k)/n >= e:     # approximation is easy: gamma approximation
         # logger.debug("Using gamma approx")
@@ -136,23 +134,28 @@ def get_log_p0(n, k, e, c0, pseudo_alpha=def_sets.PSEUDO_ALPHA, pseudo_beta=def_
             # f0 = exploglp(0)
             # xzero = (-1*f0*dldf - math.sqrt(math.pow(f0*dldf,2)-2*f0*(f0*d2ldf2 + dldf)))/(d0*d2ldf2 + dldf)
             # area = f0*xzero + f0*dldf*math.pow(xzero,2)/2 + (f0*d2ldf2+dldf)/6*math.pow(xzero,3)
-            dldf = k/e*(1-2*e) + (n-k)/(1-e)*(2*e-1)
+            # dldf = k/e*(1-2*e) + (n-k)/(1-e)*(2*e-1)
+            #
+            # d2ldf2 = -1*k/(math.pow(e, 2))*math.pow(1-2*e, 2) - (n-k)/(math.pow(1-e, 2))*math.pow(2*e-1, 2)
+            # f0 = exploglp(0)
+            # lf0 = loglp(n, k, 0, e)
+            # # xzero = (-1*f0*dldf - math.sqrt(math.pow(f0*dldf,2)-2*f0*(f0*d2ldf2 + dldf)))/(f0*d2ldf2 + dldf)
+            # x1 = lf0+math.log(-1*dldf)
+            # x2 = 1.0/2*math.log(f0*math.pow(dldf, 2)-2*(f0*d2ldf2 + dldf)) + lf0/2
+            # lx0 = logsumexp([x1, x2])
+            # area = lf0 + lx0    # + f0*dldf*math.pow(xzero,2)/2 + (f0*d2ldf2+dldf)/6*math.pow(xzero,3))
+            # nonzero_integral = area
 
-            d2ldf2 = -1*k/(math.pow(e, 2))*math.pow(1-2*e, 2) - (n-k)/(math.pow(1-e, 2))*math.pow(2*e-1, 2)
-            f0 = exploglp(0)
-            lf0 = loglp(n, k, 0, e)
-            # xzero = (-1*f0*dldf - math.sqrt(math.pow(f0*dldf,2)-2*f0*(f0*d2ldf2 + dldf)))/(f0*d2ldf2 + dldf)
-            x1 = lf0+math.log(-1*dldf)
-            x2 = 1.0/2*math.log(f0*math.pow(dldf, 2)-2*(f0*d2ldf2 + dldf)) + lf0/2
-            lx0 = logsumexp([x1, x2])
-            area = lf0 + lx0    # + f0*dldf*math.pow(xzero,2)/2 + (f0*d2ldf2+dldf)/6*math.pow(xzero,3))
-            nonzero_integral = area
+            #Normal approx see supplement
+
+            normalApprox = -1*(e-k/n)*(e-k/n)*n/(e*(1-e)) - math.log(e-k/n) - 1/2*math.log(n) + 1/2*math.log(2*math.pi) + math.log(e*(1-e))
+            correction = loglp(n, k, k/n, 0) + 1/2*math.log(2*math.pi)
+            nonzero_integral = normalApprox + correction
+
         else:
             nonzero_integral = math.log(integral[0])
 
-        error = integral[1]
-        if error/(integral[0]+error) > 0.5:
-            logger.debug("Posterior calculation yielded very large relative error")
+
 
     # carry along the beta function normalizing constant
     nonzero_integral += (math.log(1-c0) + gammaln(pseudo_alpha + pseudo_beta)
