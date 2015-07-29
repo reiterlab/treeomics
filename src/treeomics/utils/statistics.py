@@ -146,16 +146,14 @@ def get_log_p0(n, k, e, c0, pseudo_alpha=def_sets.PSEUDO_ALPHA, pseudo_beta=def_
             # area = lf0 + lx0    # + f0*dldf*math.pow(xzero,2)/2 + (f0*d2ldf2+dldf)/6*math.pow(xzero,3))
             # nonzero_integral = area
 
-            #Normal approx see supplement
-
-            normalApprox = -1*(e-k/n)*(e-k/n)*n/(e*(1-e)) - math.log(e-k/n) - 1/2*math.log(n) + 1/2*math.log(2*math.pi) + math.log(e*(1-e))
+            # Normal approx see supplement
+            normal_approx = (-1*(e-k/n)*(e-k/n)*n/(e*(1-e)) - math.log(e-k/n) - 1/2*math.log(n)
+                             + 1/2*math.log(2*math.pi) + math.log(e*(1-e)))
             correction = loglp(n, k, k/n, 0) + 1/2*math.log(2*math.pi) + 1/2*math.log((k/n)*(1-k/n)/n)
-            nonzero_integral = normalApprox + correction
+            nonzero_integral = normal_approx + correction
 
         else:
             nonzero_integral = math.log(integral[0])
-
-
 
     # carry along the beta function normalizing constant
     nonzero_integral += (math.log(1-c0) + gammaln(pseudo_alpha + pseudo_beta)

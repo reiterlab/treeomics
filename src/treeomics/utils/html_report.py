@@ -448,7 +448,7 @@ class HTMLReport(object):
                                            key=lambda x: pat.gene_names[x[0]].lower() if pat.gene_names is not None
                                            else pat.mut_keys[x[0]]):
                 self.file.write(
-                    self._inds[self._ind]+'<li><em>{}</em> ({}) in samples: {} </li>\n'.format(
+                    self._inds[self._ind]+'<li><em>{}</em> {} in samples: {} </li>\n'.format(
                         pat.gene_names[mut_idx] if pat.gene_names is not None else pat.mut_keys[mut_idx],
                         '({})'.format(pat.mut_keys[mut_idx]) if pat.gene_names is not None else '',
                         ', '.join('{} (reads: {}/{})'.format(

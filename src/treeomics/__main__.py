@@ -252,6 +252,9 @@ def main():
                                         bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0)
     fn_pattern += '_s' if args.mode == 1 else ''
 
+    # do basic analysis on provided input data
+    patient.analyze_data()
+
     if plots_report:   # deactivate plot generation for debugging
         # generate scatter plot about raw sequencing data (mutant reads vs. coverage)
         # plots.reads_plot(os.path.join(output_directory, 'fig_reads_'+patient.name+'.pdf'), patient)
@@ -268,7 +271,7 @@ def main():
         if patient.gene_names is not None:
             col_labels = patient.gene_names
         else:
-            col_labels = [mut_key for mut_key in patient.mut_keys]
+            col_labels = patient.mut_keys
 
         if len(col_labels) < int_sets.MAX_MUTS_TABLE_PLOT and plots_report:
             mut_table_name = 'mut_table_'+fn_pattern
@@ -282,7 +285,6 @@ def main():
         mut_table_name = None
         col_labels = None
 
-    patient.analyze_data()
     # create raw data analysis file
     analysis.create_data_analysis_file(patient, os.path.join(output_directory, 'data_'+fn_pattern+'.txt'))
     # utils.analysis.print_genetic_distance_table(patient)

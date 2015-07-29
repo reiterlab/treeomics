@@ -577,7 +577,7 @@ def infer_ml_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None):
                 logger.debug('Underflow error for pattern {}. Set probability to minimal float value!'.format(
                     ', '.join(sample_names[sa_idx] for sa_idx in node)))
             node_scores[node] = sys.float_info.min
-            raise('Underflow error for pattern {}. Set probability to minimal float value!'.format(
+            raise RuntimeError('Underflow error for pattern {}. Set probability to minimal float value!'.format(
                 ', '.join(sample_names[sa_idx] for sa_idx in node)))
             # should never happen, delete this check
 
