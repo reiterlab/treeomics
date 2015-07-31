@@ -185,6 +185,7 @@ def main():
     logger.info('False discovery rate for the statistical test: {}.'.format(fdr))
     min_absent_cov = args.min_absent_coverage
     logger.info('Minimum coverage for an absent variant: {} (otherwise unknown)'.format(min_absent_cov))
+    logger.info('Replications for robustness analysis through down-sampling: {}'.format(args.down))
 
     # ##########################################################################################################
     # ############################################### LOAD DATA ################################################

@@ -116,10 +116,10 @@ class MaxLHPhylogeny(Phylogeny):
                         self.max_lh_nodes[self.col_ids_mp[mp_col_idx]].add(mut_idx)
                         self.max_lh_mutations[mut_idx] = self.col_ids_mp[mp_col_idx]
                         self.max_lh_weights[mut_idx] = self.mp_weights[mut_idx][mp_col_idx]
-                        logger.info('Max LH pattern of variant in {} is {} with log likelihood {:.1e}.'.format(
-                            self.patient.gene_names[mut_idx] if self.patient.gene_names is not None
-                            else self.patient.mut_keys[mut_idx], self.col_ids_mp[mp_col_idx],
-                            self.mp_weights[mut_idx][mp_col_idx]))
+                        # logger.debug('Max LH pattern of variant in {} is {} with log likelihood {:.1e}.'.format(
+                        #     self.patient.gene_names[mut_idx] if self.patient.gene_names is not None
+                        #     else self.patient.mut_keys[mut_idx], self.col_ids_mp[mp_col_idx],
+                        #     self.mp_weights[mut_idx][mp_col_idx]))
 
                         # determine false positives and false negatives compared to original classification
                         fps = set(self.patient.mutations[mut_idx].difference(self.col_ids_mp[mp_col_idx]))
@@ -315,6 +315,14 @@ class MaxLHPhylogeny(Phylogeny):
                 # no incompatible mutation patterns with high reliability score exist
                 return updated_nodes, self.sc_sample_ids
 
+            # determine the number of variants for which this mutation pattern would be
+            # more likely than the before assigned evolutionarily compatible mp
+            no_sup_vars = sum(1 for mut_idx in range(len(self.mp_weights))
+                              if self.mp_weights[mut_idx][self.mp_col_ids[mp]] == max(self.mp_weights[mut_idx]))
+            if no_sup_vars < len(self.mp_weights)*0.01:
+                # mutation pattern is not the most likely for a significant fraction of variants
+                return updated_nodes, self.sc_sample_ids
+
             # find highest ranked conflicting mutation pattern
             hcmp = max(set(self.cf_graph.neighbors(mp)).difference(self.conflicting_nodes),
                        key=lambda k: self.node_scores[k])
@@ -410,7 +418,7 @@ class MaxLHPhylogeny(Phylogeny):
                     name = self.patient.sc_names[s][:self.patient.sc_names[s].find('_SC')]
                 else:
                     name = self.patient.sc_names[s]
-                next_id = int(max(n.split('_SC')[1] if len(n.split('_SC')) > 1 else 0
+                next_id = int(max(int(n.split('_SC')[1]) if len(n.split('_SC')) > 1 else 0
                                   for n in self.patient.sc_names if n.split('_SC')[0] == name))+1
                 self.patient.sc_names.append(name+'_SC'+str(next_id))
 
@@ -564,7 +572,7 @@ def infer_ml_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None):
 
                 if node_scores[node] == 0.0:
                     if len(node) == 0 or len(node) == 1 or len(node) == len(sample_names):
-                        logger.debug('Underflow error for pattern {}. Set probability to minimal float value!'.format(
+                        logger.debug('Underflow warning for pattern {}. Set probability to minimal float value!'.format(
                             ', '.join(sample_names[sa_idx] for sa_idx in node)))
                     else:
                         logger.warn('Underflow error for pattern {}. Set probability to minimal float value!'.format(
