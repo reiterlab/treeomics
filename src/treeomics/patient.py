@@ -185,6 +185,10 @@ class Patient(object):
         self.mut_keys = []
         self.gene_names = []
 
+        # posterior log probability if no data was reported
+        non_log_p0 = math.log(int_sets.NO_DATA_P0)
+        non_log_p1 = math.log(1.0 - int_sets.NO_DATA_P0)
+
         for mut_key, gene_name in gene_names.items():
 
             # add mutation name
@@ -239,10 +243,15 @@ class Patient(object):
                         self.data[len(self.mut_keys)-1].append(NEG_UNKNOWN)
                         self.unknowns[1][sample_name] += 1
 
-                # calculate posterior: log probability that VAF = 0, log probability that VAF > 0
-                p0, p1 = get_log_p0(self.phred_coverage[mut_key][sample_name], self.mut_reads[mut_key][sample_name],
-                                    self.bi_error_rate, self.bi_c0)
-                self.log_p01[len(self.mut_keys)-1].append([p0, p1])
+                # calculate posterior: log probability that VAF = 0
+                if self.phred_coverage[mut_key][sample_name] < 0:   # no sequencing data in this sample
+                    self.log_p01[len(self.mut_keys)-1].append([non_log_p0, non_log_p1])
+
+                else:                                               # calculate posterior according to prior and data
+                    # calculate posterior: log probability that VAF = 0, log probability that VAF > 0
+                    p0, p1 = get_log_p0(self.phred_coverage[mut_key][sample_name], self.mut_reads[mut_key][sample_name],
+                                        self.bi_error_rate, self.bi_c0)
+                    self.log_p01[len(self.mut_keys)-1].append([p0, p1])
                 # logger.debug('p0: {;.2e}, k: {}, n: {}.'.format(
                 #     self.log_p0[len(self.mut_keys)-1], self.mut_reads[mut_key][sample_name],
                 #     self.phred_coverage[mut_key][sample_name]))
