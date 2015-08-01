@@ -572,14 +572,16 @@ def infer_ml_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None):
 
                 if node_scores[node] == 0.0:
                     if len(node) == 0 or len(node) == 1 or len(node) == len(sample_names):
-                        logger.debug('Underflow warning for pattern {}. Set probability to minimal float value!'.format(
-                            ', '.join(sample_names[sa_idx] for sa_idx in node)))
+                        # logger.debug('Underflow warning for pattern {}. Set probability to minimal float value!'
+                        #       .format(', '.join(sample_names[sa_idx] for sa_idx in node)))
+                        pass
                     else:
-                        logger.warn('Underflow error for pattern {}. Set probability to minimal float value!'.format(
-                            ', '.join(sample_names[sa_idx] for sa_idx in node)))
+                        # logger.warn('Underflow error for pattern {}. Set probability to minimal float value!'.format(
+                        #     ', '.join(sample_names[sa_idx] for sa_idx in node)))
                         # raise RuntimeError(
                         #     'Underflow error for pattern {}. Set probability to minimal float value!'.format(
                         #         ', '.join(sample_names[sa_idx] for sa_idx in node)))
+                        pass
 
                     node_scores[node] = sys.float_info.min
 

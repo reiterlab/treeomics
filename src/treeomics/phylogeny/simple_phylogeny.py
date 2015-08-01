@@ -48,7 +48,7 @@ class SimplePhylogeny(Phylogeny):
 
         # compute various mutation patterns (nodes) and their reliability scores
         self.nodes, self.node_scores, self.mp_weights = determine_graph_nodes(
-            self.patient.log_p0, self.patient.sample_names, self.patient.mut_keys, self.patient.gene_names)
+            self.patient.log_p01, self.patient.sample_names, self.patient.mut_keys, self.patient.gene_names)
 
         # create conflict graph which forms the input to the ILP
         self.cf_graph = create_conflict_graph(self.nodes, weights=self.node_scores)
@@ -144,10 +144,10 @@ class SimplePhylogeny(Phylogeny):
         return comp_node_frequencies
 
 
-def determine_graph_nodes(log_p0, sample_names, mut_keys, gene_names=None):
+def determine_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None):
     """
     Infer the mutation patterns (graph nodes) by the maximum likelihood using bayesian inference
-    :param log_p0: posterior: log probability that VAF = 0
+    :param log_p01: posterior: log probability that VAF = 0
     :param sample_names: name of the samples
     :param mut_keys: unique key of variant
     :param gene_names: if available name of the gene where the variant occurred
@@ -159,23 +159,23 @@ def determine_graph_nodes(log_p0, sample_names, mut_keys, gene_names=None):
     node_scores = dict()    # mutation patterns score summed over all variants supporting this score
     mut_pattern_weights = dict()    # weight of the inferred mutation pattern given the p0 in each sample
 
-    for mut_idx in range(len(log_p0)):
+    for mut_idx in range(len(log_p01)):
         node = set()
         log_ml = 0.0        # log maximum likelihood of the inferred pattern
         for sa_idx in range(len(sample_names)):
-            if math.exp(log_p0[mut_idx][sa_idx]) < 0.5:   # variant is present
+            if math.exp(log_p01[mut_idx][sa_idx][0]) < 0.5:   # variant is present
                 node.add(sa_idx)
-                log_ml += math.log(-np.expm1(log_p0[mut_idx][sa_idx]))
+                log_ml += math.log(-np.expm1(log_p01[mut_idx][sa_idx][0]))
             else:                           # mutation is absent
-                log_ml += log_p0[mut_idx][sa_idx]
+                log_ml += log_p01[mut_idx][sa_idx][0]
 
         node = frozenset(node)
         if log_ml == 0.0:   # numerical artifact, use approximation: ignore second order term
             for sa_idx in range(len(sample_names)):
                 if sa_idx in node:              # variant is present
-                    log_ml += math.exp(log_p0[mut_idx][sa_idx])     # sum probability
+                    log_ml += math.exp(log_p01[mut_idx][sa_idx][0])     # sum probability
                 else:                           # variant is absent
-                    log_ml += -np.expm1(log_p0[mut_idx][sa_idx])
+                    log_ml += -np.expm1(log_p01[mut_idx][sa_idx][0])
 
             log_ml = np.log1p(-log_ml)      # calculates log(1+argument)
             logger.debug('Approximated log probability of variant {} having pattern {} by {:.2e}.'.format(

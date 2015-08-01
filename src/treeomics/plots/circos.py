@@ -115,19 +115,19 @@ def create_mutation_links_file(links_filename, phylogeny, mut_pos):
 
         links_file.write('# chr1 start1 end1 chr2 start2 end2 [options]\n')
 
-        # run through all edges of conflicting clones
+        # run through all edges of conflicting mutation patterns
         for source, sink in phylogeny.cf_graph.edges_iter():
 
-            if source not in phylogeny.nodes or sink not in phylogeny.nodes:
-                # only generate the conflict links among the present and absent mutation clones
+            if source not in phylogeny.patient.mps or sink not in phylogeny.patient.mps:
+                # only generate the conflict links among the present and absent mutation patterns
                 # do not consider clones determined by unknown positions which are given by the nodes
                 # in the actual conflict graph
                 continue
 
-            # create links between all mutations present in the two clones
-            for source_mut in phylogeny.nodes[source]:
+            # create links between all mutations present in the two mutation patterns
+            for source_mut in phylogeny.patient.mps[source]:
 
-                for sink_mut in phylogeny.nodes[sink]:
+                for sink_mut in phylogeny.patient.mps[sink]:
                     # write link to file in the following format
                     # hs1 450 550 hs2 800100 800200
 
