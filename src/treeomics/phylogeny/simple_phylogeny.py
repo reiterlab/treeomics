@@ -179,7 +179,7 @@ def determine_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None):
 
             log_ml = np.log1p(-log_ml)      # calculates log(1+argument)
             logger.debug('Approximated log probability of variant {} having pattern {} by {:.2e}.'.format(
-                gene_names[mut_idx], node, log_ml))
+                gene_names[mut_idx] if gene_names is not None else mut_keys[mut_idx], node, log_ml))
             if log_ml == 0.0:
                 if len(node) == 0 or len(node) == len(sample_names):
                     logger.debug('Underflow error. Set probability to minimal float value!')

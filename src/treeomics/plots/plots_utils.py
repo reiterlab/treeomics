@@ -285,16 +285,16 @@ def boxplot(filename, patient):
     bp_ax.set_title(patient.name)
     bp_ax.set_xlabel('Samples')
     bp_ax.set_ylabel('Variant allele frequency')
-    bp_ax.set_xticklabels([sa_n for sa_n in patient.sample_names], rotation=45)
+    bp_ax.set_xticklabels([sa_n.replace('_', ' ') for sa_n in patient.sample_names], rotation=45)
     # caption = 'Mutant allele frequency (MAF) distribution in the DNA samples of {}. '.format(patient.name)
     # bp_fig.text(0, -0.2, caption,
     #                horizontalalignment='left', color='black', fontsize=10)
     for sa_idx, sample_name in enumerate(patient.sample_names):
-        bp_ax.text(sa_idx+1, 0.93, len(patient.sample_mafs[sample_name]),
-                   horizontalalignment='center', color='#707070', fontsize=9)
-        bp_ax.text(sa_idx+1, 0.89, '{}x'.format(np.median(patient.sample_phred_coverages[sample_name])),
-                   horizontalalignment='center', fontsize=8,
-                   color=('#707070' if np.median(patient.sample_phred_coverages[sample_name]) >= 50 else 'red'))
+        # bp_ax.text(sa_idx+1, 0.93, len(patient.sample_mafs[sample_name]),
+        #            horizontalalignment='center', color='#707070', fontsize=9)
+        bp_ax.text(sa_idx+1, 0.93, '{}x'.format(np.median(patient.sample_phred_coverages[sample_name])),
+                   horizontalalignment='center', fontsize=9,
+                   color=('black' if np.median(patient.sample_phred_coverages[sample_name]) >= 100 else 'red'))
 
     plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
     logger.info('Generated boxplot for mutant allele frequencies {}'.format(filename))
@@ -428,7 +428,7 @@ def reads_plot(filename, patient):
     """
     # create scatter plot of the number of mutant reads over the coverage
     # each sample in a different color
-    bp_fig, bp_ax = plt.subplots(figsize=(len(patient.sample_mafs)*0.56, 4))
+    sc_fig, sc_ax = plt.subplots(figsize=(len(patient.sample_mafs)*0.56, 4))
 
     x_coverages = []
     y_mut_reads = []
@@ -450,30 +450,34 @@ def reads_plot(filename, patient):
 
     plt.scatter(x_coverages, y_mut_reads, c=colors, s=10, marker="x")
 
-    bp_ax.set_xscale('log')
-    bp_ax.set_xlim([1, 10000])
-    bp_ax.set_yscale('log')
-    bp_ax.set_ylim([1, 10000])
-    bp_ax.set_xlabel('Coverage')
-    bp_ax.set_ylabel('Variant reads')
+    sc_ax.set_xscale('log')
+    sc_ax.set_xlim([1, 10000])
+    sc_ax.set_yscale('log')
+    sc_ax.set_ylim([1, 10000])
+    sc_ax.set_xlabel('Coverage')
+    sc_ax.set_ylabel('Variant reads')
+    sc_ax.set_title(patient.name)
 
     plt.show(block=False)
-    x_labels = [item.get_text() for item in bp_ax.get_xticklabels()]
+    x_labels = [item.get_text() for item in sc_ax.get_xticklabels()]
     # x_labels[1] = r'$\leq 10^0$'
     # x_labels[1] = '$\\mathdefault{\leq 10^{0}}$'
     x_labels[1] = '$\\mathdefault{\leq 1}$'
-    bp_ax.set_xticklabels(x_labels)
-    y_labels = [item.get_text() for item in bp_ax.get_yticklabels()]
+    sc_ax.set_xticklabels(x_labels)
+    y_labels = [item.get_text() for item in sc_ax.get_yticklabels()]
     y_labels[1] = '$\\mathdefault{\leq 1}$'
-    bp_ax.set_yticklabels(y_labels)
+    sc_ax.set_yticklabels(y_labels)
 
     y_pos = 5000
     for sa_idx, sample_name in enumerate(patient.sample_names):
         # bp_ax.text(1.3, y_pos, sample_name, horizontalalignment='left',
         #            color=plt.cm.spectral(1. * (sa_idx+1) / (patient.n+1)), fontsize=9)
-        bp_ax.text(1.3, y_pos, sample_name[5:], horizontalalignment='left',
+        sc_ax.text(1.3, y_pos, sample_name[5:], horizontalalignment='left',
                    color=plt.cm.jet(1. * sa_idx / (patient.n - 1)), fontsize=9)
         y_pos /= 1.7
+
+    # draw line at a frequency of 10%
+    plt.plot([1, 10000], [0.1, 1000], 'k:', color='black', lw=1)
 
     plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
     logger.info('Generated scatter plot about sequencing reads {}'.format(filename))

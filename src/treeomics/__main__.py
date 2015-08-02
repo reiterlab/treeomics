@@ -257,15 +257,6 @@ def main():
     patient.analyze_data()
 
     if plots_report:   # deactivate plot generation for debugging
-        # generate scatter plot about raw sequencing data (mutant reads vs. coverage)
-        # plots.reads_plot(os.path.join(output_directory, 'fig_reads_'+patient.name+'.pdf'), patient)
-
-        # generate box plots with MAFs per sample
-        # plots.boxplot(os.path.join(output_directory, 'fig_mafs_'+patient.name+'.pdf'), patient)
-
-        # generate scatter plot about p-values of possibly present variants
-        # plots.p_value_present_plot(os.path.join(output_directory, 'fig_p-present_'+patient.name+'.pdf'),
-        #                            patient, fpr)
 
         # generate mutation table plot
         # show only mutations which are present in at least one sample
@@ -285,6 +276,13 @@ def main():
     else:
         mut_table_name = None
         col_labels = None
+
+    if plots_paper:     # deactivate plot generation for regular analysis
+        # generate scatter plot about raw sequencing data (mutant reads vs. coverage)
+        plts.reads_plot(os.path.join(output_directory, 'fig_reads_'+patient.name+'.pdf'), patient)
+
+        # generate box plots with MAFs per sample
+        plts.boxplot(os.path.join(output_directory, 'fig_mafs_'+patient.name+'.pdf'), patient)
 
     # create raw data analysis file
     analysis.create_data_analysis_file(patient, os.path.join(output_directory, 'data_'+fn_pattern+'.txt'))
