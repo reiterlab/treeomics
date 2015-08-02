@@ -282,7 +282,7 @@ def boxplot(filename, patient):
                 meanline=False, showmeans=True)
 
     bp_ax.set_ylim([0, 1.0])
-    bp_ax.set_title(patient.name)
+    #bp_ax.set_title(patient.name)
     bp_ax.set_xlabel('Samples')
     bp_ax.set_ylabel('Variant allele frequency')
     bp_ax.set_xticklabels([sa_n.replace('_', ' ') for sa_n in patient.sample_names], rotation=45)
@@ -472,7 +472,7 @@ def reads_plot(filename, patient):
     for sa_idx, sample_name in enumerate(patient.sample_names):
         # bp_ax.text(1.3, y_pos, sample_name, horizontalalignment='left',
         #            color=plt.cm.spectral(1. * (sa_idx+1) / (patient.n+1)), fontsize=9)
-        sc_ax.text(1.3, y_pos, sample_name[5:], horizontalalignment='left',
+        sc_ax.text(1.3, y_pos, sample_name, horizontalalignment='left',
                    color=plt.cm.jet(1. * sa_idx / (patient.n - 1)), fontsize=9)
         y_pos /= 1.7
 
