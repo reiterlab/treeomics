@@ -472,7 +472,7 @@ def reads_plot(filename, patient):
     for sa_idx, sample_name in enumerate(patient.sample_names):
         # bp_ax.text(1.3, y_pos, sample_name, horizontalalignment='left',
         #            color=plt.cm.spectral(1. * (sa_idx+1) / (patient.n+1)), fontsize=9)
-        sc_ax.text(1.3, y_pos, sample_name, horizontalalignment='left',
+        sc_ax.text(1.3, y_pos, sample_name.replace('_', ' '), horizontalalignment='left',
                    color=plt.cm.jet(1. * sa_idx / (patient.n - 1)), fontsize=9)
         y_pos /= 1.7
 
