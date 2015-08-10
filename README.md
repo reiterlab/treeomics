@@ -16,18 +16,11 @@ Developed by: JG Reiter<sup>1,2,3,4</sup>, A Makohon-Moore<sup>5,6</sup>, J Gero
 ========
 
 ### What is Treeomics?
+Treeomics is a computational tool to reconstruct the phylogeny of a cancer with commonly available sequencing technologies.
+The tool detects putative artifacts in noisy sequencing data and can therefore infer more robust evolutionary trees.
 
-<table border="0" style="width:100%">
-  <tr>
-    <td>Treeomics is a computational tool to reconstruct the phylogeny of a cancer with commonly available sequencing technologies.
-    The tool detects putative artifacts in noisy sequencing data and can therefore infer more robust evolutionary trees.
-    </td>
-    <td><img class="img-responsive" src="data_pam03.png" alt="Sequencing data" width="250"/>
-    </br>
-    <figcaption>Observed tumor heterogeneity among spatially-distinct DNA sequencing samples</figcaption>
-    </td> 
-  </tr>
-</table>
+![Observed tumor heterogeneity](data_pam03.png "Observed tumor heterogeneity among spatially-distinct DNA sequencing samples")    
+
 
 #### Installation
 1. Open a terminal and clone the repository from GitHub with ```git clone https://github.com/johannesreiter/treeomics.git```
