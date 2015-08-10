@@ -64,6 +64,7 @@ If you have any questions, you can contact us ([https://github.com/johannesreite
 ### License
 Copyright (C) 2015 Johannes Reiter
 
+Treeomics is licensed under the GNU General Public License, Version 3.
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, 
 version 3 of the License.
 There is no warranty for this free software.
