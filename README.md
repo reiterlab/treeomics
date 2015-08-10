@@ -33,7 +33,7 @@ The tool detects putative artifacts in noisy sequencing data and can therefore i
     An IBM Academic License can be obtained here: [http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative](http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative)
   - If you want any plots to be automatically generated, install also
     matplotlib ([http://matplotlib.org](http://matplotlib.org/)), LaTeX/TikZ (with ```pdflatex``` in your ```PATH``` environment variable; 
-    [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html))
+    [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html)), circos ((with ```circos``` in your ```PATH``` environment variable; [http://circos.ca/software/installation](http://circos.ca/software/installation))
     
 #### Getting started with Treeomics
 1. Input files: The input to ```__main__.py``` is either
@@ -45,7 +45,7 @@ where ```<mut-reads table>``` is the path to a tab-separated-value file with the
 reads reporting a variant (row) in each sample (column) and ```<coverage table>``` is the path to a tab-separated-value 
 file with the sequencing depth at the position of this variant in each sample.
 
-Usage: ```python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf file directory> [-n <normal sample name>] -O```
+Usage: ```python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf file directory> [-n <normal sample name>] [-e <sequencing error rate] [-p false positive rate] [-i false discovery rate] -O```
 
 #### Examples
 Example 1: ```python treeomics -r input/Makohon2015/Pam03_mutant_reads.txt -s input/Makohon2015/Pam03_phredcoverage.txt```  
