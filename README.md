@@ -45,7 +45,16 @@ where ```<mut-reads table>``` is the path to a tab-separated-value file with the
 reads reporting a variant (row) in each sample (column) and ```<coverage table>``` is the path to a tab-separated-value 
 file with the sequencing depth at the position of this variant in each sample.
 
-Usage: ```python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf file directory> [-n <normal sample name>] [-e <sequencing error rate] [-p false positive rate] [-i false discovery rate] -O```
+##### Usage: 
+```python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf file directory> [-n <normal sample name>] [-e <sequencing error rate] [-z <prior absent probability>] [-p false positive rate] [-i false discovery rate] -O```
+
+##### Optional parameters:
+- *-e <sequencing error rate>:* Error rate of the sequencing machine.
+- *-z <prior absent probability>:* Prior probability for a variant being absent.
+- *-p <false positive rate>:* False-positive rate for conventional binary classification.
+- *-i <false discovery rate>:* Targeted false-discovery rate for conventional binary classification.
+
+Default settings can be changed in ```treeomics\src\settings.py```.
 
 #### Examples
 Example 1: ```python treeomics -r input/Makohon2015/Pam03_mutant_reads.txt -s input/Makohon2015/Pam03_phredcoverage.txt```  

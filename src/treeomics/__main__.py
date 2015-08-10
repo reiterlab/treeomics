@@ -110,7 +110,8 @@ def usage():
     Terminates the tool afterwards
     """
     logger.warn("Usage: python treeomics.zip -r <mut-reads table> -s <coverage table> | -v vcf_file | "
-                "-d vcf_file_directory  [-n normal_sample_name] \n")
+                "-d vcf_file_directory  [-n <normal sample name>] [-e <sequencing error rate] "
+                "[-z <prior absent probability>] [-p false positive rate] [-i false discovery rate] \n")
     logger.warn("Example: python treeomics.zip -r input/Makohon2015/Pam03_mutant_reads.txt "
                 "-s input/Makohon2015/Pam03_phredcoverage.txt ")
     sys.exit(2)
