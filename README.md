@@ -51,8 +51,8 @@ file with the sequencing depth at the position of this variant in each sample.
 ##### Optional parameters:
 - *-e <sequencing error rate>:* Error rate of the sequencing machine.
 - *-z <prior absent probability>:* Prior probability for a variant being absent.
-- *-p <false positive rate>:* False-positive rate for conventional binary classification.
-- *-i <false discovery rate>:* Targeted false-discovery rate for conventional binary classification.
+- *-p <false positive rate>:* False-positive rate of conventional binary classification.
+- *-i <false discovery rate>:* Targeted false-discovery rate of conventional binary classification.
 
 Default settings can be changed in ```treeomics\src\settings.py```.
 
