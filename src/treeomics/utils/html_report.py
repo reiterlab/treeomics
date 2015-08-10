@@ -480,9 +480,9 @@ class HTMLReport(object):
                             float(no_putative_artifacts) / (len(pat.sample_names) * len(present_mutations)))+'\n')
             self.file.write(
                 self._inds[self._ind] +
-                'Additionally there were {} putative false-negatives due to too low coverage '.format(
+                'Additionally there were {} putative false-negatives with low statistical power '.format(
                     sum(len(fns) for mut_idx, fns in phylogeny.false_negative_unknowns.items()))
-                + '(unknowns; data not shown). \n')
+                + 'due to too low coverage (unknowns; data not shown). \n')
 
             self.file.write(self._inds[self._ind]
                             + ' The color of the border of each rectangle representing a variant illustrates the '

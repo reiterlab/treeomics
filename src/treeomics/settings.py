@@ -1,4 +1,6 @@
-__author__ = 'jreiter'
+#!/usr/bin/python
+"""Basic configurations to run Treeomics"""
+__author__ = 'Johannes REITER'
 
 # Sample sequencing data filtering settings
 SAMPLE_COVERAGE_THRESHOLD = 0   # samples with a lower median coverage are discarded

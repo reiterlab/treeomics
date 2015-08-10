@@ -131,7 +131,8 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
     y_spacing = 1
     label_x_pos = -2
     label_y_pos = 0
-    cb_width = 35.0
+    cb_width = 30.0
+    x_space = 5.0
 
     if isinstance(phylogeny, SimplePhylogeny):
         displayed_mutations = [mut_idx for mut_idx in phylogeny.conflicting_mutations]
@@ -150,12 +151,12 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
     y_length = (len(patient.data[0]) * (height+y_spacing) - y_spacing
                 + (label_y_pos + 20 if column_labels is not None else 0))
 
-    x_length += cb_width
+    x_length += x_space + cb_width
 
     # create new figure
     fig = plt.figure(figsize=(x_length / 20.0, y_length / 20.0), dpi=150)
 
-    ax = plt.axes([0, 1, (x_length-cb_width)/x_length, 1])
+    ax = plt.axes([0, 1, (x_length-cb_width-x_space)/x_length, 1])
     ax.axis('off')
 
     ax.patch.set_facecolor('white')
@@ -241,16 +242,18 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
 
     cb1 = mpl.colorbar.ColorbarBase(ax1, cmap=cmap, norm=norm, orientation='vertical')
     cb1.ax.tick_params(labelsize=8)
-    cb1.set_label('VAF', labelpad=-cb_width*1.6)
+    cb1.ax.yaxis.set_ticks_position('left')
+    cb1.set_label('VAF')
 
     # draw colorbar legend to MAFs
     ax2 = fig.add_axes([(x_length-(cb_width/2))/x_length+(cb_width/4/x_length), 1.05, 0.04, 0.9])
     # Set the colormap and norm to correspond to the data for which the colorbar will be used.
     cmap = cm.Greens
 
-    cb1 = mpl.colorbar.ColorbarBase(ax2, cmap=cmap, norm=mpl.colors.LogNorm(vmin=1, vmax=1000), orientation='vertical')
-    cb1.ax.tick_params(labelsize=8)
-    cb1.set_label('Coverage', labelpad=-cb_width*1.6)
+    cb2 = mpl.colorbar.ColorbarBase(ax2, cmap=cmap, norm=mpl.colors.LogNorm(vmin=1, vmax=1000), orientation='vertical')
+    cb2.ax.tick_params(labelsize=8)
+    cb2.ax.yaxis.set_ticks_position('left')
+    cb2.set_label('Coverage')
 
     ax.autoscale_view()
 
