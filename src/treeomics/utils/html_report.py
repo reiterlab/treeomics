@@ -171,8 +171,8 @@ class HTMLReport(object):
             self.file.write(self._inds[self._ind]+'<div align="left">\n')
             self.file.write(self._inds[self._ind]+'<figcaption>\n')
             self.file.write(
-                self._inds[self._ind]+'<b>Variant classification across {} samples of patient {}.</b>\n'.format(
-                    len(patient.sample_names), patient.name))
+                self._inds[self._ind]+'<b>Conventional binary present/absent variant classification across '
+                + '{} samples of patient {}.</b>\n'.format(len(patient.sample_names), patient.name))
             self.file.write(self._inds[self._ind]+'Blue rectangles correspond to present variants, '
                             + 'red to absent variants, and light red to unknown mutation status '
                               '(due to low coverage).\n')
@@ -286,20 +286,17 @@ class HTMLReport(object):
             self._inds[self._ind]+'<b>Mutation pattern overview graph of {} samples in patient {}.</b>\n'.format(
                 len(patient.sample_names), patient.name))
         self.file.write(
-            self._inds[self._ind]
-            + 'Simplistic binary present/absent classification lead to {} distinct MPs (mutation patterns).\n'
-            .format(len(phylogeny.mps.keys())))
-        self.file.write(
-            self._inds[self._ind] + 'Treeomics probabilistically considered {:.0f} MPs.\n'.format(
-                math.pow(2, len(patient.sample_names))))
+            self._inds[self._ind] + 'Treeomics considered {:.0f} distinct mutation patterns (MPs).\n'.format(
+                math.pow(2, len(patient.sample_names))+1))
         self.file.write(self._inds[self._ind]+'Each circular line represents a distinct sample. '
                         + 'Inner to outer lines denote: '
                         + ', '.join(sa_name.replace('_', ' ') for sa_name in patient.sample_names)
                         + '. Marks on these lines denote present variants. \n')
         self.file.write(
             self._inds[self._ind]+'Labels denote the MP reliability scores. '
+            + 'Only nodes with the highest reliability score are depicted. '
             + 'Blue colored nodes (MPs) are evolutionarily compatible '
-            + 'and red colored nodes are evolutionarily incompatible.\n')
+            + 'and red colored nodes are evolutionarily incompatible indicated by edges among the nodes.\n')
 
         self.file.write(self._inds[self._ind]+'</figcaption>\n')
         self.file.write(self._inds[self._ind]+'</div>\n')
@@ -507,9 +504,11 @@ class HTMLReport(object):
             self.file.write(self._inds[self._ind]+'</div>\n')
             self.file.write(self._inds[self._ind]+'</div>\n')
 
-    def end_report(self, fpr, fdr, min_absent_cov, min_median_cov, min_median_maf):
+    def end_report(self, e, c0, fpr, fdr, min_absent_cov, min_median_cov, min_median_maf):
         """
         Add used parameter values, HTML file footer, and close the file
+        :param e: sequencing error rate for bayesian inference
+        :param c0: prior mixture parameter of delta function and uniform distribution for bayesian inference
         :param fpr: false-positive rate
         :param fdr: false-discovery rate
         :param min_absent_cov: Minimum coverage for a variant to be called absent
@@ -520,11 +519,15 @@ class HTMLReport(object):
         if self.file is not None:
 
             self.file.write(self._inds[self._ind]+'</br><p><em>Treeomics settings:</em>\n')
-            self.file.write(self._inds[self._ind]+' false discovery rate: {}, '.format(fdr)
-                            + 'assumed false-positive rate: {}, '.format(fpr)
-                            + 'absent classification minimum coverage: {}, '.format(min_absent_cov)
-                            + 'sample median coverage minimum: {}, sample median VAF minimum {}.'.format(
-                            min_median_cov, min_median_maf))
+            self.file.write(
+                self._inds[self._ind] + ' sequencing error rate e: {}, '.format(e)
+                + 'prior absent probability c0: {}, '.format(c0)
+                + 'false discovery rate: {}, '.format(fdr)
+                + 'false-positive rate: {}. '.format(fpr)
+                + 'Absent classification minimum coverage: {}. '.format(min_absent_cov) if min_absent_cov > 0 else ''
+                + 'Sample minimal median coverage: {}. '.format(min_median_cov) if min_median_cov > 0 else ''
+                + 'Sample minimal median VAF minimum {}.'.format(min_median_maf) if min_median_maf > 0 else '')
+
             self.file.write(self._inds[self._ind]+'</p>\n')
 
             self._ind -= 1      # indentation level decreases by 1

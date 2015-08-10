@@ -446,7 +446,8 @@ def main():
         raise RuntimeError("No mode was provided (e.g. -m 1) to infer the phylogenetic tree.")
 
     # finalize HTML report
-    html_report.end_report(fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_maf)
+    html_report.end_report(patient.bi_error_rate, patient.bi_c0, fpr, fdr,
+                           min_absent_cov, args.min_median_coverage, args.min_median_maf)
     logger.info('Treeomics finished evolutionary analysis.')
 
 if __name__ == '__main__':
