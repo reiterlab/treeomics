@@ -24,7 +24,7 @@ The tool detects putative artifacts in noisy sequencing data and can therefore i
 
 #### Installation
 1. Open a terminal and clone the repository from GitHub with ```git clone https://github.com/johannesreiter/treeomics.git```
-2. Install dependencies:
+2. Install required packages:
   - Install Python 3.4 ([https://www.python.org/downloads](https://www.python.org/downloads))
   - Install NumPy ([http://www.numpy.org](http://www.numpy.org)), 
     SciPy ([http://www.numpy.org](http://www.numpy.org))
@@ -54,7 +54,8 @@ file with the sequencing depth at the position of this variant in each sample.
 - *-p <false positive rate>:* False-positive rate of conventional binary classification.
 - *-i <false discovery rate>:* Targeted false-discovery rate of conventional binary classification.
 
-Default settings can be changed in ```treeomics\src\settings.py```.
+Default parameter values as well as output directory can be changed in ```treeomics\src\settings.py```.
+All plots, analysis and logging files, and the HTML report will be in this output directory.
 
 #### Examples
 Example 1: ```python treeomics -r input/Makohon2015/Pam03_mutant_reads.txt -s input/Makohon2015/Pam03_phredcoverage.txt```  
