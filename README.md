@@ -68,7 +68,7 @@ Reconstructs the phylogeny of the high-grade serous ovarian cancer of Case 5 in 
 ========
 
 ### Problems?
-If you have any questions, you can contact us ([https://github.com/johannesreiter](https://github.com/johannesreiter)) and we will do our best to help.
+If you have any questions, you can contact us ([https://github.com/johannesreiter](https://github.com/johannesreiter)) and we will try to help.
 
 
 ### License
