@@ -19,8 +19,9 @@ Developed by: JG Reiter<sup>1,2,3,4</sup>, A Makohon-Moore<sup>5,6</sup>, J Gero
 Treeomics is a computational tool to reconstruct the phylogeny of a cancer with commonly available sequencing technologies.
 The tool detects putative artifacts in noisy sequencing data and can therefore infer more robust evolutionary trees.
 
-<img style="float: center" src="repository_illustration.png">
-
+<div style="float:center;margin:0 400px 150px 0" markdown="1">
+    ![history](repository_illustration.png)
+</div>
 
 #### Installation
 1. Open a terminal and clone the repository from GitHub with ```git clone https://github.com/johannesreiter/treeomics.git```
