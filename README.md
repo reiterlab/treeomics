@@ -46,7 +46,7 @@ reads reporting a variant (row) in each sample (column) and ```<coverage table>`
 file with the sequencing depth at the position of this variant in each sample.
 
 ##### Usage: 
-```python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf file directory> [-n <normal sample name>] [-e <sequencing error rate] [-z <prior absent probability>] [-p false positive rate] [-i false discovery rate] -O```
+```python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf file directory> [-n <normal sample name>] [-e <sequencing error rate] [-z <prior absent probability>] [-p false positive rate] [-i false discovery rate] [-y <min absent coverage>] -O```
 
 ##### Optional parameters:
 - *-e <sequencing error rate>:* Error rate of the sequencing machine.
@@ -59,11 +59,11 @@ Default parameter values as well as output directory can be changed in ```treeom
 All plots, analysis and logging files, and the HTML report will be in this output directory.
 
 #### Examples
-Example 1: ```python treeomics -r input/Makohon2015/Pam03_mutant_reads.txt -s input/Makohon2015/Pam03_phredcoverage.txt -e 0.05 -z 0.5```  
+Example 1: ```python treeomics -r input/Makohon2015/Pam03_mutant_reads.txt -s input/Makohon2015/Pam03_phredcoverage.txt -e 0.005 -z 0.5 -p 0.005 -i 0.05 -y 100 -O```  
 Reconstructs the phylogeny of pancreatic cancer patient Pam03 based on targeted sequencing data 
 of 5 distinct liver metastases, 3 distinct lung metastases, and 2 samples of the primary tumor.
 
-Example 2: ```python treeomics -r input/Bashashati2013/Case5_mutant_reads.txt -s input/Bashashati2013/Case5_coverage.txt```
+Example 2: ```python treeomics -r input/Bashashati2013/Case5_mutant_reads.txt -s input/Bashashati2013/Case5_coverage.txt -e 0.01 -z 0.5 -p 0.01 -i 0.05 -y 100 -O```
 Reconstructs the phylogeny of the high-grade serous ovarian cancer of Case 5 in Bashashati et al. (2013).
 
 ========
