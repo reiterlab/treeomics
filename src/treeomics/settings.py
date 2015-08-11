@@ -31,6 +31,3 @@ artifacts_plot_prefix = 'artifacts_table_'      # table plot of putative artifac
 # Minimal reliability score for the depicted of the MPs in the mutation pattern overview graph
 MIN_MP_SCORE = 1.0  # show only mutation patterns in the circos plots with a greater reliability score
 MAX_NO_MPS = 25     # show at most this number of mutation patterns in the circos plots
-<img style="float: center" src="repository_illustration.png">
-![Observed tumor heterogeneity and inferred](repository_illustration.png#center "Observed tumor heterogeneity and inferred evolution among spatially-distinct DNA sequencing samples")
-img[src*='#center']{ float: center; }
