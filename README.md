@@ -19,7 +19,7 @@ Developed by: JG Reiter<sup>1,2,3,4</sup>, A Makohon-Moore<sup>5,6</sup>, J Gero
 Treeomics is a computational tool to reconstruct the phylogeny of a cancer with commonly available sequencing technologies.
 The tool detects putative artifacts in noisy sequencing data and can therefore infer more robust evolutionary trees.
 
--> ![Observed tumor heterogeneity and inferred](repository_illustration.png "Observed tumor heterogeneity and inferred evolution among spatially-distinct DNA sequencing samples") <-   
+<img style="float: center" src="repository_illustration.png">
 
 
 #### Installation
