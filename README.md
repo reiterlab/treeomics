@@ -53,12 +53,13 @@ file with the sequencing depth at the position of this variant in each sample.
 - *-z <prior absent probability>:* Prior probability for a variant being absent.
 - *-p <false positive rate>:* False-positive rate of conventional binary classification.
 - *-i <false discovery rate>:* Targeted false-discovery rate of conventional binary classification.
+- *-y <min absent coverage>:* Minimum coverage for a powered absent variant
 
 Default parameter values as well as output directory can be changed in ```treeomics\src\settings.py```.
 All plots, analysis and logging files, and the HTML report will be in this output directory.
 
 #### Examples
-Example 1: ```python treeomics -r input/Makohon2015/Pam03_mutant_reads.txt -s input/Makohon2015/Pam03_phredcoverage.txt```  
+Example 1: ```python treeomics -r input/Makohon2015/Pam03_mutant_reads.txt -s input/Makohon2015/Pam03_phredcoverage.txt -e 0.05 -z 0.5```  
 Reconstructs the phylogeny of pancreatic cancer patient Pam03 based on targeted sequencing data 
 of 5 distinct liver metastases, 3 distinct lung metastases, and 2 samples of the primary tumor.
 

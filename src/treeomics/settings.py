@@ -18,7 +18,7 @@ MIN_MP_LH = 1.0
 FPR = 0.005                 # assumed false-positive rate for targeted sequencing (Gundem et al. 2015)
 # FPR = 0.01                # assumed false-positive rate in Illumina WGS data
 FDR = 0.05                  # targeted false-discovery rate
-MIN_ABSENT_COVERAGE = 100   # minimum coverage to call a variant absent (if null hypothesis was accepted)
+MIN_ABSENT_COVERAGE = 100   # minimum coverage to call a variant powered absent (if null hypothesis was accepted)
 
 
 # ########################## OUTPUT CONFIGURATIONS #################################
