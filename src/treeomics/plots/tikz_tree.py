@@ -13,6 +13,7 @@ logger = logging.getLogger('treeomics')
 def create_figure_file(tree, tree_root_key, filename, patient, figure_caption, standalone=False):
     """
     Takes a networkx tree and creates a tikz source file such that a pdf can be generated with latex
+    :return path to the generated latex/tikz tree
     """
 
     try:
@@ -31,9 +32,11 @@ def create_figure_file(tree, tree_root_key, filename, patient, figure_caption, s
 
             latex_file.write('\\end{document}\n')
             logger.info('Generated tree in tikz latex format: {}'.format(filename))
+            return filename
 
     except OSError:
         logger.exception("Unexpected error occurred during tikz file generation: ")
+        return None
 
 
 def _write_tikz_tree(tree, cur_node, latex_file, level, patient, gene_names=None, mut_keys=None):

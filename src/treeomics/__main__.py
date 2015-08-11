@@ -255,7 +255,9 @@ def main():
     fn_pattern = get_output_fn_template(patient.name, read_no_samples, fpr, fdr,
                                         min_absent_cov, args.min_median_coverage, args.min_median_maf,
                                         bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0)
-    fn_pattern += '_s' if args.mode == 1 else ''
+
+    # Treeomics runs in simplistic mode: every variant has exactly one mutation pattern
+    fn_pattern += '_s' if args.mode == 2 else ''
 
     # do basic analysis on provided input data
     patient.analyze_data()

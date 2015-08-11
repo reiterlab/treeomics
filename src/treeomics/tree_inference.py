@@ -3,9 +3,10 @@ __author__ = 'jreiter'
 __date__ = 'July 11, 2015'
 
 import logging
+import os
+from subprocess import call
 from phylogeny.simple_phylogeny import SimplePhylogeny
 from phylogeny.max_lh_phylogeny import MaxLHPhylogeny
-#from subclonal_phylogeny import SubclonalPhylogeny
 from utils.vaf_data import get_present_mutations
 import plots.tikz_tree as tikz
 import utils.latex_output as latex
@@ -67,39 +68,10 @@ def infer_max_compatible_tree(filepath, patient):
     return phylogeny
 
 
-def create_subclonal_tree(filepath, patient, min_sc_score, min_absent_cov=0):
-    """
-    :param filepath: tree is writen to the given file
-    :param patient: data structure around a patient
-    :param min_sc_score: minimum reliability score of  an incomp. mutation pattern that a subclone is considered
-    :param min_absent_cov: minimum coverage for absent variant otherwise status is unknown
-    """
-    phylogeny = SubclonalPhylogeny(patient, patient.mps)
-
-    # infer the tree which as to ignore the least number of mutation
-    # to derive a conflict-free tree
-    pers_tree = phylogeny.find_subclonal_tree(min_sc_score, min_absent_cov=min_absent_cov)
-    caption = ('Phylogenetic tree illustrating the subclonal evolution of cancer. '
-               + 'The derivation of an evolutionary conflict-free tree required the exclusion '
-               + 'of {} out of {} ({:.1%}) mutations.'
-               .format(len(phylogeny.conflicting_mutations),
-                       len(get_present_mutations(patient.data, include_unknowns=False)),
-                       float(len(phylogeny.conflicting_mutations)) / len(
-                           get_present_mutations(patient.data, include_unknowns=False))))
-
-    # create tikz figure
-    tikz.create_figure_file(pers_tree, tikz.TREE_ROOT, filepath,
-                            patient, caption, True)
-    # add information about the ignored mutations and the position of the acquired mutations
-    latex.add_ignored_mut_info(filepath, phylogeny, pers_tree)
-
-    return phylogeny
-
-
 def create_max_lh_tree(file_path, patient, min_mp_lh=None):
     """
     Create an evolutionary tree based on the maximum likelihood mutation patterns of each variant
-    :param file_path: tree is writen to the given file
+    :param file_path: tree is written to the given file
     :param patient: data structure around the patient
     :param min_mp_lh: minimum likelihood that at least one variant has an incompatible mp
                       such that this mp is considered as a subclone; None if subclones should not be identified
@@ -129,8 +101,19 @@ def create_max_lh_tree(file_path, patient, min_mp_lh=None):
                      float(no_fps+no_fns) / (len(patient.sample_names) * len(present_mutations)))
                    + classification_info)
 
-        tikz.create_figure_file(mlh_tree, tikz.TREE_ROOT, file_path,
-                                patient, caption, True)
+        tikz_tree = tikz.create_figure_file(mlh_tree, tikz.TREE_ROOT, file_path,
+                                            patient, caption, True)
+
+        tikz_path, tikz_file = os.path.split(tikz_tree)
+        print('Tikzpath: {} {}'.format(tikz_path, tikz_file))
+        pdflatex_cmd = 'pdflatex {}'.format(tikz_file)
+        return_code = call(pdflatex_cmd, shell=True, cwd=tikz_path)
+
+        if return_code == 0:
+            pdf_tree = tikz_tree.replace('.tex', '.pdf')
+            logger.info('Successfully called pdflatex to create pdf of the evolutionary tree at {}'.format(pdf_tree))
+        else:
+            logger.error('PDF of the evolutionary tree was not created. Is Latex/tikz installed?')
 
         # add information about the resolved mutation positions
         # which are likely sequencing errors
