@@ -184,8 +184,6 @@ def _create_cfg_nodes_files(cfg_nodes_filename, cfg_mutnode_labels_filename, cfg
     :return: cfg_nodes: mapping from clones (nodes) to node id in the circos files
     """
 
-    min_weight = 0.25
-
     logger.debug('Creating circos conflict graph nodes files: {}, {}, {}'.format(cfg_nodes_filename,
                  cfg_mutnode_labels_filename, cfg_mutnode_data_filename))
 
@@ -204,8 +202,8 @@ def _create_cfg_nodes_files(cfg_nodes_filename, cfg_mutnode_labels_filename, cfg
         # run through all nodes of the reduced conflicting conflict graph
         # and generate the circus input with the node size according to the
         # the number of mutations in the clone
-        for node_idx, node in enumerate(sorted(phylogeny.cf_graph.nodes(),
-                                               key=lambda k: -phylogeny.cf_graph.node[k]['weight']), 1):
+        for node_idx, node in enumerate(sorted(phylogeny.nodes.keys(),
+                                               key=lambda k: (-len(k), -phylogeny.node_scores[k])), 1):
 
             cfg_nodes[node] = node_idx
             # write node id to file
@@ -213,9 +211,9 @@ def _create_cfg_nodes_files(cfg_nodes_filename, cfg_mutnode_labels_filename, cfg
 
             # if there many nodes then don't show the ones with very small weights
 
-            if len(phylogeny.cf_graph.nodes()) > max_no_mps and \
-                    phylogeny.cf_graph.node[node]['weight'] < min_node_weight:
-                cfg_nodes_file.write('<{:.2f} 0 1 grey\n'.format(min_weight))
+            if len(phylogeny.nodes.keys()) > max_no_mps and \
+                    phylogeny.node_scores[node] < min_node_weight:
+                cfg_nodes_file.write('<{:.2f} 0 1 grey\n'.format(min_node_weight))
                 cfg_labels_file.write('n{} 0 1 {}-{} driver=0,conflicting=0,chosen=0,unknown=1\n'.format(
                     node_idx, node_idx+1, len(phylogeny.cf_graph.nodes())))
                 del cfg_nodes[node]
@@ -223,11 +221,11 @@ def _create_cfg_nodes_files(cfg_nodes_filename, cfg_mutnode_labels_filename, cfg
 
             # write node (clone) id to file which is given by the samples where
             # the mutation is present
-            cfg_nodes_file.write('{:.2f} '.format(phylogeny.cf_graph.node[node]['weight']))
+            cfg_nodes_file.write('{:.2f} '.format(phylogeny.node_scores[node]))
 
             # write start and end position of the node to the file
             # end position is given by the number of mutations present in this clone
-            cfg_nodes_file.write('0 {} '.format(len(phylogeny.cf_graph.node[node]['muts'])))
+            cfg_nodes_file.write('0 {} '.format(len(phylogeny.nodes[node])))
             # write node color to the file which is given by the fact if the clone is
             # removed by the solution or kept
             if node in phylogeny.compatible_nodes:
@@ -240,7 +238,7 @@ def _create_cfg_nodes_files(cfg_nodes_filename, cfg_mutnode_labels_filename, cfg
 
             cfg_nodes_file.write('\n')
 
-            for pos, mut_idx in enumerate(sorted(phylogeny.cf_graph.node[node]['muts'],
+            for pos, mut_idx in enumerate(sorted(phylogeny.nodes[node],
                                                  key=lambda k: phylogeny.patient.gene_names[k]
                                                  if len(phylogeny.patient.gene_names) else 0)):
                 # create label entry in the according label file if available

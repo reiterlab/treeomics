@@ -154,7 +154,7 @@ def determine_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None):
     :return dictionary of nodes and corresponding variants, pattern reliability scores, weights of patterns of variants
     """
 
-    # clones form the basis for the nodes in the graph
+    # mutation patterns form the basis for the nodes in the graph
     nodes = defaultdict(set)
     node_scores = dict()    # mutation patterns score summed over all variants supporting this score
     mut_pattern_weights = dict()    # weight of the inferred mutation pattern given the p0 in each sample
