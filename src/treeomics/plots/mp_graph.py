@@ -105,7 +105,7 @@ def _create_mp_gr_conf_cir(phylogeny, filepath, fn_pattern):
         f.write('file = data/mp_links_{}.txt'.format(fn_pattern)+'\n')
         f.write('radius        = 0.45r'+'\n')
         f.write('bezier_radius = 0r'+'\n')
-        f.write('color         = grey'+'\n')
+        f.write('color         = dred'+'\n')
         f.write('thickness     = 3'+'\n')
         f.write('</link>'+'\n')
         f.write('</links>'+'\n')
