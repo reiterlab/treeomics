@@ -9,6 +9,7 @@ import sys
 import numpy as np
 from collections import defaultdict
 from itertools import islice
+from copy import deepcopy
 import phylogeny.cplex_solver as cps
 from phylogeny.phylogeny_utils import Phylogeny, create_conflict_graph
 # import conflict_solver as cf
@@ -21,6 +22,11 @@ logger = logging.getLogger('treeomics')
 class SimplePhylogeny(Phylogeny):
 
     def __init__(self, patient, mps):
+        """
+        Initialize class
+        :param patient: instance of class patient
+        :param mps: mutation patterns based on conventional classifications
+        """
 
         Phylogeny.__init__(self, patient, mps)
 
@@ -48,7 +54,7 @@ class SimplePhylogeny(Phylogeny):
 
         # compute various mutation patterns (nodes) and their reliability scores
         self.nodes, self.node_scores, self.mp_weights = determine_graph_nodes(
-            self.patient.log_p01, self.patient.sample_names, self.patient.mut_keys, self.patient.gene_names)
+            self.patient, self.patient.sample_names, self.patient.mut_keys, self.patient.gene_names)
 
         # create conflict graph which forms the input to the ILP
         self.cf_graph = create_conflict_graph(self.nodes, weights=self.node_scores)
@@ -144,10 +150,10 @@ class SimplePhylogeny(Phylogeny):
         return comp_node_frequencies
 
 
-def determine_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None):
+def determine_graph_nodes(patient, sample_names, mut_keys, gene_names=None):
     """
     Infer the mutation patterns (graph nodes) by the maximum likelihood using bayesian inference
-    :param log_p01: posterior: log probability that VAF = 0
+    :param patient: instance of class patient providing data structured around sequencing data
     :param sample_names: name of the samples
     :param mut_keys: unique key of variant
     :param gene_names: if available name of the gene where the variant occurred
@@ -159,66 +165,83 @@ def determine_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None):
     node_scores = dict()    # mutation patterns score summed over all variants supporting this score
     mut_pattern_weights = dict()    # weight of the inferred mutation pattern given the p0 in each sample
 
-    for mut_idx in range(len(log_p01)):
-        node = set()
-        log_ml = 0.0        # log maximum likelihood of the inferred pattern
-        for sa_idx in range(len(sample_names)):
-            if math.exp(log_p01[mut_idx][sa_idx][0]) < 0.5:   # variant is present
-                node.add(sa_idx)
-                log_ml += math.log(-np.expm1(log_p01[mut_idx][sa_idx][0]))
-            else:                           # mutation is absent
-                log_ml += log_p01[mut_idx][sa_idx][0]
+    bayesian_scores = False
 
-        node = frozenset(node)
-        if log_ml == 0.0:   # numerical artifact, use approximation: ignore second order term
+    if bayesian_scores:
+        log_p01 = patient.log_p01   # posterior: log probability that VAF = 0
+        for mut_idx in range(len(log_p01)):
+            node = set()
+            log_ml = 0.0        # log maximum likelihood of the inferred pattern
             for sa_idx in range(len(sample_names)):
-                if sa_idx in node:              # variant is present
-                    log_ml += math.exp(log_p01[mut_idx][sa_idx][0])     # sum probability
-                else:                           # variant is absent
-                    log_ml += -np.expm1(log_p01[mut_idx][sa_idx][0])
+                if math.exp(log_p01[mut_idx][sa_idx][0]) < 0.5:   # variant is present
+                    node.add(sa_idx)
+                    log_ml += math.log(-np.expm1(log_p01[mut_idx][sa_idx][0]))
+                else:                           # mutation is absent
+                    log_ml += log_p01[mut_idx][sa_idx][0]
 
-            log_ml = np.log1p(-log_ml)      # calculates log(1+argument)
-            logger.debug('Approximated log probability of variant {} having pattern {} by {:.2e}.'.format(
-                gene_names[mut_idx] if gene_names is not None else mut_keys[mut_idx], node, log_ml))
-            if log_ml == 0.0:
-                if len(node) == 0 or len(node) == len(sample_names):
-                    logger.debug('Underflow error. Set probability to minimal float value!')
-                else:
-                    logger.warn('Underflow error. Set probability to minimal float value!')
-                log_ml = -sys.float_info.min
-            assert log_ml < 0.0,\
-                ('Underflow error while calculating the probability that the variant {} does not have pattern {}.'
-                    .format(gene_names[mut_idx], ', '.join(sample_names[sa_idx] for sa_idx in node)))
+            node = frozenset(node)
+            if log_ml == 0.0:   # numerical artifact, use approximation: ignore second order term
+                for sa_idx in range(len(sample_names)):
+                    if sa_idx in node:              # variant is present
+                        log_ml += math.exp(log_p01[mut_idx][sa_idx][0])     # sum probability
+                    else:                           # variant is absent
+                        log_ml += -np.expm1(log_p01[mut_idx][sa_idx][0])
 
-        mut_pattern_weights[mut_idx] = log_ml
+                log_ml = np.log1p(-log_ml)      # calculates log(1+argument)
+                logger.debug('Approximated log probability of variant {} having pattern {} by {:.2e}.'.format(
+                    gene_names[mut_idx] if gene_names is not None else mut_keys[mut_idx], node, log_ml))
+                if log_ml == 0.0:
+                    if len(node) == 0 or len(node) == len(sample_names):
+                        logger.debug('Underflow error. Set probability to minimal float value!')
+                    else:
+                        logger.warn('Underflow error. Set probability to minimal float value!')
+                    log_ml = -sys.float_info.min
+                assert log_ml < 0.0,\
+                    ('Underflow error while calculating the probability that the variant {} does not have pattern {}.'
+                        .format(gene_names[mut_idx], ', '.join(sample_names[sa_idx] for sa_idx in node)))
 
-        nodes[node].add(mut_idx)
-        # calculate the probability that no variant has pattern 'node'
-        if node in node_scores.keys():
-            node_scores[node] *= -np.expm1(log_ml)
-        else:
-            node_scores[node] = -np.expm1(log_ml)
+            mut_pattern_weights[mut_idx] = log_ml
 
-        logger.debug('Variant {} {} has pattern {} with probability {:.1e}.'.format(
-            mut_keys[mut_idx], '({})'.format(gene_names[mut_idx]) if gene_names is not None else '',
-            ', '.join(sample_names[sa_idx] for sa_idx in node), math.exp(log_ml)))
-
-    # calculate the final reliability score of a mutation pattern of the probability that no mutation has that pattern
-    for node in node_scores.keys():
-        if node_scores[node] == 0.0:
-            if len(node) == 0 or len(node) == len(sample_names):
-                logger.warn('Underflow error for pattern {}. Set probability to minimal float value!'.format(
-                    ', '.join(sample_names[sa_idx] for sa_idx in node)))
+            nodes[node].add(mut_idx)
+            # calculate the probability that no variant has pattern 'node'
+            if node in node_scores.keys():
+                node_scores[node] *= -np.expm1(log_ml)
             else:
-                logger.debug('Underflow error for pattern {}. Set probability to minimal float value!'.format(
-                    ', '.join(sample_names[sa_idx] for sa_idx in node)))
+                node_scores[node] = -np.expm1(log_ml)
 
-            node_scores[node] = sys.float_info.min
-        node_scores[node] = -math.log(node_scores[node])
+            logger.debug('Variant {} {} has pattern {} with probability {:.1e}.'.format(
+                mut_keys[mut_idx], '({})'.format(gene_names[mut_idx]) if gene_names is not None else '',
+                ', '.join(sample_names[sa_idx] for sa_idx in node), math.exp(log_ml)))
 
-    # Show nodes with high reliability score
-    for node, score in islice(sorted(node_scores.items(), key=lambda k: -k[1]), 0, 50):
-        logger.debug('Pattern {} has a reliability score of {:.2f}.'.format(
-            ', '.join(sample_names[sa_idx] for sa_idx in node), score))
+        # calculate the final reliability score of a mutation pattern of the probability
+        # that no mutation has that pattern
+        for node in node_scores.keys():
+            if node_scores[node] == 0.0:
+                if len(node) == 0 or len(node) == len(sample_names):
+                    logger.warn('Underflow error for pattern {}. Set probability to minimal float value!'.format(
+                        ', '.join(sample_names[sa_idx] for sa_idx in node)))
+                else:
+                    logger.debug('Underflow error for pattern {}. Set probability to minimal float value!'.format(
+                        ', '.join(sample_names[sa_idx] for sa_idx in node)))
+
+                node_scores[node] = sys.float_info.min
+            node_scores[node] = -math.log(node_scores[node])
+
+        # Show nodes with high reliability score
+        for node, score in islice(sorted(node_scores.items(), key=lambda k: -k[1]), 0, 50):
+            logger.debug('Pattern {} has a reliability score of {:.2f}.'.format(
+                ', '.join(sample_names[sa_idx] for sa_idx in node), score))
+
+    # use conventional statistical binary classification
+    # weights are given by the number of mutations supporting a pattern
+    else:
+        # nodes are given by the binary classification
+        nodes = deepcopy(patient.mps)
+        for node in nodes.keys():
+
+            # weight of a mutation pattern is directly given by the number of mutations supporting it
+            node_scores[node] = len(nodes[node])
+            for mut_idx in nodes[node]:
+                mut_pattern_weights[mut_idx] = 1
 
     return nodes, node_scores, mut_pattern_weights
