@@ -262,7 +262,7 @@ class HTMLReport(object):
 
         self.file.write(self._inds[self._ind]+'</br>\n\n')
 
-    def add_mp_overview_graph(self, patient, phylogeny, mp_graph_name):
+    def add_conflict_graph(self, patient, phylogeny, mp_graph_name):
         """
         Add evolutionary conflict graph plot to the HTML report
         :param patient: instance of class patient
