@@ -264,13 +264,13 @@ class HTMLReport(object):
 
     def add_mp_overview_graph(self, patient, phylogeny, mp_graph_name):
         """
-        Add mutation pattern overview plot to the HTML report
+        Add evolutionary conflict graph plot to the HTML report
         :param patient: instance of class patient
         :param phylogeny: instance of class phylogeny (either SimplePhylogeny or MaxLHPhylogeny)
-        :param mp_graph_name: path to the mutation pattern overview plot file
+        :param mp_graph_name: path to the Evolutionary conflict graph plot file
         """
 
-        self.file.write(self._inds[self._ind]+'<h4>Mutation pattern overview graph</h4>\n')
+        self.file.write(self._inds[self._ind]+'<h4>Evolutionary conflict graph</h4>\n')
 
         self.file.write(self._inds[self._ind]+'<div align="center">\n')
         self.file.write(self._inds[self._ind]+'<div style="width:98%;max-width:700px">\n')
@@ -279,11 +279,11 @@ class HTMLReport(object):
         self.file.write(self._inds[self._ind]+'<figure>\n')
         self._ind += 1      # indentation level increases by 1
         self.file.write(self._inds[self._ind]+'<img class="img-responsive" src="'+mp_graph_name +
-                                              '" alt="Mutation pattern overview graph" width="500"/>'+'\n')
+                                              '" alt="Evolutionary conflict graph" width="500"/>'+'\n')
         self.file.write(self._inds[self._ind]+'<div align="left">\n')
         self.file.write(self._inds[self._ind]+'<figcaption>\n')
         self.file.write(
-            self._inds[self._ind]+'<b>Mutation pattern overview graph of {} samples in patient {}.</b>\n'.format(
+            self._inds[self._ind]+'<b>Evolutionary conflict graph of {} samples in patient {}.</b>\n'.format(
                 len(patient.sample_names), patient.name))
         self.file.write(
             self._inds[self._ind] + 'Treeomics considered {:.0f} distinct mutation patterns (MPs).\n'.format(
