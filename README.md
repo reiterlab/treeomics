@@ -26,7 +26,7 @@ The tool detects putative artifacts in noisy sequencing data and can therefore i
 2. Install required packages:
   - Install Python 3.4 ([https://www.python.org/downloads](https://www.python.org/downloads))
   - Install NumPy ([http://www.numpy.org](http://www.numpy.org)), 
-    SciPy ([http://www.numpy.org](http://www.numpy.org))
+    SciPy ([http://www.scipy.org](http://www.scipy.org))
   - Install the IBM ILOG CPLEX Optimization Studio ([http://www-01.ibm.com/support/docview.wss?uid=swg21444285](http://www-01.ibm.com/support/docview.wss?uid=swg21444285))
     and then setup the Python API ([http://www-01.ibm.com/support/knowledgecenter/SSSA5P_12.2.0/ilog.odms.cplex.help/Content/Optimization/Documentation/CPLEX/_pubskel/CPLEX20.html](http://www-01.ibm.com/support/knowledgecenter/SSSA5P_12.2.0/ilog.odms.cplex.help/Content/Optimization/Documentation/CPLEX/_pubskel/CPLEX20.html));
     An IBM Academic License can be obtained here: [http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative](http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative)
