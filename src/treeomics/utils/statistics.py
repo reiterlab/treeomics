@@ -147,9 +147,10 @@ def get_log_p0(n, k, e, c0, pseudo_alpha=def_sets.PSEUDO_ALPHA, pseudo_beta=def_
             # nonzero_integral = area
 
             # Normal approx see supplement
-            normal_approx = (-1*(e-k/n)*(e-k/n)*n/(e*(1-e))/2 - math.log(e-k/n) - 1/2*math.log(n)
-                             + 1/2*math.log(2*math.pi) + math.log(e*(1-e)))
-            correction = loglp(n, k, k/n, 0) + 1/2*math.log(2*math.pi) + 1/2*math.log((k/n)*(1-k/n)/n)
+            normal_approx = (-1*(e-float(k)/n)*(e-k/n)*n/(e*(1-e))/2 - math.log(e-float(k)/n) - 1/2*math.log(n)
+                             + 1.0/2*math.log(2*math.pi) + math.log(e*(1-e)))
+            correction = (loglp(n, k, float(k)/n, 0)
+                          + 1.0/2*math.log(2*math.pi) + 1.0/2*math.log((float(k)/n)*(1-float(k)/n)/n))
             nonzero_integral = normal_approx + correction
 
         else:
