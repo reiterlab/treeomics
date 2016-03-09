@@ -10,9 +10,16 @@ from phylogeny.phylogeny_utils import TREE_ROOT
 logger = logging.getLogger('treeomics')
 
 
-def create_figure_file(tree, tree_root_key, filename, patient, figure_caption, standalone=False):
+def create_figure_file(tree, tree_root_key, filename, patient, figure_caption, drivers=set(),
+                       germline_distance=2.0, standalone=False):
     """
     Takes a networkx tree and creates a tikz source file such that a pdf can be generated with latex
+    :param tree:
+    :param tree_root_key:
+    :param filename: path to output file
+    :param patient: data structure around patient
+    :param figure_caption: caption for tikz figure
+    :param drivers: optional set of known driver gene names highlighted on each edge
     :return path to the generated latex/tikz tree
     """
 
@@ -20,12 +27,12 @@ def create_figure_file(tree, tree_root_key, filename, patient, figure_caption, s
         with open(filename, 'w') as latex_file:
 
             # generate latex file headers
-            latex_output.write_tikz_header(latex_file, standalone)
+            latex_output.write_tikz_header(latex_file, germline_distance=germline_distance, standalone=standalone)
             latex_output.write_figure_header(latex_file, standalone)
 
             # generate tikz tree and write it to the opened file
             _write_tikz_tree(tree, tree_root_key, latex_file, 0, patient,
-                             gene_names=patient.gene_names, mut_keys=patient.mut_keys)
+                             gene_names=patient.gene_names, mut_keys=patient.mut_keys, drivers=drivers)
 
             # generate latex file footers
             latex_output.write_figure_footer(latex_file, figure_caption, standalone)
@@ -39,7 +46,7 @@ def create_figure_file(tree, tree_root_key, filename, patient, figure_caption, s
         return None
 
 
-def _write_tikz_tree(tree, cur_node, latex_file, level, patient, gene_names=None, mut_keys=None):
+def _write_tikz_tree(tree, cur_node, latex_file, level, patient, gene_names=None, mut_keys=None, drivers=set()):
     """
     Run recursively through the tree and write the tree in tikz format to the opened file
     """
@@ -70,12 +77,23 @@ def _write_tikz_tree(tree, cur_node, latex_file, level, patient, gene_names=None
             if 'level' in tree.node[child] and tree.node[child]['level'] < level:
                 continue
 
-            latex_file.write(pre+'\t\\edge node[above, blue!70]{'
-                             + ('\\footnotesize{+'+str(len(tree[cur_node][child]['muts']))+'}'
+            # is any of the acquired mutations in a driver gene?
+            if gene_names is not None:
+                acquired_drivers = [gene_names[m] for m in tree[cur_node][child]['muts'] if gene_names[m] in drivers]
+            else:
+                acquired_drivers = list()
+
+            latex_file.write(pre+'\t\\edge node[above, NavyBlue]{'
+                             + (('\\footnotesize{+'+str(len(tree[cur_node][child]['muts']))
+                                 + (' ('+(','.join(d for d in sorted(acquired_drivers)))+')'
+                                    if len(acquired_drivers) > 0 else '') + '}')
                                 if 'muts' in tree[cur_node][child] and len(tree[cur_node][child]['muts']) > 0 else '')
                              + '}'
                              + (' node[below, red!70]{\\footnotesize{'+str(-len(tree[cur_node][child]['dels']))+'}}'
                                 if 'dels' in tree[cur_node][child] and len(tree[cur_node][child]['dels']) > 0 else '')
+                             + (' node[below, black!60]{\\footnotesize{'+'{:.1f}\\%'.format(
+                                tree.node[child]['conf']*100.0)+'}}'
+                                if 'conf' in tree.node[child] else '')
                              + ';\n ')
 
             # mutations which have been acquired on the edge from the parent to this child
@@ -89,7 +107,8 @@ def _write_tikz_tree(tree, cur_node, latex_file, level, patient, gene_names=None
                 latex_file.write(pre+'\t% Acquired mutations ({}): '.format(len(tree[cur_node][child]['muts']))
                                  + ','.join(sorted((str(m) for m in tree[cur_node][child]['muts']), key=int))+'\n')
 
-            _write_tikz_tree(tree, child, latex_file, level+1, patient, gene_names=gene_names, mut_keys=mut_keys)
+            _write_tikz_tree(tree, child, latex_file, level+1, patient, gene_names=gene_names,
+                             mut_keys=mut_keys, drivers=drivers)
 
         latex_file.write(pre+']\n')
 

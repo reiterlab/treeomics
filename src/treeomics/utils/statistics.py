@@ -1,6 +1,6 @@
 """Statistical calculations"""
 __author__ = 'jreiter, jgerold'
-__date__ = 'July 21, 2014'
+__date__ = 'July 21, 2015'
 
 import logging
 import math
@@ -58,11 +58,12 @@ def find_significant_mutations(p_values, fdr):
         if p_value <= fdr * i / len(p_values):
             sig_muts.add(key)
         else:
-            logger.info('All variants with a p-value greater than {:.3e} (threshold: >{:.5e}) '.format(
-                p_value, fdr * i / len(p_values)) + 'are not significantly mutated.')
+            logger.debug('Conventional classification: '
+                         + 'All variants with a p-value greater than {:.3e} (threshold: >{:.5e}) '.format(
+                           p_value, fdr * i / len(p_values)) + 'are not significantly mutated.')
             break
 
-    logger.info('{} variants out of {} are significantly mutated.'.format(len(sig_muts), len(p_values)))
+    # logger.debug('{} variants out of {} are significantly mutated.'.format(len(sig_muts), len(p_values)))
 
     return sig_muts
 
@@ -80,17 +81,22 @@ def loglp(n, k, p, e):
     return k*math.log((p*(1-e) + (1-p)*e)) + (n-k)*math.log((p*e+(1-p)*(1-e)))
 
 
-def get_log_p0(n, k, e, c0, pseudo_alpha=def_sets.PSEUDO_ALPHA, pseudo_beta=def_sets.PSEUDO_BETA):
+def get_log_p0(n, k, e, c0, pseudo_alpha=None, pseudo_beta=None):
     """
-    Returns the (log) probability that the variant is absent
+    Returns the (log) probability that the variant is absent and present
     :param n: coverage (number of reads)
     :param k: observed number of reads reporting the variant
     :param e: sequencing error rate
     :param c0: prior mixture parameter of delta function and uniform distribution
-    :param pseudo_alpha: alpha parameter for the beta prior
-    :param pseudo_beta: beta parameter for the beta prior
+    :param pseudo_alpha: alpha parameter for the beta distributed part of the prior
+    :param pseudo_beta: beta parameter for the beta distributed part of the prior
     :return: tuple (log probability that variant is absent, log probability that variant is present)
     """
+
+    if pseudo_alpha is None:
+        pseudo_alpha = def_sets.PSEUDO_ALPHA
+    if pseudo_beta is None:
+        pseudo_beta = def_sets.PSEUDO_BETA
 
     # pseudocounts are added to n and k, but removed for the computation of p0 at the end
     n = n + pseudo_alpha - 1 + pseudo_beta - 1
@@ -157,7 +163,7 @@ def get_log_p0(n, k, e, c0, pseudo_alpha=def_sets.PSEUDO_ALPHA, pseudo_beta=def_
             nonzero_integral = math.log(integral[0])
 
     # carry along the beta function normalizing constant
-    nonzero_integral += (math.log(1-c0) + gammaln(pseudo_alpha + pseudo_beta)
+    nonzero_integral += (math.log(1.0-c0) + gammaln(pseudo_alpha + pseudo_beta)
                          - gammaln(pseudo_alpha) - gammaln(pseudo_beta))
     # remove the pseudocounts for the delta function
     zero_integral = (math.log(c0) + loglp(n-pseudo_alpha + 1 - pseudo_beta + 1,

@@ -14,7 +14,7 @@ logger = logging.getLogger('treeomics')
 
 
 def create_mp_graph(fn_pattern, phylogeny, mps, mp_weights, output_directory='',
-                    min_node_weight=None, max_no_mps=50, pars_informative=False):
+                    min_node_weight=None, circos_max_no_mps=50, pars_informative=False):
     """
     Create mutation pattern overview plot showing only the different patterns and not the individual variants
     :param fn_pattern: common name template for output files
@@ -23,7 +23,7 @@ def create_mp_graph(fn_pattern, phylogeny, mps, mp_weights, output_directory='',
     :param mp_weights: mutation pattern reliability scores
     :param output_directory: path to the output directory for the generated files
     :param min_node_weight: minimal reliability score of a mutation pattern to be displayed
-    :param max_no_mps: apply min_node_weight if there are more than this number of MPs in the data
+    :param circos_max_no_mps: apply min_node_weight if there are more than this number of MPs in the data
     :param pars_informative: show only parsimony informative mutation patterns
     """
 
@@ -46,7 +46,7 @@ def create_mp_graph(fn_pattern, phylogeny, mps, mp_weights, output_directory='',
         os.path.join(data_dir, 'mp_nodes_'+fn_pattern+'.txt'),
         os.path.join(data_dir, 'mp_mutnode_data_'+fn_pattern+'.txt'),
         os.path.join(data_dir, 'mp_links_'+fn_pattern+'.txt'), phylogeny, mps, mp_weights,
-        min_node_weight=min_node_weight, max_no_mps=max_no_mps, pars_infor=pars_informative)
+        min_node_weight=min_node_weight, max_no_mps=circos_max_no_mps, pars_infor=pars_informative)
 
     _create_mp_gr_confs(phylogeny, output_directory, fn_pattern)
 

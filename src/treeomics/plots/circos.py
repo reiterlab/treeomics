@@ -326,11 +326,14 @@ def create_mlh_graph_files(res_nodes_filename, res_mutnode_labels_filename, res_
             res_nodes_file.write('\n')
 
             # order mutations according to their names within a clone
-            for pos, mut_idx in enumerate(sorted(muts, key=lambda k: phylogeny.patient.gene_names[k])):
+            for pos, mut_idx in enumerate(
+                    sorted(muts, key=lambda k:
+                           phylogeny.patient.gene_names[k] if phylogeny.patient.gene_names is not None else 0)):
                 # create label entry in the according label file
-                res_labels_file.write('n'+str(node_idx)+' '+str(pos)+' '+str(pos+1)
-                                      + ' '+_format_gene_name(gene_names[mut_idx])
-                                      + ' '+'driver='+(str(1) if mut_idx in driver_pathways else str(0))+'\n')
+                res_labels_file.write('n{} {} {} {} driver={} \n'.format(
+                    node_idx, pos, pos+1,
+                    _format_gene_name(gene_names[mut_idx]) if gene_names is not None else str(mut_idx),
+                    str(1) if mut_idx in driver_pathways else str(0)))
 
                 # create mutation pattern entry in the according data file
                 for sa_idx in chain(mp, phylogeny.false_positives[mut_idx], phylogeny.false_negatives[mut_idx],
@@ -358,7 +361,7 @@ def create_mlh_graph_files(res_nodes_filename, res_mutnode_labels_filename, res_
                         res_data_file.write(',resolved=0')
 
                     # map from identified putative subclones to their original sample
-                    if sa_idx in phylogeny.sc_sample_ids:
+                    while sa_idx in phylogeny.sc_sample_ids:
                         sa_idx = phylogeny.sc_sample_ids[sa_idx]
                     if data[mut_idx][sa_idx] < 0:
                         res_data_file.write(',unknown=1')
@@ -450,7 +453,7 @@ def _create_mp_nodes_files(mp_nodes_filename, mp_mutnode_data_filename, phylogen
                 break
             # show only the nodes with a minimum reliability score
             elif mp_weights[node] < min_node_weight:
-                mp_nodes_file.write(('<{:.2f}'.format(min_node_weight)if mp_weights[node] < 10
+                mp_nodes_file.write(('<{:.2f}'.format(min_node_weight) if mp_weights[node] < 10
                                      else '<{:.1f} '.format(mp_weights[node]) if mp_weights[node] < 100
                                      else '<{:.0f} '.format(mp_weights[node]))+' 0 1 grey\n')
                 del mp_nodes[node]

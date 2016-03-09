@@ -12,6 +12,7 @@ from itertools import islice
 from copy import deepcopy
 import phylogeny.cplex_solver as cps
 from phylogeny.phylogeny_utils import Phylogeny, create_conflict_graph
+import utils.int_settings as def_sets
 # import conflict_solver as cf
 
 
@@ -32,7 +33,6 @@ class SimplePhylogeny(Phylogeny):
 
         # variables used for the minimum ignored mutation solution
         self.compatible_mutations = None
-        self.conflicting_mutations = None
 
         self.nodes = None
 
@@ -167,6 +167,17 @@ def determine_graph_nodes(patient, sample_names, mut_keys, gene_names=None):
 
     bayesian_scores = False
 
+    # presence probability of a variant for calculating reliability score
+    # is upper bounded because the same variant could have been independently acquired twice
+    max_pre_llh = math.log(def_sets.MAX_PRE_PROB)
+    not_max_pre_llh = 1.0 - max_pre_llh
+
+    # absence probability of a variant for calculating reliability score
+    # should be upper bounded because the variant could have been lost by LOH
+    # for most sequencing depth this lower bound is irrelevant
+    max_abs_llh = math.log(def_sets.MAX_ABS_PROB)
+    not_max_abs_llh = 1.0 - max_abs_llh
+
     if bayesian_scores:
         log_p01 = patient.log_p01   # posterior: log probability that VAF = 0
         for mut_idx in range(len(log_p01)):
@@ -175,17 +186,17 @@ def determine_graph_nodes(patient, sample_names, mut_keys, gene_names=None):
             for sa_idx in range(len(sample_names)):
                 if math.exp(log_p01[mut_idx][sa_idx][0]) < 0.5:   # variant is present
                     node.add(sa_idx)
-                    log_ml += math.log(-np.expm1(log_p01[mut_idx][sa_idx][0]))
+                    log_ml += min(log_p01[mut_idx][sa_idx][1], max_pre_llh)
                 else:                           # mutation is absent
-                    log_ml += log_p01[mut_idx][sa_idx][0]
+                    log_ml += min(log_p01[mut_idx][sa_idx][0], max_abs_llh)
 
             node = frozenset(node)
             if log_ml == 0.0:   # numerical artifact, use approximation: ignore second order term
                 for sa_idx in range(len(sample_names)):
                     if sa_idx in node:              # variant is present
-                        log_ml += math.exp(log_p01[mut_idx][sa_idx][0])     # sum probability
+                        log_ml += math.exp(max(log_p01[mut_idx][sa_idx][0], not_max_pre_llh))     # sum probability
                     else:                           # variant is absent
-                        log_ml += -np.expm1(log_p01[mut_idx][sa_idx][0])
+                        log_ml += math.exp(max(log_p01[mut_idx][sa_idx][1], not_max_abs_llh))
 
                 log_ml = np.log1p(-log_ml)      # calculates log(1+argument)
                 logger.debug('Approximated log probability of variant {} having pattern {} by {:.2e}.'.format(
@@ -226,6 +237,11 @@ def determine_graph_nodes(patient, sample_names, mut_keys, gene_names=None):
 
                 node_scores[node] = sys.float_info.min
             node_scores[node] = -math.log(node_scores[node])
+        # normalize reliability score by the number of processed variants (m)
+        for node in node_scores.keys():
+            node_scores[node] /= len(log_p01)       # number of variants
+            if node_scores[node] == 0.0:
+                node_scores[node] = sys.float_info.min
 
         # Show nodes with high reliability score
         for node, score in islice(sorted(node_scores.items(), key=lambda k: -k[1]), 0, 50):

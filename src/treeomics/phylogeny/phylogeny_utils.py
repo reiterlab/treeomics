@@ -5,9 +5,12 @@ __date__ = 'April, 2014'
 
 import logging
 import itertools
+import os
 from copy import deepcopy
 from collections import defaultdict
 import networkx as nx
+from networkx.readwrite import json_graph
+import json
 
 
 # get logger for application
@@ -35,15 +38,19 @@ class Phylogeny(object):
         self.compatible_nodes = None
         self.conflicting_nodes = None
 
+        # only relevant if not the whole solution space is explored
+        self.conflicting_mutations = None
+
         # mutation pattern conflict graph
         self.cf_graph = None
 
-    def infer_evolutionary_tree(self, updated_mps, founders, unique_mutations):
+    def infer_evolutionary_tree(self, updated_mps, founders, unique_mutations, confidence=None):
         """
         Construct a phylogenetic tree from the maximum set of compatible mutations
         :param updated_mps: evolutionary-conflict-free mutation patterns from which the tree is inferred
         :param founders: set of mutations which are present in all samples
         :param unique_mutations: dictionary of mutations which are only present in a sample
+        :param confidence: confidence value in parsimony-informative branch
         :return inferred tree
         """
 
@@ -64,7 +71,7 @@ class Phylogeny(object):
                 for mut in muts:
                     tree.edge[TREE_ROOT][mp]['muts'].add(mut)
             elif len(mp) > 1:
-                _add_evolutionary_node(tree, founding_mp, mp, '', muts)
+                _add_evolutionary_node(tree, founding_mp, mp, '', muts, confidence=confidence)
             else:
                 # leaves (private mutations) are considered separately
                 pass
@@ -119,6 +126,38 @@ class Phylogeny(object):
             # else:       # this node is a leave node (=sample)
 
         logger.debug("Added evolutionary information to the derived tree.")
+
+    @staticmethod
+    def save_json_tree(filepath, tree):
+        """
+        Transform inferred phylogeny to JSON object and save it to a file
+        :param filepath: path to the output file
+        :param tree: reconstructed phylogeny given as networkx DiGraph object
+        """
+
+        # create simplified JSON tree
+        out_ids = dict()
+        out_tree = nx.DiGraph()
+        for out_id, node in enumerate(tree.nodes_iter()):
+            out_ids[node] = out_id
+            out_tree.add_node(out_id, name=tree.node[node]['name'])
+
+        for u, v in tree.edges_iter():
+            out_tree.add_edge(out_ids[u], out_ids[v], value=len(tree.edge[u][v]['muts']))
+
+        # create json output from reconstructed phylogeny
+        json_data = json_graph.node_link_data(out_tree)
+
+        # json object to output file
+        with open(filepath, 'w') as json_file:
+            json.dump(json_data, json_file, indent=4)
+            logger.info('Create JSON file from reconstructed phylogeny: {}.'.format(filepath))
+
+    @staticmethod
+    def write_html_file(outfilepath, json_filepath):
+        with open(outfilepath, 'w') as html_file, open(_get_html_template()) as temp_file:
+            for line in temp_file:
+                html_file.write(line.replace('SETFILENAME', json_filepath))
 
 
 def create_conflict_graph(nodes, weights=None):
@@ -293,7 +332,7 @@ def compute_graph_nodes(mps, sample_names, mut_names, present_p_values, absent_p
     return nodes, node_weights, unknown_muts, mut_pattern_scores
 
 
-def _add_evolutionary_node(tree, parent, mp, node_name, mutations):
+def _add_evolutionary_node(tree, parent, mp, node_name, mutations, confidence=None):
     """
 
     Find the right place in the tree to insert the new node (clone)
@@ -303,6 +342,7 @@ def _add_evolutionary_node(tree, parent, mp, node_name, mutations):
     :param mp:
     :param node_name:
     :param mutations:
+    :param confidence: confidence in branching
     :return:
     """
 
@@ -311,12 +351,15 @@ def _add_evolutionary_node(tree, parent, mp, node_name, mutations):
     # but none of its children is a superset of the given clone => insertion place is found
     for child in tree.successors(parent):
         if mp.issubset(child):
-            if _add_evolutionary_node(tree, child, mp, node_name, mutations):
+            if _add_evolutionary_node(tree, child, mp, node_name, mutations, confidence=confidence):
                 return True
 
     # clone is not a subset of any existing children
     # hence, a new node has to be created on this level
     tree.add_node(mp, name=node_name, muts=mutations.union(tree.node[parent]['muts']))
+    # add confidence value of this branching
+    if confidence is not None and mp in confidence:
+        tree.node[mp]['conf'] = confidence[mp]
 
     # check if any of the existing children of the parent are subsets of the new node
     new_grandchildren = set()
@@ -337,3 +380,18 @@ def _add_evolutionary_node(tree, parent, mp, node_name, mutations):
     #              len(tree.node[clone]['muts']), parent))
 
     return True
+
+
+def _get_html_template():
+
+    filename = "tree_template.html"
+    input_dir = "input"
+    # derive correct input directory
+    if not os.getcwd().endswith('treeomics'):
+        template_path = os.path.join(input_dir, filename)
+    else:
+        template_path = os.path.join('..', input_dir, filename)
+
+    logger.debug('Path to HTML template: '.format(template_path))
+
+    return template_path

@@ -8,6 +8,7 @@ import logging
 import math
 from collections import defaultdict, Counter
 from random import sample
+import numpy as np
 import cplex as cp
 
 # get logger for application
@@ -103,6 +104,108 @@ def solve_conflicting_phylogeny(cf_graph):
         compatible_nodes))
 
     return incompatible_nodes, compatible_nodes
+
+
+def bootstrapping_solving(cf_graph, mp_weights, idx_to_mp, no_samples):
+    """
+    Generate and solve MILP of the down-sampled data-set and track the identified
+    mutation pattern occurrences
+    :param cf_graph: Conflict graph: nodes correspond to mutation patterns and edges to their conflicts
+    :param mp_weights: 2-dimensional array with log probability that this variant has this mutation pattern
+    :param idx_to_mp: dictionary from mutation patterns to the column ids used in the mp_weights array
+    :param no_samples: Number of samples with replacement for the bootstrapping
+    :return: observed occurrences of mutation patterns
+    """
+
+    # record the chosen patterns in the down-sampled data set
+    node_frequencies = Counter()
+
+    logger.debug('Build linear programs (cplex) for the robustness analysis through bootstrapping.')
+
+    # add column names to the ILP
+    ilp_col_names = []
+    ilp_col_mps = []
+    ilp_cols = dict()
+    for col_idx, node in enumerate(cf_graph.nodes_iter(), 0):
+        ilp_col_names.append(str(node))
+        ilp_cols[node] = col_idx
+        ilp_col_mps.append(node)
+
+    # column types
+    var_types = ['B' for _ in range(len(ilp_col_names))]
+
+    # add evolutionary constraints
+    constraints = []    # LHS (left hand side) of the rows in the ILP
+    row_names = []      # names of the rows (constraints)
+    for constraint_idx, (source, sink) in enumerate(cf_graph.edges_iter(), 1):
+        constraint = [[str(source), str(sink)], [1, 1]]
+        constraints.append(constraint)
+        row_names.append(str(source)+'-'+str(sink))
+
+        # logger.debug('Add constraint {}: {}'.format(constraint_idx, str(source)+'-'+str(sink)))
+
+    row_rhss = [1 for _ in range(len(constraints))]     # 1 is the RHS in all constraints
+    row_senses = ['G' for _ in range(len(constraints))]     # greater equal is used in all constraints
+    logger.debug('Generated {} constraints.'.format(len(constraints)))
+    logger.info('Do bootstrapping with {} samples.'.format(no_samples))
+
+    m = len(mp_weights)   # number of variants
+    for rep in range(no_samples):
+
+        # obtain sample of used variants
+        used_muts = np.random.choice(m, m, replace=True)
+        # the number of columns in the ILP is given by the number of nodes in the conflict graph
+        # weighting of the mutation patterns corresponds to the number of mutation which are conflicting
+        objective_function = np.zeros(cf_graph.order())
+
+        # update objective function (mutation pattern scores)
+        # decrease objective function values according to the removed patterns
+        for used_mut in used_muts:
+            for col_idx, log_ml in mp_weights[used_mut].items():
+                # add the (negative log probability) part of the reliability score of this mutation in this pattern
+                # note we are in log space
+                objective_function[ilp_cols[idx_to_mp[col_idx]]] -= math.log(-math.expm1(log_ml))
+
+        # logger.debug('Update objective function: ' + ', '.join(
+        #     '{}: {:.3f}'.format(var_idx, weight) for var_idx, weight in enumerate(objective_function, 1)))
+
+        # generate new MILP
+        lp = cp.Cplex()
+        # lp.set_error_stream(None)
+        # lp.set_warning_stream(None)
+        lp.set_results_stream(None)
+        lp.set_log_stream(None)
+        lp.variables.add(obj=objective_function, types=var_types, names=ilp_col_names)
+        lp.objective.set_sense(lp.objective.sense.minimize)
+        lp.linear_constraints.add(lin_expr=constraints, senses=row_senses, rhs=row_rhss, names=row_names)
+
+        # solve the Integer Linear Program (ILP)
+        lp.solve()
+        sol = lp.solution       # obtain solution
+        # solve_stat = sol.get_status()
+        # logger.debug('Solution status: {}'.format(sol.status[solve_stat]))
+
+        # proportional to incompatible mutations (depending on the weight definition)
+        # objective_value = sol.get_objective_value()
+        # logger.debug('Minimum vertex cover is of weight (objective value) {:.4f} (original weight: {:4f}).'
+        #               .format(objective_value, sum(val for val in objective_function)))
+
+        # column solution values
+        # solution_values = sol.get_values()
+        # logger.debug('Column solution values: ' + ', '.join(
+        #     '{}: {}'.format(var_idx, status) for var_idx, status in enumerate(solution_values, 1)))
+
+        solution_values = sol.get_values()
+        for ilp_col_idx, val in enumerate(solution_values):
+            if round(val, 5) == 0:
+                node_frequencies[ilp_col_mps[ilp_col_idx]] += 1
+
+        if no_samples >= 100 and rep > 0 and rep % (no_samples/100) == 0:
+            logger.debug('{:.0%} of bootstrapping completed.'.format(1.0*rep/no_samples))
+
+    logger.debug('Finished bootstrapping.')
+
+    return node_frequencies
 
 
 def solve_downsampled_nodes(cf_graph, mp_weights, col_ids_mp, no_replications):
@@ -215,7 +318,7 @@ def solve_downsampled_nodes(cf_graph, mp_weights, col_ids_mp, no_replications):
 def solve_downsampled_binary_nodes(cf_graph, mut_pattern_scores, shared_mutations, no_replications, no_samples):
     """
     Generate and solve MILP of the down-sampled data-set and track the identified
-    mutation pattern occurrences
+    mutation pattern occurrences when each variant has exactly one mutation pattern
     :param cf_graph: Conflict graph: nodes correspond to mutation patterns and edges to their conflicts
     :param mut_pattern_scores: Mutation pattern score of each mutation (key: mut_idx)
     :param shared_mutations: List of the shared (parsimony-informative) mutations (mut_idx)

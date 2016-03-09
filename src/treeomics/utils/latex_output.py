@@ -4,13 +4,14 @@ __author__ = 'jreiter'
 
 import logging
 import itertools
+import numpy as np
 from phylogeny.phylogeny_utils import TREE_ROOT
 
 # get logger for application
 logger = logging.getLogger('treeomics')
 
 
-def write_tikz_header(latex_file, standalone=False):
+def write_tikz_header(latex_file, germline_distance=2.0, standalone=False):
     """
     Write the latex and tikz header to the given and already opened file
     :param latex_file: already opened file writer instance
@@ -36,7 +37,7 @@ def write_tikz_header(latex_file, standalone=False):
     latex_file.write('\\begin{document}\n\n')
 
     latex_file.write('% Set the overall layout of the tree\n')
-    latex_file.write('\\tikzset{level 1/.style={level distance=2cm}}\n')
+    latex_file.write('\\tikzset{level 1/.style={level distance='+'{:.1f}'.format(germline_distance)+'cm}}\n')
     latex_file.write('\\tikzset{level 2+/.style={level distance=1.6cm}}\n')
     latex_file.write('\\tikzset{edge from parent/.append style={->,line width=1.2,'
                      + 'shorten >=2.5pt,shorten <=2.5pt}}\n')
@@ -84,7 +85,7 @@ def write_figure_footer(latex_file, figure_caption, standalone=False):
         latex_file.write('\\end{figure}\n\n')
 
 
-def add_ignored_mut_info(filename, phylogeny, tree):
+def add_branch_mut_info(filename, phylogeny, tree):
     """
     Add additional information to the figure file about ignored mutations and variation events on the edges
     :param filename: name of the file to which the information should be appended
@@ -103,18 +104,18 @@ def add_ignored_mut_info(filename, phylogeny, tree):
 
             # print the list of mutations which need to be excluded from the derivation
             # such that all variants allow a perfect and persistent phylogeny
-            latex_file.write('\\noindent \n')
-            latex_file.write('\\textbf{Ignored mutations ('+str(len(phylogeny.conflicting_mutations))+'): } \n')
-            if gene_names is not None:
-                latex_file.write(', '.join(sorted('\\textcolor{orange}{'+gene_names[mut]+'} ('+driver_pathways[mut]
-                                           + ')' for mut in phylogeny.conflicting_mutations if mut in driver_pathways)
-                                           + sorted(gene_names[mut] for mut in phylogeny.conflicting_mutations
-                                                    if mut not in driver_pathways)))
-
-            latex_file.write(', '.join(sorted('\\textcolor{orange}{'+mut_keys[mut]+'} ('+driver_pathways[mut]
-                                       + ')' for mut in phylogeny.conflicting_mutations if mut in driver_pathways)
-                                       + sorted(mut_keys[mut] for mut in phylogeny.conflicting_mutations
-                                                if mut not in driver_pathways)))
+            # latex_file.write('\\noindent \n')
+            # latex_file.write('\\textbf{Ignored mutations ('+str(len(phylogeny.conflicting_mutations))+'): } \n')
+            # if gene_names is not None:
+            #     latex_file.write(', '.join(sorted('\\textcolor{orange}{'+gene_names[mut]+'} ('+driver_pathways[mut]
+            #                                + ')' for mut in phylogeny.conflicting_mutations if mut in driver_pathways)
+            #                                + sorted(gene_names[mut] for mut in phylogeny.conflicting_mutations
+            #                                         if mut not in driver_pathways)))
+            #
+            # latex_file.write(', '.join(sorted('\\textcolor{orange}{'+mut_keys[mut]+'} ('+driver_pathways[mut]
+            #                            + ')' for mut in phylogeny.conflicting_mutations if mut in driver_pathways)
+            #                            + sorted(mut_keys[mut] for mut in phylogeny.conflicting_mutations
+            #                                     if mut not in driver_pathways)))
 
             # add a list with all edges and all their variation events
             latex_file.write('\n\n\\noindent \n')
@@ -152,8 +153,8 @@ def add_ignored_mut_info(filename, phylogeny, tree):
                     for grandchild in tree.successors(child):
                         fifo_queue.append((child, grandchild))
 
-                latex_file.write('\\end{itemize} \n')
-                latex_file.write('\\end{comment} \n\n')
+            latex_file.write('\\end{itemize} \n')
+            latex_file.write('\\end{comment} \n\n')
 
             # add a table with detailed mutation number translation
             # latex_file.write('\n\n\n% Mutation number translation table:\n')
@@ -181,40 +182,89 @@ def add_artifact_info(file_path, phylogeny):
             pat = phylogeny.patient
 
             if pat.gene_names is not None:
+                if phylogeny.conflicting_mutations is not None and len(phylogeny.conflicting_mutations) > 0:
+                    # print evolutionarily incompatible (unclassified artifacts) due to limited solution space
+                    latex_file.write('Evolutionarily incompatible variants due to limited search space: {} \n\n'.format(
+                        ', '.join('{} ({})'.format(pat.gene_names[mut_idx], pat.mut_keys[mut_idx])
+                                  for mut_idx in sorted(phylogeny.conflicting_mutations,
+                                                        key=lambda x: pat.gene_names[x].lower()))))
+
+                    for mut_idx in sorted(phylogeny.conflicting_mutations, key=lambda x: pat.gene_names[x].lower()):
+                        latex_file.write('Evolutionarily incompatible {} ({}): '.format(
+                                         pat.gene_names[mut_idx], pat.mut_keys[mut_idx]))
+                        for sa_idx in sorted(range(len(pat.sample_names)), key=lambda x: pat.sample_names[x]):
+                            latex_file.write('{} (reads {}/{}); '.format(
+                                pat.sample_names[sa_idx],
+                                pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                                pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
+                        latex_file.write('\n')
+
                 # print putative false positives
                 for mut_idx, samples in sorted(phylogeny.false_positives.items(),
-                                               key=lambda x: pat.gene_names[x[0]]):
+                                               key=lambda x: pat.gene_names[x[0]].lower()):
                     for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
                         # putative false-positive
                         latex_file.write('Putative false-positive {} ({}) in sample {}'.format(
                             pat.gene_names[mut_idx], pat.mut_keys[mut_idx],
                             pat.sample_names[sa_idx]))
                         latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
-                            pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                            pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
+
+                fp_cov = [pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]
+                          for mut_idx, samples in phylogeny.false_positives.items() for sa_idx in samples]
+                fp_var = [pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]
+                          for mut_idx, samples in phylogeny.false_positives.items() for sa_idx in samples]
+                fp_vaf = [(pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]] /
+                          pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]])
+                          if pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]] > 0 else 0.0
+                          for mut_idx, samples in phylogeny.false_positives.items() for sa_idx in samples]
+                latex_file.write('False-positives: coverage: mean {}, median {}; vars: mean {}, median {}\n'.format(
+                    np.mean(fp_cov), np.median(fp_cov), np.mean(fp_var), np.median(fp_var)))
+                latex_file.write('False-positives: VAF: mean {:.2%}, median {:.2%}\n\n'.format(
+                    np.mean(fp_vaf), np.median(fp_vaf)))
 
                 # print putative false negatives
                 for mut_idx, samples in sorted(phylogeny.false_negatives.items(),
-                                               key=lambda x: pat.gene_names[x[0]]):
+                                               key=lambda x: pat.gene_names[x[0]].lower()):
                     for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
-                        latex_file.write('Putative false-negative {} ({}) in sample {}'.format(
+                        latex_file.write('Putative powered false-negative {} ({}) in sample {}'.format(
                             pat.gene_names[mut_idx], pat.mut_keys[mut_idx],
                             pat.sample_names[sa_idx]))
                         latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
-                            pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                            pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
+                pfn_cov = [pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]
+                           for mut_idx, samples in phylogeny.false_negatives.items() for sa_idx in samples]
+                latex_file.write('Powered false-negatives: Coverage: mean {}, median {}\n\n'.format(
+                    np.mean(pfn_cov), np.median(pfn_cov)))
 
                 # print putative false negatives with too low coverage (unknowns)
                 for mut_idx, samples in sorted(phylogeny.false_negative_unknowns.items(),
-                                               key=lambda x: pat.gene_names[x[0]]):
+                                               key=lambda x: pat.gene_names[x[0]].lower()):
                     for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
-                        latex_file.write('Putative unknown false-negative {} ({}) in sample {}'.format(
+                        latex_file.write('Putative under-powered false-negative {} ({}) in sample {}'.format(
                             pat.gene_names[mut_idx], pat.mut_keys[mut_idx],
                             pat.sample_names[sa_idx]))
                         latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
-                            pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                            pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
+                upfn_cov = [pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]
+                            for mut_idx, samples in phylogeny.false_negative_unknowns.items() for sa_idx in samples]
+                latex_file.write('Under-powered false-negatives: Coverage: mean {}, median {}\n\n'.format(
+                    np.mean(upfn_cov), np.median(upfn_cov)))
+
             else:
+                if phylogeny.conflicting_mutations is not None and len(phylogeny.conflicting_mutations) > 0:
+                    # print evolutionarily incompatible (unclassified artifacts) due to limited solution space
+                    for mut_idx in sorted(phylogeny.conflicting_mutations, key=lambda x: pat.gene_names[x].lower()):
+                        latex_file.write('Evolutionarily incompatible {}: '.format(pat.mut_keys[mut_idx]))
+                        for sa_idx in sorted(range(len(pat.sample_names)), key=lambda x: pat.sample_names[x]):
+                            latex_file.write('{} (reads {}/{}); '.format(
+                                pat.sample_names[sa_idx],
+                                pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                                pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
+                        latex_file.write('\n')
                 # print putative false positives
                 for mut_idx, samples in sorted(phylogeny.false_positives.items(),
                                                key=lambda x: pat.mut_keys[x[0]]):
@@ -223,7 +273,7 @@ def add_artifact_info(file_path, phylogeny):
                         latex_file.write('Putative false-positive {} in sample {}'.format(
                             pat.mut_keys[mut_idx], pat.sample_names[sa_idx]))
                         latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
-                            pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                            pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
 
                 # print putative false negatives
@@ -233,7 +283,7 @@ def add_artifact_info(file_path, phylogeny):
                         latex_file.write('Putative false-negative {} in sample {}'.format(
                             pat.mut_keys[mut_idx], pat.sample_names[sa_idx]))
                         latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
-                            pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                            pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
 
                 # print putative false negatives with too low coverage (unknowns)
@@ -243,7 +293,7 @@ def add_artifact_info(file_path, phylogeny):
                         latex_file.write('Putative positive unknown {} in sample {}'.format(
                             pat.mut_keys[mut_idx], pat.sample_names[sa_idx]))
                         latex_file.write(' (Cov: {}, var-reads: {}).\n'.format(
-                            pat.phred_coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
+                            pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
 
             latex_file.write('\\end{comment} \n\n')

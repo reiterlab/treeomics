@@ -5,7 +5,7 @@ __author__ = 'Johannes REITER'
 
 import logging
 import csv
-import settings
+import math
 from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
 import numpy as np
 from phylogeny.simple_phylogeny import SimplePhylogeny
@@ -45,8 +45,8 @@ def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None,
         # provide some analysis about the raw sequencing data
         for sample_name in patient.sample_names:
             analysis_file.write('# Median phred coverage in sample {}: {} (mean: {:.2f})\n'.format(
-                sample_name, np.median(patient.sample_phred_coverages[sample_name]),
-                np.mean(patient.sample_phred_coverages[sample_name])))
+                sample_name, np.median(patient.sample_coverages[sample_name]),
+                np.mean(patient.sample_coverages[sample_name])))
 
             analysis_file.write('# Median MAF in sample {}: {:.2%}\n'.format(
                                 sample_name, np.median(patient.sample_mafs[sample_name])))
@@ -56,8 +56,8 @@ def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None,
         for mut_key in patient.mut_reads.keys():
             # for sample_name in patient.mut_reads[mut_key].keys():     # all samples
             for sample_name in patient.sample_names:
-                if patient.phred_coverage[mut_key][sample_name] >= 0:
-                    coverages.append(patient.phred_coverage[mut_key][sample_name])
+                if patient.coverage[mut_key][sample_name] >= 0:
+                    coverages.append(patient.coverage[mut_key][sample_name])
 
         analysis_file.write('# Median coverage in the used samples of patient {}: {} (mean: {:.2f})\n'.format(
             patient.name, np.median(coverages), np.mean(coverages)))
@@ -171,27 +171,33 @@ def create_data_analysis_file(patient, analysis_filepath):
         analysis_file.write('# Analyzed data from patient {}.\n'.format(patient.name))
 
         # write header
-        csvwriter.writerow(('Sample', 'Med. coverage', 'Med. dis. coverage', 'Med. MAF', 'Present', 'Absent',
-                            'Unknown (present)', 'Unknown (absent)'))
+        csvwriter.writerow(('Sample', 'MedianCoverage', 'EstPurity', 'MedianMAF',
+                            'BayPresent', 'BayAbsent', 'Present', 'Absent', 'Unknown'))
 
         # build up output data sequentially
-        for sample_name in patient.sample_names:
+        pres_lp = math.log(0.5)
+        for sa_idx, sample_name in enumerate(patient.sample_names):
 
             row = list()
             row.append(sample_name)
 
-            row.append(np.median(patient.sample_phred_coverages[sample_name]))
-            if patient.sample_dis_phred_coverages is not None:
-                row.append(np.median(patient.sample_dis_phred_coverages[sample_name]))
+            row.append(np.median(patient.sample_coverages[sample_name]))
+            if sample_name in patient.estimated_purities:
+                row.append('{:.5f}'.format(patient.estimated_purities[sample_name]))
             else:
-                row.append('n/a')
+                row.append('-')
 
             row.append('{:.3f}'.format(np.median(patient.sample_mafs[sample_name])))
 
+            # Bayesian inference model
+            # present if probability to be present is greater than 50%
+            row.append(sum(1 for ps in patient.log_p01.values() if ps[sa_idx][1] > pres_lp))
+            row.append(sum(1 for ps in patient.log_p01.values() if ps[sa_idx][1] <= pres_lp))
+
+            # conventional classification
             row.append(patient.positives[sample_name])
             row.append(patient.negatives[sample_name])
-            row.append(patient.unknowns[0][sample_name])
-            row.append(patient.unknowns[1][sample_name])
+            row.append(patient.unknowns[0][sample_name]+patient.unknowns[1][sample_name])
 
             # write row to file
             csvwriter.writerow(row)

@@ -1,29 +1,211 @@
 __author__ = 'jreiter'
 
 import logging
-from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
-from phylogeny.simple_phylogeny import SimplePhylogeny
-from phylogeny.max_lh_phylogeny import MaxLHPhylogeny
-#from subclonal_phylogeny import SubclonalPhylogeny
 import numpy as np
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from itertools import cycle, chain
 import scipy.cluster.hierarchy as sch
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.cm import ScalarMappable
+import pandas as pd
+import seaborn as sns
 from copy import deepcopy
 import math
 from utils.statistics import calculate_present_pvalue, calculate_absent_pvalue
 from matplotlib import rcParams
 from matplotlib import cm
+import os.path
+from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
+from phylogeny.simple_phylogeny import SimplePhylogeny
+from phylogeny.max_lh_phylogeny import MaxLHPhylogeny
 
 # get logger for application
 logger = logging.getLogger('treeomics')
 rcParams['font.family'] = 'sans-serif'
 rcParams['font.sans-serif'] = ['Arial']
+sns.set_style("whitegrid", {'grid.color': '0.8', "axes.edgecolor": "0.0"})
 
 
-def hinton(data, filename, row_labels=None, column_labels=None, displayed_mutations=None):
+def bayesian_hinton(log_p01, output_directory, filename, row_labels=None, column_labels=None,
+                    displayed_mutations=None, drivers=None):
+    """
+    Draw bayesian Hinton diagram for visualizing uncertainty in mutation data of multiple samples.
+    :param data: mutation data decoded as log probability that a variant is (absent, present)
+    :param output_directory: output directory
+    :param filename: plot filename (without ending), add pdf and png later
+    :param row_labels: sample names
+    :param column_labels: names of genes where the variant occurred
+    :param displayed_mutations: depict only the given list of mutations in the table
+    :param drivers: highlight mutations associated with cancer
+    """
+
+    # create colorbar and return scalar map
+    # scalar_map = _create_colorbar(output_directory)
+    # colors = [scalar_map.to_rgba(1.0), scalar_map.to_rgba(0.85), scalar_map.to_rgba(0.7), scalar_map.to_rgba(0.5),
+    #           scalar_map.to_rgba(0.3), scalar_map.to_rgba(0.15), scalar_map.to_rgba(0.0)]
+    # from seaborn sns.color_palette("RdBu_r", 7)
+    colors = [(0.16339870177063293, 0.4449827098378949, 0.69750097919912901),
+              (0.42068437209316328, 0.67643216077019186, 0.81868513191447534),
+              (0.76147636946509856, 0.86851211856393251, 0.92456747854457177),
+              (0.96908881383783674, 0.96647443490869855, 0.96493656495038205),
+              (0.98246828247519102, 0.80069205340217142, 0.70611305096570187),
+              (0.89457901435739851, 0.50380624217145586, 0.3997693394913393),
+              (0.72848905885920801, 0.15501730406985564, 0.19738562726507)]
+
+    # size and position settings
+    height = 4
+    width = 2
+    y_spacing = 1
+    label_x_pos = -2
+    label_y_pos = 0
+
+    # show all mutations in the table if no subset is given
+    if displayed_mutations is None:
+        displayed_mutations = [i for i in range(len(log_p01))]
+
+    x_length = ((-label_x_pos + 20) if row_labels is not None else 0) + (len(displayed_mutations) * width)
+    y_length = len(log_p01[0]) * (height+y_spacing) - y_spacing + (label_y_pos + 20 if column_labels is not None else 0)
+
+    # create new figure
+    plt.figure(figsize=(x_length / 20.0, y_length / 20.0), dpi=150)
+
+    ax = plt.axes([0, 1, 1, 1])
+
+    ax.patch.set_facecolor('white')
+    ax.set_aspect('auto')
+    ax.xaxis.set_major_locator(plt.NullLocator())
+    ax.yaxis.set_major_locator(plt.NullLocator())
+
+    # sort mutation table according to status
+    priorities = [0 for _ in range(len(log_p01))]
+    for mut_idx in displayed_mutations:
+        for sa_idx, (log_prob0, _) in enumerate(log_p01[mut_idx]):
+            p0 = math.exp(log_prob0)
+            if p0 <= 0.01:     # mutation is most likely present
+                priorities[mut_idx] += 7 * (8 ** (len(log_p01[mut_idx])-sa_idx-1))
+            elif p0 <= 0.1:     # mutation is probably present
+                priorities[mut_idx] += 6 * (8 ** (len(log_p01[mut_idx])-sa_idx-1))
+            elif p0 <= 0.25:     # mutation is maybe present
+                priorities[mut_idx] += 5 * (8 ** (len(log_p01[mut_idx])-sa_idx-1))
+            elif p0 < 0.75:     # mutation is unknown
+                priorities[mut_idx] += 3 * (8 ** (len(log_p01[mut_idx])-sa_idx-1))
+            elif p0 < 0.9:     # mutation is maybe absent
+                priorities[mut_idx] += 2 * (8 ** (len(log_p01[mut_idx])-sa_idx-1))
+            elif p0 < 0.99:     # mutation is probably absent
+                priorities[mut_idx] += 1 * (8 ** (len(log_p01[mut_idx])-sa_idx-1))
+            else:     # mutation is most likely absent
+                priorities[mut_idx] += 0 * (8 ** (len(log_p01[mut_idx])-sa_idx-1))
+
+    edge_color = 'black'
+
+    for x_pos, mut_idx in enumerate(sorted(displayed_mutations,
+                                           key=lambda k: (-priorities[k],
+                                                          column_labels[k] if column_labels is not None else 0))):
+
+        for sa_idx, (log_prob0, _) in enumerate(log_p01[mut_idx]):
+            p0 = math.exp(log_prob0)
+
+            if p0 <= 0.01:     # mutation is most likely present
+                color = colors[0]
+            elif p0 <= 0.1:     # mutation is probably present
+                color = colors[1]
+            elif p0 <= 0.25:     # mutation is maybe present
+                color = colors[2]
+            elif p0 < 0.75:     # mutation is unknown
+                color = colors[3]
+            elif p0 < 0.9:     # mutation is maybe absent
+                color = colors[4]
+            elif p0 < 0.99:     # mutation is probably absent
+                color = colors[5]
+            else:     # mutation is most likely absent
+                color = colors[6]
+
+            rect = plt.Rectangle([x_pos * width, (height+y_spacing) * (len(log_p01[mut_idx]) - sa_idx - 1)],
+                                 width, height, facecolor=color, edgecolor=edge_color, linewidth=1.0)
+            ax.add_patch(rect)
+
+    if row_labels is not None:
+        for sa_idx, row_name in enumerate(row_labels):
+            ax.text(label_x_pos, (height+y_spacing) * (len(row_labels) - sa_idx - 1)+1, row_name.replace('_', ' '),
+                    horizontalalignment='right', verticalalignment='bottom', fontsize=12)
+
+    if column_labels is not None:
+        for x_pos, mut_idx in enumerate(sorted(displayed_mutations,
+                                               key=lambda k: (-priorities[k], column_labels[k]))):
+
+            ax.text(x_pos * width+(width/2)+0.2, label_y_pos+(height+y_spacing) * (len(log_p01[mut_idx])),
+                    _format_gene_name(column_labels[mut_idx], max_length=12),
+                    rotation='vertical', horizontalalignment='center', verticalalignment='bottom', fontsize=8,
+                    color='red' if drivers is not None and column_labels[mut_idx] in drivers else 'black')
+
+    ax.autoscale_view()
+    plt.savefig(os.path.join(output_directory, filename+'.pdf'), dpi=150, bbox_inches='tight', transparent=True)
+    plt.savefig(os.path.join(output_directory, filename+'.png'), dpi=150, bbox_inches='tight', transparent=True)
+
+    logger.info('Generated bayesian mutation table plot: {}'.format(filename+'.pdf'))
+
+    # plt.show(block=True)
+
+
+def _create_colorbar(output_directory):
+    """
+    Make plot with vertical (default) colorbar and return scalar map
+    :param output_directory: output directory
+    :return: scalar map
+    """
+
+    fig, ax = plt.subplots(figsize=(0.3, 3), dpi=150)
+    # segmentdata argument is a dictionary with a red, green and blue entries.
+    # Each entry should be a list of x, y0, y1 tuples, forming rows in a table.
+    # Entries for alpha are optional
+    cdict = {'red':   ((0.0, 1.0, 1.0),
+                       (0.1, 0.9, 0.9),
+                       (0.6, 0.9, 0.9),
+                       (0.95, 0.0, 0.0),
+                       (1.0, 0.0, 0.0)),
+
+             'green': ((0.0, 0.0, 0.0),
+                       (0.01, 0.0, 0.0),
+                       (0.4, 0.9, 0.9),
+                       (0.5, 0.9, 0.9),
+                       (0.6, 0.9, 0.9),
+                       (0.99, 0.0, 0.0),
+                       (1.0, 0.0, 0.0)),
+
+             'blue':  ((0.0, 0.0, 0.0),
+                       (0.05, 0.0, 0.0),
+                       (0.4, 0.9, 0.9),
+                       (0.9, 0.9, 0.9),
+                       (1.0, 1.0, 1.0))  # ,
+
+             # 'alpha': ((0.0, 0.7, 0.7),
+             #           #(0.5, 0.3, 0.3),
+             #           (1.0, 0.7, 0.7))
+             }
+
+    lscmap = LinearSegmentedColormap('BlueRed', cdict)
+
+    norm = mpl.colors.Normalize(vmin=0.0, vmax=1.0)
+
+    cb1 = mpl.colorbar.ColorbarBase(ax, cmap=lscmap, norm=norm, orientation='vertical', ticks=[0, 0.25, 0.5, 0.75, 1.0])
+    cb1.ax.tick_params(labelsize=11)
+    cb1.ax.yaxis.set_ticks_position('left')
+    cb1.ax.set_yticklabels(['< 0.01', '0.1', '0.5', '0.9', '> 0.99'])
+    cb1.set_label('Prob. of presence', size=12)
+
+    scalar_map = ScalarMappable(norm=norm, cmap=lscmap)
+
+    plt.savefig(os.path.join(output_directory, 'colorbar_variant_presences'+'.pdf'),
+                dpi=150, bbox_inches='tight', transparent=True)
+    plt.savefig(os.path.join(output_directory, 'colorbar_variant_presences'+'.png'),
+                dpi=150, bbox_inches='tight', transparent=True)
+
+    return scalar_map
+
+
+def hinton(data, filename, row_labels=None, column_labels=None, displayed_mutations=None, drivers=None):
     """
     Draw Hinton diagram for visualizing mutation data of multiple samples.
     :param data: mutation data
@@ -31,6 +213,7 @@ def hinton(data, filename, row_labels=None, column_labels=None, displayed_mutati
     :param row_labels: sample names
     :param column_labels: names of genes where the variant occurred
     :param displayed_mutations: depict only the given list of mutations in the table
+    :param drivers: highlight mutations associated with cancer
     """
 
     # size and position settings
@@ -104,7 +287,8 @@ def hinton(data, filename, row_labels=None, column_labels=None, displayed_mutati
 
             ax.text(x_pos * width+(width/2)+0.2, label_y_pos+(height+y_spacing) * (len(data[mut_idx])),
                     _format_gene_name(column_labels[mut_idx], max_length=12),
-                    rotation='vertical', horizontalalignment='center', verticalalignment='bottom', fontsize=8)
+                    rotation='vertical', horizontalalignment='center', verticalalignment='bottom', fontsize=8,
+                    color='red' if drivers is not None and column_labels[mut_idx] in drivers else 'black')
 
     ax.autoscale_view()
 
@@ -139,12 +323,20 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
     elif isinstance(phylogeny, MaxLHPhylogeny):
         displayed_mutations = [mut_idx for mut_idx in
                                set(phylogeny.false_positives.keys()).union(set(phylogeny.false_negatives.keys()))]
+        if phylogeny.conflicting_mutations is not None:
+            for mut_idx in phylogeny.conflicting_mutations:
+                displayed_mutations.append(mut_idx)
+
     # elif isinstance(phylogeny, SubclonalPhylogeny):
     #     logger.warning('Illustrative mutation table not yet implemented for subclonal detections.')
     #     return
     else:
         logger.error('Could not create illustrative mutation table of incompatible mutation patterns. ')
         logger.error('Phylogeny object is of wrong type! ')
+        return
+
+    if len(displayed_mutations) == 0:
+        logger.info('There were no evolutionarily incompatible mutations!')
         return
 
     x_length = ((-label_x_pos + 20) if row_labels is not None else 0) + (len(displayed_mutations) * width * 3)
@@ -174,7 +366,7 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
 
         for sa_idx, maf in enumerate(patient.data[mut_idx]):
 
-            cov = float(patient.phred_coverage[patient.mut_keys[mut_idx]][patient.sample_names[sa_idx]])
+            cov = float(patient.coverage[patient.mut_keys[mut_idx]][patient.sample_names[sa_idx]])
             if cov > 0:
                 raw_maf = (float(patient.mut_reads[patient.mut_keys[mut_idx]][patient.sample_names[sa_idx]]) / cov)
             else:
@@ -258,11 +450,115 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
     ax.autoscale_view()
 
     plt.savefig(filename+'.pdf', dpi=150, bbox_inches='tight', transparent=True)
-    plt.savefig(filename+'.png', dpi=150, bbox_inches='tight', transparent=True)
+    plt.savefig(filename+'.png', bbox_inches='tight', transparent=True)
     logger.info('Generated illustrative mutation table plot of incompatible mutation patterns: {}'.format(
         filename+'.pdf'))
 
     return x_length, y_length
+
+
+def vaf_distribution_plot(filename, patient):
+    """
+    Create violin variant allele frequency distribution plot
+    :param filename: name of the output file
+    :param patient: instance of the class patient
+    """
+
+    # Set up the matplotlib figure
+    fig, ax_vaf = plt.subplots(figsize=(1.5+len(patient.sample_names)*0.5, 3.0))
+
+    # create pandas dataframe
+    vafs = defaultdict(list)
+
+    # for mut_key in patient.mut_reads.keys():                # conventional binary classification
+    #     for sample_name in patient.sample_names:
+    #         if patient.coverage[mut_key][sample_name] > 0:
+    #             vafs[sample_name.replace('_', '')].append(
+    #                 patient.mut_reads[mut_key][sample_name] / patient.coverage[mut_key][sample_name])
+    #         else:
+    #             vafs[sample_name.replace('_', '')].append(0.0)
+
+    for mut_idx, mut_key in enumerate(patient.mut_keys):             # bayesian classification
+        for sa_idx, sample_name in enumerate(patient.sample_names):
+            # variant is present
+            if math.exp(patient.log_p01[mut_idx][sa_idx][1]) > 0.5 and patient.mut_reads[mut_key][sample_name] > 0:
+                vafs[sample_name.replace('_', '')].append(
+                    patient.mut_reads[mut_key][sample_name] / patient.coverage[mut_key][sample_name])
+            else:
+                vafs[sample_name.replace('_', '')].append(0.0)
+
+    df_vafs = pd.DataFrame(vafs)
+    # Draw a violinplot with a narrower bandwidth than the default
+    sns.violinplot(data=df_vafs[df_vafs > 0], ax=ax_vaf, inner=None, bw='silverman', cut=0.3, linewidth=1.0)
+
+    # Finalize the figure
+    ax_vaf.set(ylim=(0, 1.0))
+    ax_vaf.set_xlabel('Sample')
+    ax_vaf.set_ylabel('Variant allele frequency')
+    sns.despine(right=False, top=False)
+
+    for sa_idx in range(len(df_vafs.columns)):
+        if patient.sample_names[sa_idx] in patient.estimated_purities:
+            ax_vaf.text(sa_idx, 1.08, '{:.0%}'.format(patient.estimated_purities[patient.sample_names[sa_idx]]),
+                        horizontalalignment='center', fontsize=9, color='black', rotation=45)
+        else:
+            ax_vaf.text(sa_idx, 1.08, '{:.0%}'.format(df_vafs[df_vafs > 0].median()[sa_idx]),
+                        horizontalalignment='center', fontsize=9, color='red', rotation=45)
+
+    plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
+    logger.info('Generated violinplot for VAF distribution {}'.format(filename))
+
+
+def coverage_plot(filename, patient, max_cov=None):
+    """
+    Create violin plot to visualize the coverage distribution in each sample
+    :param filename: path to the output file of the created figure
+    :param patient: instance of class patient
+    """
+
+    # Set up the matplotlib figure
+    fig, ax_cov = plt.subplots(figsize=(1.5+len(patient.sample_names)*0.5, 3.0))
+
+    # create pandas dataframe
+    coverages = defaultdict(list)
+
+    for mut_key in patient.mut_reads.keys():
+        for sample_name in patient.sample_names:
+            coverages[sample_name.replace('_', '')].append(patient.coverage[mut_key][sample_name])
+
+    df_cov = pd.DataFrame(coverages)
+    # -1 corresponds to coverage of this variant is unknown in this sample (not called by a variant caller)
+    df_cov = df_cov.replace(-1, np.nan)
+    # Draw a violinplot with a narrower bandwidth than the default
+    sns.violinplot(data=df_cov, ax=ax_cov, inner=None, bw='scott', cut=0.2, linewidth=1.0)
+
+    def round_to_x(number, x):
+        """
+        Round to x significant digits
+        """
+        assert(x > 0)
+        return round(number, -int(math.floor(math.log10(number)))-1+x)
+
+    if max_cov is None:
+        max_median = max(df_cov.median()[sa_idx] for sa_idx in range(len(df_cov.columns)))
+        max_cov = round_to_x(max_median*2.5, 2)
+    if patient.name.startswith('Pam'):
+        max_cov = 4000
+
+    # Finalize the figure
+    # ax_cov.set(ylim=(0, max_cov))
+    ax_cov.set_ylim([0, max_cov])
+    ax_cov.set_xlabel('Sample')
+    ax_cov.set_ylabel('Coverage')
+    sns.despine(right=False, top=False)
+
+    for sa_idx in range(len(df_cov.columns)):
+        ax_cov.text(sa_idx, max_cov*1.1, '{:.0f}x'.format(df_cov.median()[sa_idx]),
+                    horizontalalignment='center', fontsize=9, rotation=45,
+                    color=('black' if df_cov.median()[sa_idx] >= 100 else 'red'))
+
+    plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
+    logger.info('Generated coverage distribution plot {}'.format(filename))
 
 
 def boxplot(filename, patient):
@@ -285,7 +581,7 @@ def boxplot(filename, patient):
                 meanline=False, showmeans=True)
 
     bp_ax.set_ylim([0, 1.0])
-    #bp_ax.set_title(patient.name)
+    # bp_ax.set_title(patient.name)
     bp_ax.set_xlabel('Samples')
     bp_ax.set_ylabel('Variant allele frequency')
     bp_ax.set_xticklabels([sa_n.replace('_', ' ') for sa_n in patient.sample_names], rotation=45)
@@ -301,6 +597,72 @@ def boxplot(filename, patient):
 
     plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
     logger.info('Generated boxplot for mutant allele frequencies {}'.format(filename))
+
+
+def reads_plot(filename, patient):
+    """
+    Create scatter plot of the number of mutant reads over the coverage
+    Each sample in a different color
+    :param filename: path to the output file of the created figure
+    :param patient: instance of class patient
+    """
+    # create scatter plot of the number of mutant reads over the coverage
+    # each sample in a different color
+    sc_fig, sc_ax = plt.subplots(figsize=(len(patient.sample_mafs)*0.56, 4))
+
+    x_coverages = []
+    y_mut_reads = []
+    colors = []
+
+    for mut_key in patient.mut_reads.keys():
+        for sa_idx, sample_name in enumerate(patient.mut_reads[mut_key].keys(), 0):
+
+            if patient.coverage[mut_key][sample_name] > 0:
+                x_coverages.append(patient.coverage[mut_key][sample_name])
+            else:
+                x_coverages.append(1)
+            if patient.mut_reads[mut_key][sample_name]:
+                y_mut_reads.append(patient.mut_reads[mut_key][sample_name])
+            else:
+                y_mut_reads.append(1)
+
+            colors.append(plt.cm.jet(1. * sa_idx / (patient.n - 1)))
+
+    plt.scatter(x_coverages, y_mut_reads, c=colors, s=10, marker="x")
+
+    sc_ax.set_xscale('log')
+    sc_ax.set_xlim([1, 10000])
+    sc_ax.set_yscale('log')
+    sc_ax.set_ylim([1, 10000])
+    sc_ax.set_xlabel('Coverage')
+    sc_ax.set_ylabel('Variant reads')
+    sc_ax.set_title(patient.name)
+
+    plt.show(block=False)
+    x_labels = [item.get_text() for item in sc_ax.get_xticklabels()]
+    # x_labels[1] = r'$\leq 10^0$'
+    # x_labels[1] = '$\\mathdefault{\leq 10^{0}}$'
+    x_labels[1] = '$\\mathdefault{\leq 1}$'
+    sc_ax.set_xticklabels(x_labels)
+    y_labels = [item.get_text() for item in sc_ax.get_yticklabels()]
+    y_labels[1] = '$\\mathdefault{\leq 1}$'
+    sc_ax.set_yticklabels(y_labels)
+
+    y_pos = 5000
+    for sa_idx, sample_name in enumerate(patient.sample_names):
+        # bp_ax.text(1.3, y_pos, sample_name, horizontalalignment='left',
+        #            color=plt.cm.spectral(1. * (sa_idx+1) / (patient.n+1)), fontsize=9)
+        sc_ax.text(1.3, y_pos, sample_name.replace('_', ' '), horizontalalignment='left',
+                   color=plt.cm.jet(1. * sa_idx / (patient.n - 1)), fontsize=9)
+        y_pos /= 1.7
+
+    # draw line at a frequency of 10%
+    plt.plot([1, 10000], [0.1, 1000], 'k:', color='black', lw=1)
+
+    plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
+    logger.info('Generated scatter plot about sequencing reads {}'.format(filename))
+
+    # plt.show(block=True)
 
 
 def clustered_table(filename, patient, clusters, row_labels=None, column_labels=None, displayed_mutations=None):
@@ -422,72 +784,6 @@ def clustered_table(filename, patient, clusters, row_labels=None, column_labels=
     # plt.show(block=True)
 
 
-def reads_plot(filename, patient):
-    """
-    Create scatter plot of the number of mutant reads over the coverage
-    Each sample in a different color
-    :param filename: path to the output file of the created figure
-    :param patient: instance of class patient
-    """
-    # create scatter plot of the number of mutant reads over the coverage
-    # each sample in a different color
-    sc_fig, sc_ax = plt.subplots(figsize=(len(patient.sample_mafs)*0.56, 4))
-
-    x_coverages = []
-    y_mut_reads = []
-    colors = []
-
-    for mut_key in patient.mut_reads.keys():
-        for sa_idx, sample_name in enumerate(patient.mut_reads[mut_key].keys(), 0):
-
-            if patient.phred_coverage[mut_key][sample_name] > 0:
-                x_coverages.append(patient.phred_coverage[mut_key][sample_name])
-            else:
-                x_coverages.append(1)
-            if patient.mut_reads[mut_key][sample_name]:
-                y_mut_reads.append(patient.mut_reads[mut_key][sample_name])
-            else:
-                y_mut_reads.append(1)
-
-            colors.append(plt.cm.jet(1. * sa_idx / (patient.n - 1)))
-
-    plt.scatter(x_coverages, y_mut_reads, c=colors, s=10, marker="x")
-
-    sc_ax.set_xscale('log')
-    sc_ax.set_xlim([1, 10000])
-    sc_ax.set_yscale('log')
-    sc_ax.set_ylim([1, 10000])
-    sc_ax.set_xlabel('Coverage')
-    sc_ax.set_ylabel('Variant reads')
-    sc_ax.set_title(patient.name)
-
-    plt.show(block=False)
-    x_labels = [item.get_text() for item in sc_ax.get_xticklabels()]
-    # x_labels[1] = r'$\leq 10^0$'
-    # x_labels[1] = '$\\mathdefault{\leq 10^{0}}$'
-    x_labels[1] = '$\\mathdefault{\leq 1}$'
-    sc_ax.set_xticklabels(x_labels)
-    y_labels = [item.get_text() for item in sc_ax.get_yticklabels()]
-    y_labels[1] = '$\\mathdefault{\leq 1}$'
-    sc_ax.set_yticklabels(y_labels)
-
-    y_pos = 5000
-    for sa_idx, sample_name in enumerate(patient.sample_names):
-        # bp_ax.text(1.3, y_pos, sample_name, horizontalalignment='left',
-        #            color=plt.cm.spectral(1. * (sa_idx+1) / (patient.n+1)), fontsize=9)
-        sc_ax.text(1.3, y_pos, sample_name.replace('_', ' '), horizontalalignment='left',
-                   color=plt.cm.jet(1. * sa_idx / (patient.n - 1)), fontsize=9)
-        y_pos /= 1.7
-
-    # draw line at a frequency of 10%
-    plt.plot([1, 10000], [0.1, 1000], 'k:', color='black', lw=1)
-
-    plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
-    logger.info('Generated scatter plot about sequencing reads {}'.format(filename))
-
-    # plt.show(block=True)
-
-
 def p_value_present_plot(filename, patient, false_positive_rate):
     """
     Create plot with the p-values in each sample
@@ -503,7 +799,7 @@ def p_value_present_plot(filename, patient, false_positive_rate):
         for sa_idx, sample_name in enumerate(patient.mut_reads[mut_key].keys(), 0):
             if patient.mut_reads[mut_key][sample_name] > 0:
                 present_p_value = math.log(calculate_present_pvalue(patient.mut_reads[mut_key][sample_name],
-                                                                    patient.phred_coverage[mut_key][sample_name],
+                                                                    patient.coverage[mut_key][sample_name],
                                                                     false_positive_rate), 10)
                 x_values.append(present_p_value)
                 y_values.append(patient.n-sa_idx)
@@ -550,7 +846,7 @@ def p_value_absent_plot(filename, patient, min_maf):
                 continue
 
             absent_p_value = math.log(calculate_absent_pvalue(patient.mut_reads[mut_key][sample_name],
-                                                              patient.phred_coverage[mut_key][sample_name], min_maf),
+                                                              patient.coverage[mut_key][sample_name], min_maf),
                                       10)
             x_values.append(absent_p_value)
             y_values.append(patient.n-sa_idx)
@@ -648,7 +944,7 @@ def _format_gene_name(gene_name, max_length=20):
     gene_name = gene_name.replace('"', '')
     # shorten gene names if they are too long for the labeling
     if len(gene_name) > max_length-4 and gene_name.find(',', 6) != -1:
-        logger.debug('Shorten too long gene name for circos labeling: {}'.format(gene_name))
+        # logger.debug('Shorten too long gene name for circos labeling: {}'.format(gene_name))
         gene_name = gene_name[:gene_name.find(',', 6)]
     if len(gene_name) > max_length:
         # cut all names which are still longer
