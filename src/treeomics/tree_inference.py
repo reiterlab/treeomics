@@ -122,14 +122,14 @@ def create_max_lh_tree(file_path, patient, mm_filepath, mp_filepath, subclone_de
         median_no_muts = np.median([len(muts) for muts in mlh_pg.patient.variants.values()])
 
         tikz_tree = tikz.create_figure_file(mlh_tree, tikz.TREE_ROOT, file_path, patient, caption, drivers=drivers,
-                                            germline_distance=10.0*len(mlh_pg.mlh_founders)/median_no_muts,
+                                            germline_distance=10.0*max(1.0, len(mlh_pg.mlh_founders)/median_no_muts),
                                             standalone=True)
         # add information about the ignored mutations and the position of the acquired mutations
         latex.add_branch_mut_info(file_path, mlh_pg, mlh_tree)
 
         tikz_path, tikz_file = os.path.split(tikz_tree)
         logger.debug('Tikzpath: {} {}'.format(tikz_path, tikz_file))
-        pdflatex_cmd = '/Library/TeX/texbin/pdflatex {}'.format(tikz_file)
+        pdflatex_cmd = 'pdflatex {}'.format(tikz_file)
         FNULL = open(os.devnull, 'w')
         return_code = call(pdflatex_cmd, shell=True, cwd=tikz_path, stdout=FNULL)
 

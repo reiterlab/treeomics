@@ -455,10 +455,11 @@ def main():
                                               subclone_detection=args.subclone_detection, drivers=subject_drivers,
                                               no_bootstrap_samples=args.boot, max_no_mps=args.max_no_mps)
 
-            if plots_paper:     # generate Java Script D3 trees
-                json_file = 'mlhtree_'+fn_tree+'.json'
-                Phylogeny.save_json_tree(os.path.join(output_directory, json_file), phylogeny.mlh_tree)
-                Phylogeny.write_html_file(os.path.join(output_directory, 'mlhtree_'+fn_tree+'.html'), json_file)
+            # previously used for benchmarking
+            # if plots_paper:     # generate Java Script D3 trees
+            #     json_file = 'mlhtree_'+fn_tree+'.json'
+            #     Phylogeny.save_json_tree(os.path.join(output_directory, json_file), phylogeny.mlh_tree)
+            #     Phylogeny.write_html_file(os.path.join(output_directory, 'mlhtree_'+fn_tree+'.html'), json_file)
 
             # determine mutation patterns based on standard binary classification to generate an overview graph
             if plots_report:
