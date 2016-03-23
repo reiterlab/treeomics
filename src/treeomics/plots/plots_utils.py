@@ -46,13 +46,11 @@ def bayesian_hinton(log_p01, output_directory, filename, row_labels=None, column
     # colors = [scalar_map.to_rgba(1.0), scalar_map.to_rgba(0.85), scalar_map.to_rgba(0.7), scalar_map.to_rgba(0.5),
     #           scalar_map.to_rgba(0.3), scalar_map.to_rgba(0.15), scalar_map.to_rgba(0.0)]
     # from seaborn sns.color_palette("RdBu_r", 7)
-    colors = [(0.16339870177063293, 0.4449827098378949, 0.69750097919912901),
-              (0.42068437209316328, 0.67643216077019186, 0.81868513191447534),
-              (0.76147636946509856, 0.86851211856393251, 0.92456747854457177),
-              (0.96908881383783674, 0.96647443490869855, 0.96493656495038205),
-              (0.98246828247519102, 0.80069205340217142, 0.70611305096570187),
-              (0.89457901435739851, 0.50380624217145586, 0.3997693394913393),
-              (0.72848905885920801, 0.15501730406985564, 0.19738562726507)]
+    # sns.diverging_palette(245, 15, s=95, n=15)
+    div_pal = sns.diverging_palette(245, 15, s=95, n=23)
+    colors = []
+    for c in div_pal:
+        colors.append(c[:3])
 
     # size and position settings
     height = 4
@@ -107,20 +105,52 @@ def bayesian_hinton(log_p01, output_directory, filename, row_labels=None, column
         for sa_idx, (log_prob0, _) in enumerate(log_p01[mut_idx]):
             p0 = math.exp(log_prob0)
 
-            if p0 <= 0.01:     # mutation is most likely present
+            if p0 <= 0.00001:     # mutation is most likely present
                 color = colors[0]
-            elif p0 <= 0.1:     # mutation is probably present
+            elif p0 <= 0.0001:     # mutation is most likely present
                 color = colors[1]
-            elif p0 <= 0.25:     # mutation is maybe present
+            elif p0 <= 0.001:     # mutation is most likely present
                 color = colors[2]
-            elif p0 < 0.75:     # mutation is unknown
+            elif p0 <= 0.0031:     # mutation is probably present
                 color = colors[3]
-            elif p0 < 0.9:     # mutation is maybe absent
+            elif p0 <= 0.01:     # mutation is probably present
                 color = colors[4]
-            elif p0 < 0.99:     # mutation is probably absent
+            elif p0 <= 0.02:     # mutation is probably present
                 color = colors[5]
-            else:     # mutation is most likely absent
+            elif p0 <= 0.05:     # mutation is probably present
                 color = colors[6]
+            elif p0 <= 0.1:     # mutation is probably present
+                color = colors[7]
+            elif p0 <= 0.15:     # mutation is probably present
+                color = colors[8]
+            elif p0 <= 0.2:     # mutation is maybe present
+                color = colors[9]
+            elif p0 <= 0.4:     # mutation is maybe present
+                color = colors[10]
+            elif p0 < 0.6:     # mutation is unknown
+                color = colors[11]
+            elif p0 < 0.8:     # mutation is maybe absent
+                color = colors[12]
+            elif p0 < 0.85:     # mutation is maybe absent
+                color = colors[13]
+            elif p0 < 0.9:     # mutation is probably absent
+                color = colors[14]
+            elif p0 < 0.95:     # mutation is probably absent
+                color = colors[15]
+            elif p0 < 0.98:     # mutation is probably absent
+                color = colors[16]
+            elif p0 < 0.99:     # mutation is probably absent
+                color = colors[17]
+            elif p0 < 0.9969:     # mutation is probably absent
+                color = colors[18]
+            elif p0 < 0.999:     # mutation is probably absent
+                color = colors[19]
+            elif p0 < 0.9999:     # mutation is probably absent
+                color = colors[20]
+            elif p0 < 0.99999:     # mutation is probably absent
+                color = colors[21]
+            else:     # mutation is most likely absent
+                color = colors[22]
 
             rect = plt.Rectangle([x_pos * width, (height+y_spacing) * (len(log_p01[mut_idx]) - sa_idx - 1)],
                                  width, height, facecolor=color, edgecolor=edge_color, linewidth=1.0)
@@ -333,11 +363,11 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
     else:
         logger.error('Could not create illustrative mutation table of incompatible mutation patterns. ')
         logger.error('Phylogeny object is of wrong type! ')
-        return
+        return -1, -1
 
     if len(displayed_mutations) == 0:
         logger.info('There were no evolutionarily incompatible mutations!')
-        return
+        return -1, -1
 
     x_length = ((-label_x_pos + 20) if row_labels is not None else 0) + (len(displayed_mutations) * width * 3)
     y_length = (len(patient.data[0]) * (height+y_spacing) - y_spacing

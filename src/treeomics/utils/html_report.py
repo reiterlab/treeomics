@@ -189,8 +189,8 @@ class HTMLReport(object):
                 self._inds[self._ind]+'<b>Probabilistic variant classification across '
                 + '{} samples of patient {}.</b>\n'.format(len(patient.sample_names), patient.name))
             self.file.write(self._inds[self._ind]+'Blue rectangles correspond to present variants, '
-                            + 'red to absent variants, and light red to unknown mutation status '
-                              '(due to low coverage). Brighter colors denote higher probability. \n')
+                            + 'red to absent variants, and white to unknown mutation status. '
+                              'Brighter colors denote higher probability. \n')
             # self.file.write(
             #     self._inds[self._ind]+'In total {} distinct variants were classified as present in at least one sample'
             #         .format(len(patient.present_mutations)) + ', {} ({:.1%}) of those were founders, \n'.format(

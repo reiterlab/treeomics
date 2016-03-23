@@ -169,7 +169,7 @@ def usage():
     """
     logger.warn("Usage: python treeomics.zip -r <mut-reads table> -s <coverage table> | -v vcf_file | "
                 "-d vcf_file_directory  [-n <normal sample name>] [-e <sequencing error rate] "
-                "[-z <prior absent probability>] [-p false positive rate] [-i false discovery rate] \n")
+                "[-z <prior absent probability>] \n")
     logger.warn("Example: python treeomics.zip -r input/Makohon2015/Pam03_mutant_reads.txt "
                 "-s input/Makohon2015/Pam03_phredcoverage.txt ")
     sys.exit(2)
@@ -195,7 +195,7 @@ def main():
     parser.add_argument("-s", "--coverage", help="path to table with read coverage at the mutated positions", type=str)
 
     # specify output directory
-    parser.add_argument("-x", "--output", help="output directory", type=str, default=settings.OUTPUT_FOLDER)
+    parser.add_argument("-o", "--output", help="output directory", type=str, default=settings.OUTPUT_FOLDER)
 
     # read in parameter value
     parser.add_argument("-e", "--error_rate", help="sequencing error rate for bayesian inference",
@@ -220,8 +220,8 @@ def main():
                         type=int, default=settings.MIN_ABSENT_COVERAGE)
 
     parser.add_argument('-b', '--boot', help='Number of bootstrapping samples', type=int, default=0)
-    parser.add_argument('-o', '--down', help='Replications for robustness analysis through down-sampling',
-                        type=int, default=0)
+    # parser.add_argument('-o', '--down', help='Replications for robustness analysis through down-sampling',
+    #                     type=int, default=0)
 
     parser.add_argument("-l", "--max_no_mps", help="limit the solution space size by the maximal number of " +
                                                    "explored mutation patterns per variant",
@@ -268,8 +268,6 @@ def main():
     logger.info('Minimum coverage for an absent variant: {} (otherwise unknown)'.format(min_absent_cov))
     if args.boot > 0:
         logger.info('Number of samples for bootstrapping analysis: {}'.format(args.boot))
-    if args.down > 0:
-        logger.info('Replications for robustness analysis through down-sampling: {}'.format(args.down))
 
     if args.subclone_detection and args.max_no_mps is not None:
         logger.error('Subclone and partial solution space search are not supported to be performed at the same time! ')
@@ -290,10 +288,6 @@ def main():
         read_no_samples = patient.process_raw_data(
             fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_maf, var_table=args.mut_reads,
             cov_table=args.coverage, normal_sample=normal_sample_name)
-        # 'LiM_2' Pam01
-        # 'LiM_7', 'LiM_8', 'PT_18' Pam02
-        # 'LiM_5', 'LuM_2', 'LuM_3', 'PT_12' Pam03
-        # 'PeM_6', 'PT_26', 'PT_27'   Pam04
 
     elif args.csv_file:
 
@@ -426,7 +420,7 @@ def main():
     html_report.start_report()
     html_report.add_sequencing_information(
         patient, mut_table_path=mut_table_name+'.png' if mut_table_name is not None else None)
-    html_report.add_similarity_information(patient)
+    # html_report.add_similarity_information(patient)
 
     # ############################################################################################
     # infer evolutionary compatible mutation patterns and subsequently evolutionary trees based on
@@ -486,25 +480,13 @@ def main():
                     x_length, y_length = plts.create_incompatible_mp_table(
                         patient, os.path.join(output_directory, settings.artifacts_plot_prefix+fn_pattern),
                         phylogeny, row_labels=patient.sample_names, column_labels=col_labels)
-                    # add information about putative false-positives and false-negatives to the HTML report
-                    html_report.add_artifacts_information(
-                        phylogeny, artifacts_plot_filepath=settings.artifacts_plot_prefix+fn_pattern+'.png',
-                        plot_width=x_length*7)
+                    if x_length > 0 and y_length > 0:
+                        # add information about putative false-positives and false-negatives to the HTML report
+                        html_report.add_artifacts_information(
+                            phylogeny, artifacts_plot_filepath=settings.artifacts_plot_prefix+fn_pattern+'.png',
+                            plot_width=x_length*7)
                 else:
                     html_report.add_artifacts_information(phylogeny)
-
-            # do mutation pattern robustness analysis through down-sampling
-            if args.down > 0:
-                if 0 < settings.SUBCLONE_DETECTION < 1:
-                    logger.error('Down-sampling analysis does not support subclone detection! ')
-                    logger.error('Go to settings.py and set MIN_MP_LH to 1.')
-                else:
-                    comp_node_frequencies = phylogeny.validate_node_robustness(args.down)
-
-                    # generate mutation pattern robustness plot
-                    plts.robustness_plot(
-                        os.path.join(output_directory, 'robustness_{}_{}.pdf'.format(args.down, fn_pattern)),
-                        comp_node_frequencies)
 
         # find evolutionary incompatible mutation patterns based on standard binary classification
         elif args.mode == 2:
@@ -531,31 +513,19 @@ def main():
                         patient, os.path.join(output_directory, settings.incomp_mps_plot_prefix+fn_pattern),
                         phylogeny, row_labels=patient.sample_names, column_labels=col_labels)
 
-                    # add information about evolutionarily incompatible mutation patterns to the HTML report
-                    html_report.add_inc_mp_information(
-                        phylogeny, incomp_mps_plot_filepath=settings.incomp_mps_plot_prefix+fn_pattern+'.png',
-                        plot_width=x_length*7)
+                    if x_length > 0 and y_length > 0:
+                        # add information about evolutionarily incompatible mutation patterns to the HTML report
+                        html_report.add_inc_mp_information(
+                            phylogeny, incomp_mps_plot_filepath=settings.incomp_mps_plot_prefix+fn_pattern+'.png',
+                            plot_width=x_length*7)
                 else:
                     # too many evolutionarily incompatible mutation to create mutation table plot
                     # add information about evolutionarily incompatible mutation patterns to the HTML report
                     html_report.add_inc_mp_information(phylogeny)
 
-            # do mutation pattern robustness analysis through down-sampling
-            if args.down > 0:
-                if min_absent_cov > 0:
-                    logger.warn('Down-sampling analysis can only run if the minimal absent coverage is 0.')
-                else:
-                    comp_node_frequencies = phylogeny.validate_node_robustness(args.down)
-
-                    # generate mutation pattern robustness plot
-                    plts.robustness_plot(
-                        os.path.join(output_directory, 'robustness_{}_{}.pdf'.format(args.down, fn_pattern)),
-                        comp_node_frequencies)
-
         # generate analysis file to provide an overview about the derived results
         analysis.create_analysis_file(patient, args.min_median_coverage,
-                                      os.path.join(output_directory, 'analysis_'+fn_pattern+'.txt'),
-                                      phylogeny, comp_node_frequencies, args.down)
+                                      os.path.join(output_directory, 'analysis_'+fn_pattern+'.txt'), phylogeny)
 
         # create input data file for circos conflict graph plots
         if plots_paper:

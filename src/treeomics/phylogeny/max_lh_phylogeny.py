@@ -146,20 +146,20 @@ class MaxLHPhylogeny(Phylogeny):
             # and solve this using integer linear programming
             self.conflicting_nodes, self.compatible_nodes = cps.solve_conflicting_phylogeny(self.cf_graph)
 
-            # unused measure since it is not invariant to the number of samples
-            self.branch_confidence = dict()
-            # calculate confidence value for each branching
-            for node in self.compatible_nodes:
-                # consider only parsimony-informative MPs
-                if len(node) <= 1 or len(node) == len(self.patient.sample_names):
-                    continue
-                self.branch_confidence[node] = \
-                    ((1.0 - math.exp(-self.node_scores[node])) *
-                     np.prod(np.array([math.exp(-self.node_scores[v]) for v in self.cf_graph.neighbors(node)])))
-                self.branch_confidence[node] /= \
-                    (self.branch_confidence[node] + (math.exp(-self.node_scores[node]) *
-                     (1.0-np.prod(np.array([math.exp(-self.node_scores[v]) for v in self.cf_graph.neighbors(node)])))))
-                # logger.info('Branching confidence of {}: {:.2e}'.format(node, self.branch_confidence[node]))
+            # # unused measure since it is not invariant to the number of samples
+            # self.branch_confidence = dict()
+            # # calculate confidence value for each branching
+            # for node in self.compatible_nodes:
+            #     # consider only parsimony-informative MPs
+            #     if len(node) <= 1 or len(node) == len(self.patient.sample_names):
+            #         continue
+            #     self.branch_confidence[node] = \
+            #         ((1.0 - math.exp(-self.node_scores[node])) *
+            #          np.prod(np.array([math.exp(-self.node_scores[v]) for v in self.cf_graph.neighbors(node)])))
+            #     self.branch_confidence[node] /= \
+            #         (self.branch_confidence[node] + (math.exp(-self.node_scores[node]) *
+            #          (1.0-np.prod(np.array([math.exp(-self.node_scores[v]) for v in self.cf_graph.neighbors(node)])))))
+            #     # logger.info('Branching confidence of {}: {:.2e}'.format(node, self.branch_confidence[node]))
 
             # ##### assign each variant to the highest ranked evolutionarily compatible mutation pattern ########
 

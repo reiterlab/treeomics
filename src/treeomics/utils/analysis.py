@@ -110,18 +110,18 @@ def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None,
                     float(len(phylogeny.conflicting_mutations)) / no_shared_muts,
                     len(phylogeny.conflicting_mutations), no_shared_muts))
 
-            # write robustness analysis to file
-            if comp_node_frequencies is not None:
-                analysis_file.write('# Robustness analysis through {} replications \n'.format(no_replications))
-                analysis_file.write('# Mutation pattern  \t {} \n'.format(' \t '.join(
-                                    '{}%'.format(fr) for fr in sorted(comp_node_frequencies.keys()))))
-                for node in sorted(phylogeny.compatible_nodes.keys(),
-                                   key=lambda k: -phylogeny.node_weights[k]):
-                    # print only parsimony informative MPs
-                    if 1 < len(node) < len(patient.sample_names):
-                        analysis_file.write('# ({}) \t {} \n'.format(','.join(str(n+1) for n in sorted(node)), ' \t '.join(
-                            '{:.3f}'.format(
-                                comp_node_frequencies[fr][node]) for fr in sorted(comp_node_frequencies.keys()))))
+            # # write robustness analysis to file
+            # if comp_node_frequencies is not None:
+            #     analysis_file.write('# Robustness analysis through {} replications \n'.format(no_replications))
+            #     analysis_file.write('# Mutation pattern  \t {} \n'.format(' \t '.join(
+            #                         '{}%'.format(fr) for fr in sorted(comp_node_frequencies.keys()))))
+            #     for node in sorted(phylogeny.compatible_nodes.keys(),
+            #                        key=lambda k: -phylogeny.node_weights[k]):
+            #         # print only parsimony informative MPs
+            #         if 1 < len(node) < len(patient.sample_names):
+            #             analysis_file.write('# ({}) \t {} \n'.format(','.join(str(n+1) for n in sorted(node)), ' \t '.join(
+            #                 '{:.3f}'.format(
+            #                     comp_node_frequencies[fr][node]) for fr in sorted(comp_node_frequencies.keys()))))
 
         if isinstance(phylogeny, MaxLHPhylogeny) and phylogeny.mlh_tree is not None:
             # how many positions are evolutionarily incompatible
