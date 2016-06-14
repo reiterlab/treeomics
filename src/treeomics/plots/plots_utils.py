@@ -1,9 +1,8 @@
-__author__ = 'jreiter'
-
+"""Visualize various data"""
 import logging
 import numpy as np
-from collections import defaultdict, OrderedDict
-from itertools import cycle, chain
+from collections import defaultdict
+from itertools import cycle
 import scipy.cluster.hierarchy as sch
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -21,6 +20,9 @@ from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
 from phylogeny.simple_phylogeny import SimplePhylogeny
 from phylogeny.max_lh_phylogeny import MaxLHPhylogeny
 
+__author__ = 'Johannes REITER'
+__date__ = 'April, 2014'
+
 # get logger for application
 logger = logging.getLogger('treeomics')
 rcParams['font.family'] = 'sans-serif'
@@ -32,7 +34,7 @@ def bayesian_hinton(log_p01, output_directory, filename, row_labels=None, column
                     displayed_mutations=None, drivers=None):
     """
     Draw bayesian Hinton diagram for visualizing uncertainty in mutation data of multiple samples.
-    :param data: mutation data decoded as log probability that a variant is (absent, present)
+    :param log_p01: mutation data decoded as log probability that a variant is (absent, present) in each sample
     :param output_directory: output directory
     :param filename: plot filename (without ending), add pdf and png later
     :param row_labels: sample names
@@ -177,6 +179,7 @@ def bayesian_hinton(log_p01, output_directory, filename, row_labels=None, column
     logger.info('Generated bayesian mutation table plot: {}'.format(filename+'.pdf'))
 
     # plt.show(block=True)
+    plt.close()
 
 
 def _create_colorbar(output_directory):
@@ -231,6 +234,8 @@ def _create_colorbar(output_directory):
                 dpi=150, bbox_inches='tight', transparent=True)
     plt.savefig(os.path.join(output_directory, 'colorbar_variant_presences'+'.png'),
                 dpi=150, bbox_inches='tight', transparent=True)
+
+    plt.close()
 
     return scalar_map
 
@@ -324,6 +329,7 @@ def hinton(data, filename, row_labels=None, column_labels=None, displayed_mutati
 
     plt.savefig(filename+'.pdf', dpi=150, bbox_inches='tight', transparent=True)
     plt.savefig(filename+'.png', dpi=150, bbox_inches='tight', transparent=True)
+    plt.close()
     logger.info('Generated mutation table plot: {}'.format(filename+'.pdf'))
 
     # plt.show(block=True)
@@ -481,6 +487,7 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
 
     plt.savefig(filename+'.pdf', dpi=150, bbox_inches='tight', transparent=True)
     plt.savefig(filename+'.png', bbox_inches='tight', transparent=True)
+    plt.close()
     logger.info('Generated illustrative mutation table plot of incompatible mutation patterns: {}'.format(
         filename+'.pdf'))
 
@@ -536,6 +543,7 @@ def vaf_distribution_plot(filename, patient):
                         horizontalalignment='center', fontsize=9, color='red', rotation=45)
 
     plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
+    plt.close()
     logger.info('Generated violinplot for VAF distribution {}'.format(filename))
 
 
@@ -588,6 +596,7 @@ def coverage_plot(filename, patient, max_cov=None):
                     color=('black' if df_cov.median()[sa_idx] >= 100 else 'red'))
 
     plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
+    plt.close()
     logger.info('Generated coverage distribution plot {}'.format(filename))
 
 
@@ -626,6 +635,7 @@ def boxplot(filename, patient):
                    color=('black' if np.median(patient.sample_phred_coverages[sample_name]) >= 100 else 'red'))
 
     plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
+    plt.close()
     logger.info('Generated boxplot for mutant allele frequencies {}'.format(filename))
 
 
@@ -690,6 +700,7 @@ def reads_plot(filename, patient):
     plt.plot([1, 10000], [0.1, 1000], 'k:', color='black', lw=1)
 
     plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
+    plt.close()
     logger.info('Generated scatter plot about sequencing reads {}'.format(filename))
 
     # plt.show(block=True)
@@ -809,6 +820,7 @@ def clustered_table(filename, patient, clusters, row_labels=None, column_labels=
     ax_hin.autoscale_view()
 
     plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
+    plt.close()
     logger.info('Generated combined mutation table and dendrogram {}'.format(filename))
 
     # plt.show(block=True)
@@ -851,6 +863,7 @@ def p_value_present_plot(filename, patient, false_positive_rate):
     bp_ax.set_yticklabels(y_labels)
 
     plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
+    plt.close()
     logger.info('Generated scatter plot about p-values of possibly present variants {}'.format(filename))
 
 
@@ -899,6 +912,7 @@ def p_value_absent_plot(filename, patient, min_maf):
     bp_ax.legend(loc='lower left', fontsize=10, frameon=True)
 
     plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
+    plt.close()
     logger.info('Generated scatter plot about p-values of possibly absent variants {}'.format(filename))
 
 
@@ -957,6 +971,7 @@ def robustness_plot(filename, comp_node_frequencies):
     ax.set_ylabel('Mutation pattern robustness')
 
     plt.savefig(filename, dpi=150, bbox_inches='tight', transparent=True)
+    plt.close()
     logger.info('Generated scatter plot about the mutation pattern robustness {}'.format(filename))
 
 

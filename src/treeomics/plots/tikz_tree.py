@@ -91,7 +91,7 @@ def _write_tikz_tree(tree, cur_node, latex_file, level, patient, gene_names=None
                              + '}'
                              + (' node[below, red!70]{\\footnotesize{'+str(-len(tree[cur_node][child]['dels']))+'}}'
                                 if 'dels' in tree[cur_node][child] and len(tree[cur_node][child]['dels']) > 0 else '')
-                             + (' node[below, black!60]{\\footnotesize{'+'{:.1f}\\%'.format(
+                             + (' node[below, black!60]{\\footnotesize{'+'{:.0f}\\%'.format(
                                 tree.node[child]['conf']*100.0)+'}}'
                                 if 'conf' in tree.node[child] else '')
                              + ';\n ')

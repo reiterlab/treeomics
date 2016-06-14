@@ -104,10 +104,10 @@ class MaxLHPhylogeny(Phylogeny):
         lh = 1 - lh
         self.min_score = -math.log(1.0 - lh)
         logger.debug('Likelihood of a pattern with at least one false-positive or false-negative: {:.3e}'.format(lh))
-        logger.info('Minimum reliability score value to be considered as a potential subclone: {:.5f}'.format(
+        logger.info('Minimum reliability score value to be considered as a potential subclone: {:.3e}'.format(
             self.min_score))
 
-    def infer_max_lh_tree(self, subclone_detection=False, no_bootstrap_samples=0, max_no_mps=None):
+    def infer_max_lh_tree(self, subclone_detection=False, no_bootstrap_samples=0, max_no_mps=None, time_limit=None):
         """
         Infer maximum likelihood tree via calculation reliability scores for each
         possible mutation pattern from the likelihood that no variant has this pattern
@@ -117,6 +117,7 @@ class MaxLHPhylogeny(Phylogeny):
         :param max_no_mps: only the given maximal number of most likely (by joint likelihood) mutation patterns
             is explored per variant
         :param no_bootstrap_samples: number of samples with replacement for the bootstrapping
+        :param time_limit: time limit for MILP solver in seconds
         :return inferred evolutionary tree
         """
 
@@ -144,22 +145,8 @@ class MaxLHPhylogeny(Phylogeny):
 
             # translate the conflict graph into a minimum vertex cover problem
             # and solve this using integer linear programming
-            self.conflicting_nodes, self.compatible_nodes = cps.solve_conflicting_phylogeny(self.cf_graph)
-
-            # # unused measure since it is not invariant to the number of samples
-            # self.branch_confidence = dict()
-            # # calculate confidence value for each branching
-            # for node in self.compatible_nodes:
-            #     # consider only parsimony-informative MPs
-            #     if len(node) <= 1 or len(node) == len(self.patient.sample_names):
-            #         continue
-            #     self.branch_confidence[node] = \
-            #         ((1.0 - math.exp(-self.node_scores[node])) *
-            #          np.prod(np.array([math.exp(-self.node_scores[v]) for v in self.cf_graph.neighbors(node)])))
-            #     self.branch_confidence[node] /= \
-            #         (self.branch_confidence[node] + (math.exp(-self.node_scores[node]) *
-            #          (1.0-np.prod(np.array([math.exp(-self.node_scores[v]) for v in self.cf_graph.neighbors(node)])))))
-            #     # logger.info('Branching confidence of {}: {:.2e}'.format(node, self.branch_confidence[node]))
+            self.conflicting_nodes, self.compatible_nodes = cps.solve_conflicting_phylogeny(
+                self.cf_graph, time_limit=time_limit)
 
             # ##### assign each variant to the highest ranked evolutionarily compatible mutation pattern ########
 
@@ -310,11 +297,12 @@ class MaxLHPhylogeny(Phylogeny):
 
         # is bootstrapping enabled?
         if no_bootstrap_samples > 0:
-            if subclone_detection is not None and 0 < subclone_detection < 1:
+            if subclone_detection:
                 logger.error('Bootstrapping analysis does not support subclone detection! ')
-                logger.error('Go to settings.py and set MIN_MP_LH to 1.')
+                logger.error('Go to settings.py and set NO_BOOSTRAP_SAMPLES to 0 or SUBCLONE_DETECTION to False.')
+                raise RuntimeError('Bootstrapping analysis does not support subclone detection! ')
             else:
-                self.do_bootstrapping(no_bootstrap_samples)
+                self.do_bootstrapping(no_bootstrap_samples, time_limit=time_limit)
 
         # construct a phylogenetic tree from the maximum likelihood mutation patterns
         self.mlh_tree = self.infer_evolutionary_tree(self.shared_mlh_mps, self.mlh_founders,
@@ -322,15 +310,16 @@ class MaxLHPhylogeny(Phylogeny):
 
         return self.mlh_tree
 
-    def do_bootstrapping(self, no_samples):
+    def do_bootstrapping(self, no_samples, time_limit=None):
         """
         Validate the robustness of the identified most reliable mutation patterns through bootstrapping
         :param no_samples: Number of samples with replacement for the bootstrapping
+        :param time_limit: time limit for MILP solver in seconds
         """
 
         # Most reliable mutation patterns need to be identified before
         if self.compatible_nodes is None:
-            self.infer_max_lh_tree(subclone_detection=False)
+            self.infer_max_lh_tree(subclone_detection=False, time_limit=time_limit)
 
         node_frequencies = cps.bootstrapping_solving(
             self.cf_graph, self.mp_weights, self.idx_to_mp, no_samples)
@@ -352,17 +341,18 @@ class MaxLHPhylogeny(Phylogeny):
 
             logger.info('Bootstrapping value for node {}: {:.1%}'.format(node, self.bootstrapping_values[node]))
 
-    def validate_node_robustness(self, no_replications):
+    def validate_node_robustness(self, no_replications, time_limit=None):
         """
         Validate the robustness of the identified most reliable mutation patterns
         through down-sampling
         :param no_replications: Number of replications for each used fraction of variants
+        :param time_limit: time limit for MILP solver in seconds
         :return observed frequencies of the mutation patterns in each used fraction of variants
         """
 
         # Most reliable mutation patterns need to be identified before
         if self.compatible_nodes is None:
-            self.infer_max_lh_tree(subclone_detection=False)
+            self.infer_max_lh_tree(subclone_detection=False, time_limit=time_limit)
 
         node_frequencies = cps.solve_downsampled_nodes(
             self.cf_graph, self.mp_weights, self.idx_to_mp, no_replications)
@@ -410,46 +400,8 @@ class MaxLHPhylogeny(Phylogeny):
             logger.info('There are no more incompatible mutation patterns with a reliability score '
                         'of at least {:.1e}.'.format(self.min_score))
             return self.sc_sample_ids, False
-        else:
-            # anc = set()     # find the mutations present in the ancestor MP and assign them also to the new MP
-            # for old_mp, new_mp in updated_nodes.items():
-            #
-            #     if old_mp.issuperset(anc):
-            #         anc = old_mp
-            #     elif (len(old_mp.intersection(anc)) > 0 and
-            #             len(old_mp.difference(anc)) > 0 and len(anc.difference(old_mp)) > 0):
-            #         logger.warn('Putative subclones are evolutionary incompatible '
-            #                     'to each other: {} <> {}'.format(anc, old_mp))
-            #
-            # logger.debug('{} is the parental mutation pattern of the putative subclones {}.'.format(
-            #     anc, updated_nodes.keys()))
-            #
-            # # the mutations present in the direct ancestor of the identified
-            # # parent subclone should be present in all
-            # parental_mps = set()
-            # for sc in self.compatible_nodes:
-            #     if sc.issuperset(anc):
-            #         parental_mps.add(sc)
-            #         logger.debug('Mutations present in {} should also be present in all putative subclones.'
-            #                      .format(sc))
-            #
-            # # account for putative subclones in parental mutation patterns
-            # for a in parental_mps:
-            #     # mutations of parental clone should also be present in new putative subclones
-            #     par_mp = a.union(updated_nodes[anc])
-            #
-            #     # update subclones in patient
-            #     self.node_scores[par_mp] = self.node_scores[a]
-            #     del self.node_scores[a]
-            #     self.idx_to_mp[self.mp_col_ids[a]] = par_mp
-            #     self.mp_col_ids[par_mp] = self.mp_col_ids[a]
-            #     del self.mp_col_ids[a]
-            #
-            #     logger.info('Updated parental mutation pattern from {} to {}'.format(
-            #         ', '.join(self.patient.sc_names[sc_idx] for sc_idx in a),
-            #         ', '.join(self.patient.sc_names[sc_idx] for sc_idx in par_mp)))
 
-            return self.sc_sample_ids, True
+        return self.sc_sample_ids, True
 
     def find_subclonal_mps(self):
         """
@@ -469,8 +421,8 @@ class MaxLHPhylogeny(Phylogeny):
 
             # determine the number of variants for which this mutation pattern would be
             # more likely than the before assigned evolutionarily compatible mp
-            no_sup_vars = sum(1 for mut_idx in range(len(self.mp_weights))
-                              if self.mp_weights[mut_idx][self.mp_col_ids[mp]] > self.max_lh_weights[mut_idx])
+            # no_sup_vars = sum(1 for mut_idx in range(len(self.mp_weights))
+            #                   if self.mp_weights[mut_idx][self.mp_col_ids[mp]] > self.max_lh_weights[mut_idx])
 
             # # number of variants for which this mp would be the most likely one
             # no_sup_vars = sum(1 for mut_idx in range(len(self.mp_weights))
@@ -484,6 +436,7 @@ class MaxLHPhylogeny(Phylogeny):
 
             # find highest ranked conflicting mutation pattern that is part of the current solution
             # step (a) in pseudo algorithm
+            logger.debug('Highest ranked conflicting mutation pattern: {} and its neighbors'.format(mp))
             hcmp = max(set(self.cf_graph.neighbors(mp)).difference(self.conflicting_nodes),
                        key=lambda k: self.node_scores[k])
             logger.info('Highest ranked evolutionary incompatible mutation pattern of MP {} (w: {:.2f}): {} (w: {:.2f})'
@@ -763,8 +716,8 @@ def infer_ml_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None, max_n
             node_scores[node] = sys.float_info.min
 
     # Show nodes with highest reliability score
-    for node, score in itertools.islice(sorted(node_scores.items(), key=lambda k: -k[1]), 0, 50):
-        logger.debug('Pattern {} has a normalized reliability score of {:.2e}.'.format(node, score))
+    for node, score in itertools.islice(sorted(node_scores.items(), key=lambda k: -k[1]), 0, 25):
+        logger.info('Pattern {} has a normalized reliability score of {:.2e}.'.format(node, score))
 
     return node_scores, idx_to_mp, mp_col_ids, mp_weights
 

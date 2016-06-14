@@ -1,8 +1,5 @@
 #!/usr/bin/python
 """Data structure around sequencing data of a subject"""
-__author__ = 'jreiter'
-__date__ = 'April, 2014'
-
 import logging
 from collections import defaultdict, Counter
 import re
@@ -17,6 +14,11 @@ from utils.data_tables import read_mutation_table, read_csv_file, write_posterio
 from utils.statistics import calculate_present_pvalue, find_significant_mutations
 from utils.vaf_data import calculate_p_values
 from utils.statistics import get_log_p0
+
+
+__author__ = 'jreiter'
+__date__ = 'April, 2014'
+
 
 # get logger for application
 logger = logging.getLogger('treeomics')
@@ -37,7 +39,9 @@ class Patient(object):
         # minimum coverage for an absent variant
         self.min_absent_cov = min_absent_cov
 
-        # allele frequency data in each numbered sample
+        # observed Variant Allele Frequency
+        self.vafs = None
+        # allele frequency data in each numbered sample (frequentist)
         self.data = defaultdict(list)
 
         # tuple posterior: log probability that VAF = 0, lob probability that VAF > 0
@@ -172,15 +176,15 @@ class Patient(object):
                    settings.MIN_VAF for sample_name in self.mut_reads[mut_key].keys()
                    if self.mut_reads[mut_key][sample_name] >= max(1, settings.MIN_VAR_READS)):
 
-                # vafs = [float(self.mut_reads[mut_key][sample_name]) / self.phred_coverage[mut_key][sample_name]
-                #         for sample_name in self.mut_reads[mut_key].keys()
-                #         if self.mut_reads[mut_key][sample_name] >= settings.MIN_VAR_READS]
-                # if len(vafs) == 0:
-                #     logger.debug('Excluded variant {} ({}) as it has in no sample at least {} variant reads.'
-                #                  .format(gene_names[mut_key], mut_key, settings.MIN_VAR_READS))
-                # else:
-                #     logger.debug('Excluded variant {} ({}) present with highest VAF of {:.1%}.'
-                #                  .format(gene_names[mut_key], mut_key, max(vafs)))
+                vafs = [float(self.mut_reads[mut_key][sample_name]) / self.coverage[mut_key][sample_name]
+                        for sample_name in self.mut_reads[mut_key].keys()
+                        if self.mut_reads[mut_key][sample_name] >= max(1, settings.MIN_VAR_READS)]
+                if len(vafs) == 0:
+                    logger.debug('Excluded variant {} ({}) as it has in no sample at least {} variant reads.'
+                                 .format(gene_names[mut_key], mut_key, max(1, settings.MIN_VAR_READS)))
+                else:
+                    logger.debug('Excluded variant {} ({}) present with highest VAF of {:.1%}.'
+                                 .format(gene_names[mut_key], mut_key, max(vafs)))
                 low_vaf_artifacts += 1
                 # exclude these variants
                 del self.mut_reads[mut_key]
@@ -203,7 +207,7 @@ class Patient(object):
                 putative_sequencing_artifacts))
         if low_vaf_artifacts > 0:
             logger.warn('{} variants did not reach a VAF of {:.1%} and at least {} var reads in any of the samples.'
-                        .format(low_vaf_artifacts, settings.MIN_VAF, settings.MIN_VAR_READS))
+                        .format(low_vaf_artifacts, settings.MIN_VAF, max(1, settings.MIN_VAR_READS)))
 
         logger.info('{} variants passed the filtering.'.format(len(gene_names)))
 
@@ -245,6 +249,8 @@ class Patient(object):
 
         self._calculate_hyperparameters()
 
+        self.vafs = np.zeros((len(gene_names), len(self.sample_names)))
+
         # ##################################################################################
         # - - - - - - - - CLASSIFY MUTATIONS with BAYESIAN INFERENCE MODEL - - - - - - - - -
         # ##################################################################################
@@ -272,7 +278,12 @@ class Patient(object):
             self.mut_positions.append((chrom, start_pos, end_pos))
 
             # - - - - - - - - CLASSIFY MUTATIONS - - - - - - - - -
-            for sample_name in self.sample_names:
+            for sa_id, sample_name in enumerate(self.sample_names):
+
+                # add VAF
+                if self.coverage[mut_key][sample_name] > 0:
+                    self.vafs[len(self.mut_keys)-1, sa_id] = (float(self.mut_reads[mut_key][sample_name]) /
+                                                              self.coverage[mut_key][sample_name])
 
                 # calculate posterior: log probability that VAF = 0
                 if self.coverage[mut_key][sample_name] < 0:   # no sequencing data in this sample
@@ -723,6 +734,9 @@ class Patient(object):
             del self.coverage[mut_key]
             del self.mut_keys[-1]
             del self.mut_positions[-1]
+        else:
+            logger.debug('Variant {}{} did not pass filtering.'.format(
+                mut_key, ' ({})'.format(self.gene_names[mut_key]) if self.gene_names is not None else ''))
 
     def analyze_data(self, post_table_filepath=None):
         """
@@ -770,8 +784,8 @@ class Patient(object):
 
         if post_table_filepath is not None:
             # write file with posterior probabilities
-            write_posterior_table(post_table_filepath, self.sample_names, self.sample_mafs, self.mut_positions,
-                                  self.gene_names, self.log_p01, self.betas)
+            write_posterior_table(post_table_filepath, self.sample_names, self.estimated_purities, self.sample_mafs,
+                                  self.mut_positions, self.gene_names, self.log_p01, self.betas)
 
     def _determine_sharing_status(self):
         """
@@ -892,7 +906,7 @@ class Patient(object):
             # sample passed filtering
             else:
                 self.sample_names.append(sample_name)
-                logger.info('Sample {}: median phred coverage {:.1f}, median MAF {:.3f}.'.format(
+                logger.info('Sample {}: median coverage {:.1f}, median VAF {:.3f}.'.format(
                     sample_name, np.median(self.sample_coverages[sample_name]),
                     np.median(self.sample_mafs[sample_name])))
                 # logger.info('Median distinct phred coverage in sample {}: {}'.format(

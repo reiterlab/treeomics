@@ -3,6 +3,21 @@
 __author__ = 'Johannes REITER'
 
 # ######################### DEFAULT PARAMETER VALUES #############################
+
+# number of bootstrapping samples
+NO_BOOTSTRAP_SAMPLES = 109
+
+# subclone detection enabled
+SUBCLONE_DETECTION = True
+
+# Time limit for MILP solver in seconds
+# For data sets with less than 10-15 samples, a time limit is typically not required (TIME_LIMIT = None)
+TIME_LIMIT = None
+
+# For efficiency, the number of explored mutation pattern per variant can be limited
+# Note that if MAX_NO_MPS is not None, the optimal solution is no longer guaranteed
+MAX_NO_MPS = None
+
 # Sample sequencing data filtering settings
 SAMPLE_COVERAGE_THRESHOLD = 0   # samples with a lower median coverage are discarded
 MAF_THRESHOLD = 0.0             # samples with a lower median mutant allele frequency are discarded
@@ -11,9 +26,6 @@ MAF_THRESHOLD = 0.0             # samples with a lower median mutant allele freq
 BI_E = 0.005            # sequencing error rate for bayesian inference
 BI_C0 = 0.5             # prior mixture parameter of delta function and uniform distribution for bayesian inference
 
-# minimum likelihood that at least one variant has an incompatible mp
-# such that this mp is considered as a subclone
-SUBCLONE_DETECTION = False
 
 # Conventional binary sequencing data analysis settings     ######################
 FPR = 0.005                 # assumed false-positive rate for targeted sequencing (Gundem et al. 2015)
@@ -40,11 +52,11 @@ OUTPUT_FOLDER = 'output'    # path to output folder for all files
 
 # additional gene names list to be highlighted in mutation table independent of the COSMIC list
 # Drivers specific to pancreatic cancer
-# DRIVERS = ('ACVR1B', 'ARID1A', 'ARID1B', 'ATM', 'BRCA1', 'BRCA2', 'BRAF', 'CDK6', 'CDKN2A', 'ERBB2', 'FGFR2', 'GATA6',
-#            'KDM6A', 'KRAS', 'MAP2K4', 'MET', 'MLH1',  'MSH2', 'MLL2', 'MYC', 'NOV', 'PALB2', 'PBRM1', 'PIK3C2B',
-#            'PIK3CA', 'PIK3R3', 'PREX2', 'RNF43', 'RPA1', 'ROBO1', 'ROBO2', 'SF3B1', 'SLIT2', 'SMAD4', 'SMARCA2',
-#            'SMARCA4', 'SOX9', 'STK11', 'TGFBR2', 'TP53')
-DRIVERS = set()
+DRIVERS = ('ACVR1B', 'ARID1A', 'ARID1B', 'ATM', 'BRCA1', 'BRCA2', 'BRAF', 'CDK6', 'CDKN2A', 'ERBB2', 'FGFR2', 'GATA6',
+           'KDM6A', 'KRAS', 'MAP2K4', 'MET', 'MLH1',  'MSH2', 'MLL2', 'MYC', 'NOV', 'PALB2', 'PBRM1', 'PIK3C2B',
+           'PIK3CA', 'PIK3R3', 'PREX2', 'RNF43', 'RPA1', 'ROBO1', 'ROBO2', 'SF3B1', 'SLIT2', 'SMAD4', 'SMARCA2',
+           'SMARCA4', 'SOX9', 'STK11', 'TGFBR2', 'TP53')
+# DRIVERS = set()
 
 # output file prefix
 incomp_mps_plot_prefix = 'incomp_mps_table_'    # mutation table plot of incompatible mutation patterns

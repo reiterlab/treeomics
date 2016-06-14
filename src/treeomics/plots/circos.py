@@ -1,6 +1,5 @@
 #!/usr/bin/python
 """Helper functions to generate input files for circos plots"""
-__author__ = 'Johannes REITER'
 
 import logging
 import os
@@ -8,6 +7,9 @@ from itertools import chain
 from plots.plots_utils import _format_gene_name
 from phylogeny.simple_phylogeny import SimplePhylogeny
 from phylogeny.max_lh_phylogeny import MaxLHPhylogeny
+
+__author__ = 'Johannes REITER'
+
 
 # get logger for application
 logger = logging.getLogger('treeomics')
@@ -20,6 +22,8 @@ def create_raw_data_file(raw_data_filename, mutations, mut_pos, data=None, sampl
     :param raw_data_filename: output filename
     :param mutations: dictionary with all mutations mapping to the set of samples where it is present
     :param mut_pos: array of tuples with the mutation position (chr, start_pos, end_pos)
+    :param data:
+    :param sample_names:
     """
 
     logger.debug('Creating raw mutation data file: {}'.format(raw_data_filename))
@@ -309,26 +313,40 @@ def create_mlh_graph_files(res_nodes_filename, res_mutnode_labels_filename, res_
             if len(muts) > 0:
                 unique_mutations[frozenset([sa_idx])] = muts
 
+        absent_mp = frozenset([])
+        absent_muts = dict()
+        absent_muts[absent_mp] = phylogeny.mlh_absent_mutations
+
         for node_idx, (mp, muts) in enumerate(
                 chain(founders.items(), sorted(phylogeny.shared_mlh_mps.items(), key=lambda k: -len(k[0])),
-                      sorted(unique_mutations.items(), key=lambda k: k[0])), 1):
+                      sorted(unique_mutations.items(), key=lambda k: k[0]), absent_muts.items()), 1):
+
+            if len(mp) == 0 and all(mut_idx not in phylogeny.false_positives.keys() for mut_idx in muts):
+                node_idx -= 1
+                continue
 
             # write node id to file
             res_nodes_file.write('chr - n'+str(node_idx)+' ')
             # write node (clone) id to file which is given by the samples where
             # the mutation is present
-            res_nodes_file.write(','.join(str(sa_idx) for sa_idx in mp)+' ')
+            res_nodes_file.write((','.join(str(sa_idx) for sa_idx in mp) if len(mp) > 0 else '\'\'')+' ')
             # write start and end position of the node to the file
             # end position is given by the number of mutations present in this clone
-            res_nodes_file.write('0 '+str(len(muts))+' ')
+            res_nodes_file.write('0 '+str(len(muts) if len(mp) > 0 else sum(
+                1 for mut_idx in muts if mut_idx in phylogeny.false_positives.keys()))+' ')
             # write node color to the file which is blue since all conflicts are resolved
             res_nodes_file.write('blue')
             res_nodes_file.write('\n')
 
             # order mutations according to their names within a clone
-            for pos, mut_idx in enumerate(
-                    sorted(muts, key=lambda k:
-                           phylogeny.patient.gene_names[k] if phylogeny.patient.gene_names is not None else 0)):
+            pos = 0
+            for mut_idx in sorted(
+                    muts, key=lambda k: phylogeny.patient.gene_names[k]
+                    if phylogeny.patient.gene_names is not None else 0):
+
+                if len(mp) == 0 and mut_idx not in phylogeny.false_positives.keys():
+                    continue
+
                 # create label entry in the according label file
                 res_labels_file.write('n{} {} {} {} driver={} \n'.format(
                     node_idx, pos, pos+1,
@@ -338,8 +356,8 @@ def create_mlh_graph_files(res_nodes_filename, res_mutnode_labels_filename, res_
                 # create mutation pattern entry in the according data file
                 for sa_idx in chain(mp, phylogeny.false_positives[mut_idx], phylogeny.false_negatives[mut_idx],
                                     phylogeny.false_negative_unknowns[mut_idx]):
-                    res_data_file.write('n'+str(node_idx)+' '+str(pos)+' '+str(pos+1)
-                                        + ' '+str(sa_idx+1) + ' '+'shared='+str(len(mp)))
+                    res_data_file.write('n'+str(node_idx)+' '+str(pos)+' '+str(pos+1) +
+                                        ' '+str(sa_idx+1) + ' '+'shared='+str(len(mp)))
                     # check if this data was given or resolved
                     if mut_idx in phylogeny.false_negatives.keys() \
                             and sa_idx in phylogeny.false_negatives[mut_idx]:
@@ -369,6 +387,8 @@ def create_mlh_graph_files(res_nodes_filename, res_mutnode_labels_filename, res_
                         res_data_file.write(',unknown=0')
 
                     res_data_file.write('\n')
+
+                pos += 1
 
         logger.info('Circos resolved graph nodes file created: {}'.format(os.path.abspath(res_nodes_filename)))
 

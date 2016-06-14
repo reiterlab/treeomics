@@ -1,9 +1,4 @@
 #!/usr/bin/python
-"""Find maximal subset of compatible mutation patterns weighted by reliability scores via CPLEX ILP solver"""
-__author__ = 'Johannes REITER'
-__date__ = 'April, 2014'
-
-
 import logging
 import math
 from collections import defaultdict, Counter
@@ -11,16 +6,22 @@ from random import sample
 import numpy as np
 import cplex as cp
 
+"""Find maximal subset of compatible mutation patterns weighted by reliability scores via CPLEX ILP solver"""
+__author__ = 'Johannes REITER'
+__date__ = 'April, 2014'
+
+
 # get logger for application
 logger = logging.getLogger('treeomics')
 
 
-def solve_conflicting_phylogeny(cf_graph):
+def solve_conflicting_phylogeny(cf_graph, time_limit=None):
     """
     Translates given conflict graph into a integer linear program and
     solves the ILP for the minimum number of mutation patterns (set of identical mutation patterns)
     which need to be ignored
     :param cf_graph: Conflict graph: nodes correspond to mutation patterns and edges to their conflicts
+    :param time_limit: time limit for MILP solver in seconds
     :return set of conflicting mutation patterns, set of compatible mutation patterns
     """
 
@@ -45,6 +46,10 @@ def solve_conflicting_phylogeny(cf_graph):
 
     # set objective function which is the minimum number of positions with a sequencing error
     lp.objective.set_sense(lp.objective.sense.minimize)
+
+    # set time limit for MILP solver
+    if time_limit is not None:
+        lp.parameters.timelimit.set(time_limit)
 
     lp.variables.add(obj=objective_function, types=ctypes, names=cnames)
 
@@ -80,8 +85,8 @@ def solve_conflicting_phylogeny(cf_graph):
 
     logger.info('Solution status: {}'.format(sol.status[solve_stat]))
 
-    logger.debug('Column solution values: '
-                 + ', '.join('{}: {}'.format(var_idx, status) for var_idx, status in enumerate(solution_values, 1)))
+    logger.debug('Column solution values: ' +
+                 ', '.join('{}: {}'.format(var_idx, status) for var_idx, status in enumerate(solution_values, 1)))
 
     # translate solution of the ILP back to the phylogeny problem
     # removing the minimum vertex cover (conflicting mutation patterns) gives the maximum compatible set of mps

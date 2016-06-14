@@ -1,10 +1,12 @@
 #!/usr/bin/python
 """Create mutation matrix for benchmarking"""
+import logging
+import csv
+import os
+
 __author__ = 'Johannes REITER'
 __date__ = 'January, 2016'
 
-import logging
-import csv
 
 # get logger for application
 logger = logging.getLogger('treeomics')
@@ -15,7 +17,7 @@ def write_mutation_matrix(phylogeny, filepath):
     Generate ancestor/descendant mutation matrix of the Treeomics solution for efficient benchmarking
     across tools and approaches
     :param phylogeny: data structure around phylogeny
-    :param: path to output file
+    :param filepath: path to output file
     """
 
     with open(filepath, 'w', newline='') as mm_file:
@@ -72,3 +74,5 @@ def write_mutation_matrix(phylogeny, filepath):
                     row.append(str(0))
 
             mm_writer.writerow(row)
+
+        logger.info('Wrote mutation matrix file {}'.format(os.path.abspath(filepath)))

@@ -40,7 +40,7 @@ def create_mp_graph(fn_pattern, phylogeny, mps, mp_weights, output_directory='',
             os.makedirs(os.path.dirname(data_dir))
         logger.debug('Data directory: {}'.format(os.path.abspath(data_dir)))
     except OSError:
-        logger.exception("Could not create mutation pattern overview graph directory {} ".format(data_dir))
+        logger.exception('Could not create mutation pattern overview graph directory {} '.format(data_dir))
 
     circos.create_mp_graph_files(
         os.path.join(data_dir, 'mp_nodes_'+fn_pattern+'.txt'),

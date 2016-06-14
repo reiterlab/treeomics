@@ -51,6 +51,7 @@ class Variant(object):
         self.AD = None              # allelic depths for the ref and alt alleles (in ordered list)
         self.DP = None              # total read depth
         self.BAF = None             # B-allele frequency
+        self.CCF = None             # Cancer cell fraction for the ref and alt alleles in the order listed
 
         # self.mut_key = '{}_{}_{}>{}'.format(self.CHROM, self.POS, self.REF, self.ALT[0])
 
@@ -85,6 +86,14 @@ class Variant(object):
             logger.warn("List of BAFs should be calculated for multiple alternate alleles.")
 
         self.BAF = float(fa)
+
+    def set_ccf(self, ccf):
+        """
+        Set cancer cell fraction for the ref and alt alleles in the order listed
+        :param ccf: list of cancer cell fractions for reference and alternates
+        """
+
+        self.CCF = [float(ccf) for ccf in ccf.split(',')]
 
     def __lt__(self, other):    # called if x < y
 

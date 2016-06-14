@@ -1,15 +1,15 @@
 """Statistical calculations"""
-__author__ = 'jreiter, jgerold'
-__date__ = 'July 21, 2015'
-
 import logging
 import math
 from scipy.stats import binom
 from scipy.misc import logsumexp
-from scipy.integrate import quad
+from scipy.special import betainc
 from scipy.special import gammaln
 import utils.int_settings as def_sets
 
+
+__author__ = 'jreiter, jgerold'
+__date__ = 'July 21, 2015'
 
 # get logger for application
 logger = logging.getLogger('treeomics')
@@ -58,8 +58,8 @@ def find_significant_mutations(p_values, fdr):
         if p_value <= fdr * i / len(p_values):
             sig_muts.add(key)
         else:
-            logger.debug('Conventional classification: '
-                         + 'All variants with a p-value greater than {:.3e} (threshold: >{:.5e}) '.format(
+            logger.debug('Conventional classification: ' +
+                         'All variants with a p-value greater than {:.3e} (threshold: >{:.5e}) '.format(
                            p_value, fdr * i / len(p_values)) + 'are not significantly mutated.')
             break
 
@@ -81,7 +81,7 @@ def loglp(n, k, p, e):
     return k*math.log((p*(1-e) + (1-p)*e)) + (n-k)*math.log((p*e+(1-p)*(1-e)))
 
 
-def get_log_p0(n, k, e, c0, pseudo_alpha=None, pseudo_beta=None):
+def get_log_p0(n, k, e, c0, pseudo_alpha=None, pseudo_beta=None, cutoff_f=None):
     """
     Returns the (log) probability that the variant is absent and present
     :param n: coverage (number of reads)
@@ -90,8 +90,13 @@ def get_log_p0(n, k, e, c0, pseudo_alpha=None, pseudo_beta=None):
     :param c0: prior mixture parameter of delta function and uniform distribution
     :param pseudo_alpha: alpha parameter for the beta distributed part of the prior
     :param pseudo_beta: beta parameter for the beta distributed part of the prior
+    :param cutoff_f: cutoff frequency for variants being absent
     :return: tuple (log probability that variant is absent, log probability that variant is present)
     """
+
+    # cutoff frequency
+    if cutoff_f is None:
+        cutoff_f = 2*e
 
     if pseudo_alpha is None:
         pseudo_alpha = def_sets.PSEUDO_ALPHA
@@ -99,77 +104,41 @@ def get_log_p0(n, k, e, c0, pseudo_alpha=None, pseudo_beta=None):
         pseudo_beta = def_sets.PSEUDO_BETA
 
     # pseudocounts are added to n and k, but removed for the computation of p0 at the end
-    n = n + pseudo_alpha - 1 + pseudo_beta - 1
-    k = k + pseudo_alpha - 1
+    n_new = n + pseudo_alpha - 1 + pseudo_beta - 1
+    k_new = k + pseudo_alpha - 1
 
-    def exploglp(p):
-        return math.exp(loglp(n, k, p, e))
+    # overall weight assigned to the delta spike
+    delta_value = math.log(c0) + loglp(n, k, 0, e)
+    # whole integral normalizing constant so that c0 is recovered without data when cutoff = 0
+    beta_norm_const = math.log(1-2*e) + (math.log(1.0 - c0) + gammaln(pseudo_alpha + pseudo_beta) -
+                                         gammaln(pseudo_alpha) - gammaln(pseudo_beta))
+    # correct the cutoff for change of variables
+    new_cutoff = cutoff_f*(1-2*e) + e
+    # compute the integral of allele frequencies below the cutoff, given we are in the beta function
+    tmp_beta_inc = betainc(k+pseudo_alpha, n-k+pseudo_beta, new_cutoff)
+    if tmp_beta_inc == 0.0:
+        fraction_below_cutoff = -1e10   # very small number in log space
+    else:
+        fraction_below_cutoff = math.log(tmp_beta_inc)
 
-    nonzero_integral = 0	    # The part of the posterior not at zero
+    # compute the total weight of the beta distribution
+    total_weight_beta = (-1*math.log(1-2*e) + gammaln(k_new+1) + gammaln(n_new-k_new+1) - gammaln(n_new+2) +
+                         beta_norm_const)
 
-    # Integration tolerances
-    abs_tol = 0
-    rel_tol = math.exp(-15)
-
-    if n <= 300:    # coverage is below 0, integration is easy
-        integral = quad(exploglp, a=0, b=1, epsrel=rel_tol, epsabs=0)
-        nonzero_integral = math.log(integral[0])
-        error = integral[1]
-
-    elif float(k)/n >= e:     # approximation is easy: gamma approximation
-        # logger.debug("Using gamma approx")
-        # approximate the integral to be performed as a beta function after a small change of variables
-        nonzero_integral = gammaln(k+1) + gammaln(n-k+1) - gammaln(n+2) - math.log(1-2*e)
-
-    else:       # coverage high and VAF is below error rate, approximation is hard
-        # Possible source of error for coverage larger than current dataset
-        integral = quad(exploglp, a=0, b=1, epsrel=rel_tol, epsabs=0)
-        if integral[0] == 0:
-            # We will hit this limit when n -> large with k fixed, and then we want this section
-            # of the likelihood to be very small
-            # It may also occur at other times and give difficult (ie extremely small) behavior
-            logger.warn("Warning! Exceeded performance of numerical integration, using approximation")
-            # nonzeroInt = gammaln(k+1) + gammaln(n-k+1) - gammaln(n+2) - math.log(1-2*e)
-            # LINEAR APPROX nonzeroInt = loglp(n, k, 0, e) - math.log((2*e-1)*k/e+(n-k)/(1-e)*(1-2*e))
-            # SIMPSONS APPROX
-            # This method approximates the integral using the first and second derivatives at 0
-            # by estimating when a second order approximation crosses zero and integrating from 0
-            # up to there (called xzero)
-            # dldf = k/e*(1-2*e) + (n-k)/(1-e)*(2*e-1)
-            # d2ldf2 = -1*k/(math.pow(e, 2))*math.pow(1-2*e,2) - (n-k)/(path.pow(1-e,2))*math.pow(2*e-1,2)
-            # f0 = exploglp(0)
-            # xzero = (-1*f0*dldf - math.sqrt(math.pow(f0*dldf,2)-2*f0*(f0*d2ldf2 + dldf)))/(d0*d2ldf2 + dldf)
-            # area = f0*xzero + f0*dldf*math.pow(xzero,2)/2 + (f0*d2ldf2+dldf)/6*math.pow(xzero,3)
-            # dldf = k/e*(1-2*e) + (n-k)/(1-e)*(2*e-1)
-            #
-            # d2ldf2 = -1*k/(math.pow(e, 2))*math.pow(1-2*e, 2) - (n-k)/(math.pow(1-e, 2))*math.pow(2*e-1, 2)
-            # f0 = exploglp(0)
-            # lf0 = loglp(n, k, 0, e)
-            # # xzero = (-1*f0*dldf - math.sqrt(math.pow(f0*dldf,2)-2*f0*(f0*d2ldf2 + dldf)))/(f0*d2ldf2 + dldf)
-            # x1 = lf0+math.log(-1*dldf)
-            # x2 = 1.0/2*math.log(f0*math.pow(dldf, 2)-2*(f0*d2ldf2 + dldf)) + lf0/2
-            # lx0 = logsumexp([x1, x2])
-            # area = lf0 + lx0    # + f0*dldf*math.pow(xzero,2)/2 + (f0*d2ldf2+dldf)/6*math.pow(xzero,3))
-            # nonzero_integral = area
-
-            # Normal approx see supplement
-            normal_approx = (-1*(e-float(k)/n)*(e-k/n)*n/(e*(1-e))/2 - math.log(e-float(k)/n) - 1/2*math.log(n)
-                             + 1.0/2*math.log(2*math.pi) + math.log(e*(1-e)))
-            correction = (loglp(n, k, float(k)/n, 0)
-                          + 1.0/2*math.log(2*math.pi) + 1.0/2*math.log((float(k)/n)*(1-float(k)/n)/n))
-            nonzero_integral = normal_approx + correction
-
+    posterior_term_1 = -logsumexp([-fraction_below_cutoff, delta_value - fraction_below_cutoff - total_weight_beta])
+    posterior_term_2 = -logsumexp([0, total_weight_beta - delta_value])
+    # print("Posterior term 1 ", posterior_term_1)
+    # print("Posterior term 2 ", posterior_term_2)
+    p0 = logsumexp([posterior_term_1, posterior_term_2])
+    try:
+        if p0 >= 0.0:
+            p1 = -1e10
+        elif p0 > -1e-10:
+            p1 = math.log(-p0)
         else:
-            nonzero_integral = math.log(integral[0])
+            p1 = math.log(-math.expm1(p0))
+    except ValueError:
+        logger.error('ERROR: {}'.format(p0))
+        raise
 
-    # carry along the beta function normalizing constant
-    nonzero_integral += (math.log(1.0-c0) + gammaln(pseudo_alpha + pseudo_beta)
-                         - gammaln(pseudo_alpha) - gammaln(pseudo_beta))
-    # remove the pseudocounts for the delta function
-    zero_integral = (math.log(c0) + loglp(n-pseudo_alpha + 1 - pseudo_beta + 1,
-                                          k - pseudo_alpha + 1, 0, e))
-
-    denom = logsumexp([zero_integral, nonzero_integral])
-
-    # return p0, 1-p0 in log space
-    return zero_integral - denom, nonzero_integral - denom
+    return p0, p1

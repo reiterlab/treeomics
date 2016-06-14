@@ -1,8 +1,4 @@
 """Read and write data from and to tab-separated-values files """
-__author__ = 'Johannes REITER'
-__date__ = 'Sept 10, 2014'
-
-
 import logging
 import csv
 import re
@@ -11,6 +7,11 @@ import numpy as np
 from collections import namedtuple, defaultdict
 from itertools import chain
 import utils.int_settings as def_sets
+
+
+__author__ = 'Johannes REITER'
+__date__ = 'Sept 10, 2014'
+
 
 # python 2, 3 compatibility
 try:                    # python 2
@@ -25,6 +26,7 @@ logger = logging.getLogger('treeomics')
 def read_mutation_table(filename, normal_sample=None, excluded_columns=set(), exclude_chr_arm=False):
     """
     Reads TSV file with sequencing data of variants in multiple samples (columns)
+    :param normal_sample: name of normal sample; if provided, subsequent filtering on these data is performed
     :param filename: path to TSV file
     :param excluded_columns: samples (column names) which should not be returned
     :return: dictionary of the data per variant and sample, dictionary of the gene names per variant
@@ -233,6 +235,7 @@ def read_csv_file(filename, normal_sample=None, excluded_columns=set()):
 def read_table(filename, variant_key_column_names, variant_key_pattern, data_column_names):
     """
     Reads TSV file with possibly multiple id columns and possibly multiple data columns
+    :param filename: path to TSV file
     :param variant_key_column_names: list of ordered columns which form the key in the return dictionary
     :param variant_key_pattern: python format string describing how the dictionary key is created
     :param data_column_names: samples (column names) which should be returned
@@ -292,10 +295,13 @@ def read_table(filename, variant_key_column_names, variant_key_pattern, data_col
         return data
 
 
-def write_posterior_table(filepath, sample_names, sample_vafs, mut_positions, gene_names, log_p01, betas):
+def write_posterior_table(filepath, sample_names, estimated_purities, sample_vafs, mut_positions,
+                          gene_names, log_p01, betas):
     """
     Write file with posterior probabilities and parameter details to given file path
     :param filepath: path to output file with posterior probabilities
+    :param sample_names: ordered list of sample names
+    :param estimated_purities: estimated sample purities
     :param sample_vafs: dictionary with variant allele frequencies per sample
     :param mut_positions: data tuples about the mutation: chromosome, start position, and end position
     :param gene_names: arrary with gene names
@@ -313,12 +319,15 @@ def write_posterior_table(filepath, sample_names, sample_vafs, mut_positions, ge
         post_writer.writerow(header)
 
         # write settings and sample properties
-        post_writer.writerow(['#MedianVAFs', '', '', '']
-                             + ['{:.3%}'.format(np.median(sample_vafs[sa_name])) for sa_name in sample_names])
-        post_writer.writerow(['#PriorAlpha', '', '', '']
-                             + ['{:.3f}'.format(def_sets.PSEUDO_ALPHA) for _ in range(len(sample_names))])
-        post_writer.writerow(['#PriorBeta', '', '', '']
-                             + ['{:.3f}'.format(betas[sa_name]) for sa_name in sample_names])
+        post_writer.writerow(['#EstPurities', '', '', ''] +
+                             [('{:.3%}'.format(estimated_purities[sa_name]) if sa_name in estimated_purities else '')
+                              for sa_name in sample_names])
+        post_writer.writerow(['#MedianVAFs', '', '', ''] +
+                             ['{:.3%}'.format(np.median(sample_vafs[sa_name])) for sa_name in sample_names])
+        post_writer.writerow(['#PriorAlpha', '', '', ''] +
+                             ['{:.3f}'.format(def_sets.PSEUDO_ALPHA) for _ in range(len(sample_names))])
+        post_writer.writerow(['#PriorBeta', '', '', ''] +
+                             ['{:.3f}'.format(betas[sa_name]) for sa_name in sample_names])
 
         # run through all variants and write their posterior probabilities to the file
         for mut_idx, mut_pos in enumerate(mut_positions):
@@ -341,7 +350,7 @@ def write_mutation_patterns(phylogeny, filepath):
     """
     Generate file with the identified most reliable mutation and evolutionarily compatible mutation patterns
     :param phylogeny: data structure around phylogeny
-    :param: path to output file
+    :param filepath: path to output file
     """
 
     with open(filepath, 'w') as mp_file:

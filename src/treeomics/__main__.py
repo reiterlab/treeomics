@@ -1,8 +1,4 @@
 #!/usr/bin/python
-"""Main file to run treeomics"""
-__author__ = 'Johannes REITER, IST Austria - Harvard University'
-__date__ = 'March 31, 2014'
-
 import logging
 import sys
 import os
@@ -11,7 +7,6 @@ import csv
 import re
 from collections import namedtuple
 from patient import Patient
-from phylogeny.phylogeny_utils import Phylogeny
 import settings
 import utils.int_settings as def_sets
 import tree_inference as ti
@@ -20,6 +15,11 @@ import plots.plots_utils as plts
 import plots.mp_graph as mp_graph
 import plots.circos as circos
 import utils.analysis as analysis
+
+
+"""Main file to run Treeomics"""
+__author__ = 'Johannes REITER, IST Austria - Harvard University'
+__date__ = 'March 31, 2014'
 
 
 # create logger for application
@@ -45,6 +45,7 @@ def init_output(patient_name=None, output_dir=None):
     """
     Set up output directory.
     :param patient_name: if patient name is given generate separate directory for each subject
+    :param output_dir: name of the output directory
     :return: path to output directory
     """
 
@@ -132,29 +133,40 @@ def get_driver_list(cgc_path):
         return cgc_dict
 
 
-def get_output_fn_template(name, total_no_samples, fpr=None, fdr=None, min_absent_coverage=None, min_sa_coverage=None,
-                           min_sa_maf=None, bi_e=None, bi_c0=None, no_boot=None, mode=None, max_no_mps=None):
+def get_output_fn_template(name, total_no_samples, subclone_detection=False, fpr=None, fdr=None,
+                           min_absent_coverage=None, min_sa_coverage=None, min_sa_vaf=None,
+                           bi_e=None, bi_c0=None, no_boot=None, mode=None, max_no_mps=None):
     """
     Generate common name template for output files
-    :param bi_e:  sequencing error for bayesian inference
+    :param name: subject name or id
+    :param total_no_samples: number of considered sequencing samples
+    :param subclone_detection: is subclone detection enabled?
+    :param fpr: false-positive rate
+    :param fdr: false-discovery rate
+    :param min_absent_coverage: minimum coverage such that variant can be classified as absent in the classical model
+    :param min_sa_coverage: minimum median coverage per sample
+    :param min_sa_vaf: minimum median variant allele frequency per sample
+    :param bi_e: sequencing error for bayesian inference
     :param bi_c0: prior mixture parameter of delta function and uniform distribution for bayesian inference
-    :param mode: Treeomics running mode; if 2, simplistic mode, every variant has exactly one mutation pattern
+    :param no_boot: number of bootstrapping samples
+    :param mode: mode of Treeomics
+    :param max_no_mps: maximal number of considered most likely distinct mutation patterns per variant
     :return: output filename pattern
     """
 
-    pattern = ('{}_{}'.format(name, total_no_samples)
-               + ('_st={}'.format(min_sa_coverage) if min_sa_coverage > 0 else '')
-               + ('_mf={}'.format(min_sa_maf) if min_sa_maf > 0 else '')
-               + ('_fpr={:.1e}_fdr={:.2f}'.format(fpr, fdr) if fpr is not None or fdr is not None else '')
-               + ('_at={}'.format(min_absent_coverage) if min_absent_coverage is not None else '')
-               + ('_vaf={}'.format(settings.MIN_VAF) if settings.MIN_VAF is not None and settings.MIN_VAF > 0 else '')
-               + ('_var={}'.format(settings.MIN_VAR_READS) if settings.MIN_VAR_READS is not None
-                  and settings.MIN_VAR_READS > 0 else '')
-               + ('_e={}'.format(bi_e) if bi_e is not None else '')
-               + ('_c0={}'.format(bi_c0) if bi_c0 is not None else '')
-               + ('_mps={}'.format(max_no_mps) if max_no_mps is not None else '')
-               + ('_b={}'.format(no_boot) if no_boot is not None and no_boot > 0 else '')
-               + ('_s' if mode is not None and mode == 2 else ''))
+    pattern = ('{}_{}{}'.format(name, total_no_samples, '_SC' if subclone_detection else '') +
+               ('_st={}'.format(min_sa_coverage) if min_sa_coverage > 0 else '') +
+               ('_mf={}'.format(min_sa_vaf) if min_sa_vaf > 0 else '') +
+               ('_fpr={:.1e}_fdr={:.2f}'.format(fpr, fdr) if fpr is not None or fdr is not None else '') +
+               ('_at={}'.format(min_absent_coverage) if min_absent_coverage is not None else '') +
+               ('_vaf={}'.format(settings.MIN_VAF) if settings.MIN_VAF is not None and settings.MIN_VAF > 0 else '') +
+               ('_var={}'.format(settings.MIN_VAR_READS) if settings.MIN_VAR_READS is not None and
+                settings.MIN_VAR_READS > 0 else '') +
+               ('_e={}'.format(bi_e) if bi_e is not None else '') +
+               ('_c0={}'.format(bi_c0) if bi_c0 is not None else '') +
+               ('_mps={}'.format(max_no_mps) if max_no_mps is not None else '') +
+               ('_b={}'.format(no_boot) if no_boot is not None and no_boot > 0 else '') +
+               ('_s' if mode is not None and mode == 2 else ''))
 
     # replace points with commas because latex cannot handle points in file names (interprets it as file type)
     pattern = pattern.replace('.', '_')
@@ -169,7 +181,7 @@ def usage():
     """
     logger.warn("Usage: python treeomics.zip -r <mut-reads table> -s <coverage table> | -v vcf_file | "
                 "-d vcf_file_directory  [-n <normal sample name>] [-e <sequencing error rate] "
-                "[-z <prior absent probability>] \n")
+                "[-z <prior absent probability>] [-c <minimum sample median coverage>] [] \n")
     logger.warn("Example: python treeomics.zip -r input/Makohon2015/Pam03_mutant_reads.txt "
                 "-s input/Makohon2015/Pam03_phredcoverage.txt ")
     sys.exit(2)
@@ -204,9 +216,9 @@ def main():
                         type=float, default=settings.BI_C0)
 
     parser.add_argument("-c", "--min_median_coverage",
-                        help="minimum median phred coverage of a sample",
+                        help="minimum median coverage of a sample",
                         type=int, default=settings.SAMPLE_COVERAGE_THRESHOLD)
-    parser.add_argument("-f", "--min_median_maf",
+    parser.add_argument("-f", "--min_median_vaf",
                         help="minimum median mutant allele frequency of a sample",
                         type=float, default=settings.MAF_THRESHOLD)
     parser.add_argument("-p", "--false_positive_rate",
@@ -219,28 +231,45 @@ def main():
                         help="minimum coverage for a true negative (negative threshold)",
                         type=int, default=settings.MIN_ABSENT_COVERAGE)
 
-    parser.add_argument('-b', '--boot', help='Number of bootstrapping samples', type=int, default=0)
-    # parser.add_argument('-o', '--down', help='Replications for robustness analysis through down-sampling',
-    #                     type=int, default=0)
+    plots_parser = parser.add_mutually_exclusive_group(required=False)
+    plots_parser.add_argument('--plots', dest='plots', action='store_true', help="Is plot generation enabled?")
+    plots_parser.add_argument('--no_plots', dest='plots', action='store_false', help="Is plot detection disabled?")
+    parser.set_defaults(plots=True)
 
+    parser.add_argument('-b', '--boot', help='Number of bootstrapping samples', type=int,
+                        default=settings.NO_BOOTSTRAP_SAMPLES)
+
+    # limit search space exploration to decrease the run time
+    parser.add_argument("-t", "--time_limit",
+                        help="maximum running time for CPLEX to solve the MILP",
+                        type=int, default=settings.TIME_LIMIT)
     parser.add_argument("-l", "--max_no_mps", help="limit the solution space size by the maximal number of " +
                                                    "explored mutation patterns per variant",
-                        type=int, default=None)
+                        type=int, default=settings.MAX_NO_MPS)
 
-    parser.add_argument("-u", "--subclone_detection", help="Is subclone detection enabled?",
-                        type=bool, default=settings.SUBCLONE_DETECTION)
+    feature_parser = parser.add_mutually_exclusive_group(required=False)
+    feature_parser.add_argument('-u', '--subclone_detection', dest='subclone_detection', action='store_true',
+                                help="Is subclone detection enabled?")
+    feature_parser.add_argument('--no_subclone_detection', dest='subclone_detection', action='store_false',
+                                help="Is subclone detection disabled?")
+    parser.set_defaults(subclone_detection=settings.SUBCLONE_DETECTION)
 
     args = parser.parse_args()
-    plots_report = True    # for debugging set to False
-    plots_paper = True
 
     # disable plot generation if the script is called from another script (benchmarking)
     # set log level to info
     if not os.getcwd().endswith('treeomics') and not os.getcwd().endswith('src'):
-        plots_paper = False
-        plots_report = False
+        logger.setLevel(logging.INFO)
         fh.setLevel(logging.INFO)
         ch.setLevel(logging.INFO)
+
+    if args.plots:
+        logger.info('Plot generation is enabled.')
+    else:
+        logger.info('Plot generation is disabled.')
+
+    plots_report = args.plots    # for debugging set to False
+    plots_paper = logger.isEnabledFor(logging.DEBUG)
 
     if args.normal:
         normal_sample_name = args.normal
@@ -251,9 +280,20 @@ def main():
     if args.min_median_coverage > 0:
         logger.info('Minimum sample median coverage (otherwise discarded): {}'.format(
             args.min_median_coverage))
-    if args.min_median_maf > 0:
+    if args.min_median_vaf > 0:
         logger.info('Minimum sample median mutant allele frequency (otherwise discarded): {}'.format(
-            args.min_median_maf))
+            args.min_median_vaf))
+
+    if args.boot is not None:
+        if args.boot < 0:
+            raise AttributeError('Number of bootstrapping samples can not be negative!')
+
+    if args.time_limit is not None:
+        if args.time_limit <= 0:
+            raise AttributeError('Time limit for the MILP solver needs to be positive!')
+        logger.info('MILP solver running time is limited to {} seconds. Obtained solution may not be optimal.'.format(
+            args.time_limit))
+
     if args.max_no_mps is not None:
         if args.max_no_mps <= 0:
             raise AttributeError('Solution space can only be limited to a positive number of mutation patterns!')
@@ -286,7 +326,7 @@ def main():
         logger.debug('Patient name: {}'.format(patient_name))
         patient = Patient(patient_name, min_absent_cov=min_absent_cov, error_rate=args.error_rate, c0=args.prob_zero)
         read_no_samples = patient.process_raw_data(
-            fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_maf, var_table=args.mut_reads,
+            fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf, var_table=args.mut_reads,
             cov_table=args.coverage, normal_sample=normal_sample_name)
 
     elif args.csv_file:
@@ -297,7 +337,7 @@ def main():
         logger.debug('Patient name: {}'.format(patient_name))
         patient = Patient(patient_name, min_absent_cov=min_absent_cov, error_rate=args.error_rate, c0=args.prob_zero)
         read_no_samples = patient.process_raw_data(
-            fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_maf, csv_file=args.csv_file,
+            fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf, csv_file=args.csv_file,
             normal_sample=normal_sample_name)
 
     elif args.vcf_file:      # take path to the input VCF file
@@ -309,7 +349,7 @@ def main():
         patient_name = get_patients_name(vcf_file)
         patient = Patient(patient_name, error_rate=args.error_rate, c0=args.prob_zero)
         read_no_samples = patient.read_vcf_file(vcf_file, fpr, fdr, min_sa_cov=args.min_median_coverage,
-                                                min_sa_maf=args.min_median_maf, min_absent_cov=args.min_absent_coverage,
+                                                min_sa_maf=args.min_median_vaf, min_absent_cov=args.min_absent_coverage,
                                                 normal_sample_name=normal_sample_name)
 
     elif args.directory:      # take path to the directory with all VCF files
@@ -323,7 +363,7 @@ def main():
         patient_name = get_patients_name(
             vcf_directory[:-1] if vcf_directory.endswith('/') else vcf_directory)
         patient = Patient(patient_name, error_rate=args.error_rate, c0=args.prob_zero)
-        read_no_samples = patient.read_vcf_directory(vcf_directory, args.min_median_coverage, args.min_median_maf,
+        read_no_samples = patient.read_vcf_directory(vcf_directory, args.min_median_coverage, args.min_median_vaf,
                                                      fpr, fdr, min_absent_cov, normal_sample_name)
 
     else:
@@ -362,16 +402,16 @@ def main():
     # create output filename pattern
     fn_pattern = get_output_fn_template(patient.name, read_no_samples, fpr=fpr, fdr=fdr, mode=args.mode,
                                         min_absent_coverage=min_absent_cov, min_sa_coverage=args.min_median_coverage,
-                                        min_sa_maf=args.min_median_maf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0)
+                                        min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0)
 
     # do basic analysis on provided input data
     patient.analyze_data(post_table_filepath=os.path.join(
         output_directory, get_output_fn_template(patient.name, read_no_samples,
                                                  min_sa_coverage=args.min_median_coverage,
-                                                 min_sa_maf=args.min_median_maf, bi_e=patient.bi_error_rate,
+                                                 min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate,
                                                  bi_c0=patient.bi_c0)+'_posterior.txt'))
 
-    if plots_report:   # deactivate plot generation for debugging
+    if plots_report:   # deactivate plot generation for debugging and benchmarking
 
         # generate mutation table plot
         # show only mutations which are present in at least one sample
@@ -382,9 +422,9 @@ def main():
 
         if len(col_labels) < def_sets.MAX_MUTS_TABLE_PLOT and plots_report:
             mut_table_name = \
-                ('bayesian_data_table_' + get_output_fn_template(patient.name, read_no_samples,
-                 min_sa_coverage=args.min_median_coverage, min_sa_maf=args.min_median_maf, bi_e=patient.bi_error_rate,
-                 bi_c0=patient.bi_c0))
+                ('bayesian_data_table_' + get_output_fn_template(
+                    patient.name, read_no_samples, min_sa_coverage=args.min_median_coverage,
+                    min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0))
 
             plts.bayesian_hinton(patient.log_p01, output_directory, mut_table_name,
                                  row_labels=patient.sample_names, column_labels=col_labels,
@@ -412,7 +452,7 @@ def main():
     # create output filename pattern
     fn_pattern = get_output_fn_template(patient.name, read_no_samples, fpr=fpr, fdr=fdr, mode=args.mode,
                                         min_absent_coverage=min_absent_cov, min_sa_coverage=args.min_median_coverage,
-                                        min_sa_maf=args.min_median_maf, bi_e=patient.bi_error_rate,
+                                        min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate,
                                         bi_c0=patient.bi_c0, max_no_mps=args.max_no_mps)
 
     # create HTML analysis report
@@ -429,25 +469,27 @@ def main():
     if args.mode == 1 or args.mode == 2:
 
         phylogeny = None
-        comp_node_frequencies = None
+        # comp_node_frequencies = None
 
         # ### RUN TREEOMICS ###
         if args.mode == 1:     # find likely sequencing artifacts based on a bayesian inference model
 
             # generate filename for tree
-            fn_tree = get_output_fn_template(patient.name, read_no_samples, min_sa_coverage=args.min_median_coverage,
-                                             min_sa_maf=args.min_median_maf, no_boot=args.boot,
-                                             max_no_mps=args.max_no_mps, bi_e=patient.bi_error_rate,
-                                             bi_c0=patient.bi_c0, mode=args.mode)
-            fn_matrix = get_output_fn_template(patient.name, read_no_samples, min_sa_coverage=args.min_median_coverage,
-                                               min_sa_maf=args.min_median_maf,  max_no_mps=args.max_no_mps,
-                                               bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, mode=args.mode)
+            fn_tree = get_output_fn_template(
+                patient.name, read_no_samples, subclone_detection=args.subclone_detection,
+                min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf, no_boot=args.boot,
+                max_no_mps=args.max_no_mps, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, mode=args.mode)
+            fn_matrix = get_output_fn_template(
+                patient.name, read_no_samples, subclone_detection=args.subclone_detection,
+                min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf, max_no_mps=args.max_no_mps,
+                bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, mode=args.mode)
             # determine mutation patterns based on standard binary classification to generate an overview graph
-            phylogeny = ti.create_max_lh_tree(os.path.join(output_directory, 'mlhtree_'+fn_tree+'.tex'), patient,
-                                              os.path.join(output_directory, 'treeomics_mutmatrix_'+fn_matrix+'.csv'),
-                                              os.path.join(output_directory, 'treeomics_mps_'+fn_matrix+'.tsv'),
-                                              subclone_detection=args.subclone_detection, drivers=subject_drivers,
-                                              no_bootstrap_samples=args.boot, max_no_mps=args.max_no_mps)
+            phylogeny = ti.create_max_lh_tree(
+                patient, tree_filepath=os.path.join(output_directory, fn_tree+'_mlhtree.tex'),
+                mm_filepath=os.path.join(output_directory, fn_matrix+'_treeomics_mm.csv'),
+                mp_filepath=os.path.join(output_directory, fn_matrix+'_treeomics_mps.tsv'),
+                subclone_detection=args.subclone_detection, drivers=subject_drivers, no_bootstrap_samples=args.boot,
+                max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=plots_report)
 
             # previously used for benchmarking
             # if plots_paper:     # generate Java Script D3 trees
@@ -462,10 +504,18 @@ def main():
                 # (convenient for large numbers of variants)
                 fn_mp_plot = get_output_fn_template(
                     patient.name, read_no_samples, min_sa_coverage=args.min_median_coverage, max_no_mps=args.max_no_mps,
-                    min_sa_maf=args.min_median_maf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, mode=args.mode)
+                    min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, mode=args.mode)
+
+                if args.subclone_detection:
+                    pg = ti.create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepath=None,
+                                               subclone_detection=False, drivers=subject_drivers,
+                                               no_bootstrap_samples=0, max_no_mps=args.max_no_mps,
+                                               time_limit=args.time_limit, plots=False)
+                else:
+                    pg = phylogeny
 
                 mp_graph_name = mp_graph.create_mp_graph(
-                    fn_mp_plot, phylogeny, phylogeny.node_scores.keys(), phylogeny.node_scores,
+                    fn_mp_plot, pg, pg.node_scores.keys(), pg.node_scores,
                     output_directory=output_directory, min_node_weight=settings.MIN_MP_SCORE,
                     circos_max_no_mps=settings.CIRCOS_MAX_NO_MPS)
 
@@ -572,7 +622,7 @@ def main():
 
     # finalize HTML report
     html_report.end_report(patient.bi_error_rate, patient.bi_c0, fpr, fdr,
-                           min_absent_cov, args.min_median_coverage, args.min_median_maf)
+                           min_absent_cov, args.min_median_coverage, args.min_median_vaf)
     logger.info('Treeomics finished evolutionary analysis.')
 
 if __name__ == '__main__':

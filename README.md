@@ -1,16 +1,15 @@
 ## Treeomics: Reconstructing phylogenies of metastatic cancers
-Developed by: JG Reiter<sup>1,2,3</sup>, AP Makohon-Moore<sup>4,5</sup>, JM Gerold<sup>1</sup>, I Bozic<sup>1,6</sup>, K Chatterjee<sup>2</sup>, C Iacobuzio-Donahue<sup>4,5,7</sup>, B Vogelstein<sup>8,9</sup>, MA Nowak<sup>1,6,10</sup>.
+Developed by: JG Reiter<sup>1,2</sup>, AP Makohon-Moore<sup>3,4</sup>, JM Gerold<sup>1</sup>, I Bozic<sup>1,5</sup>, K Chatterjee<sup>2</sup>, C Iacobuzio-Donahue<sup>3,4,6</sup>, B Vogelstein<sup>7,8</sup>, MA Nowak<sup>1,5,9</sup>.
 
 <sup>1</sup> Program for Evolutionary Dynamics, Harvard University, Cambridge, MA, USA.
 <sup>2</sup> IST (Institute of Science and Technology) Austria, Klosterneuburg, Austria.
-<sup>3</sup> Dana-Farber Cancer Institute, Boston, MA, USA.
-<sup>4</sup> The David M. Rubenstein Center for Pancreatic Cancer Research, Memorial Sloan Kettering Cancer Center, New York, USA.
-<sup>5</sup> Human Oncology and Pathogenesis Program, Memorial Sloan Kettering Cancer Center, New York, USA.
-<sup>6</sup> Department of Mathematics, Harvard University, Cambridge, MA, USA.
-<sup>7</sup> Department of Pathology, Memorial Sloan Kettering Cancer Center, New York, USA.
-<sup>8</sup> The Sol Goldman Pancreatic Cancer Research Center, Johns Hopkins University School of Medicine, Baltimore, MD, USA. 
-<sup>9</sup> The Ludwig Center, Johns Hopkins University School of Medicine, Baltimore, MD, USA.
-<sup>10</sup> Department of Organismic and Evolutionary Biology, Harvard University, Cambridge, MA, USA.
+<sup>3</sup> The David M. Rubenstein Center for Pancreatic Cancer Research, Memorial Sloan Kettering Cancer Center, New York, USA.
+<sup>4</sup> Human Oncology and Pathogenesis Program, Memorial Sloan Kettering Cancer Center, New York, USA.
+<sup>5</sup> Department of Mathematics, Harvard University, Cambridge, MA, USA.
+<sup>6</sup> Department of Pathology, Memorial Sloan Kettering Cancer Center, New York, USA.
+<sup>7</sup> The Sol Goldman Pancreatic Cancer Research Center, Johns Hopkins University School of Medicine, Baltimore, MD, USA. 
+<sup>8</sup> The Ludwig Center, Johns Hopkins University School of Medicine, Baltimore, MD, USA.
+<sup>9</sup> Department of Organismic and Evolutionary Biology, Harvard University, Cambridge, MA, USA.
  
 ========
 
@@ -26,11 +25,14 @@ The tool detects putative artifacts in noisy sequencing data and can therefore i
   - Install Python 3.4 ([https://www.python.org/downloads](https://www.python.org/downloads))
   - Install NumPy ([http://www.numpy.org](http://www.numpy.org)), 
     SciPy ([http://www.numpy.org](http://www.numpy.org))
+  - Install networkx ([https://networkx.github.io/](https://networkx.github.io/))
+  - Install matplotlib ([http://matplotlib.org](http://matplotlib.org/))
+  - Install pandas ([http://pandas.pydata.org/](http://pandas.pydata.org/))
+  - Install seaborn ([https://stanford.edu/~mwaskom/software/seaborn/](https://stanford.edu/~mwaskom/software/seaborn/))
   - Install the IBM ILOG CPLEX Optimization Studio ([http://www-01.ibm.com/support/docview.wss?uid=swg21444285](http://www-01.ibm.com/support/docview.wss?uid=swg21444285))
     and then setup the Python API ([http://www-01.ibm.com/support/knowledgecenter/SSSA5P_12.2.0/ilog.odms.cplex.help/Content/Optimization/Documentation/CPLEX/_pubskel/CPLEX20.html](http://www-01.ibm.com/support/knowledgecenter/SSSA5P_12.2.0/ilog.odms.cplex.help/Content/Optimization/Documentation/CPLEX/_pubskel/CPLEX20.html));
     An IBM Academic License to freely download CPLEX can be obtained here: [http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative](http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative)
-  - If you want any plots to be automatically generated, install also
-    matplotlib ([http://matplotlib.org](http://matplotlib.org/)), pandas ([http://pandas.pydata.org](http://pandas.pydata.org)) LaTeX/TikZ (with ```pdflatex``` in your ```PATH``` environment variable; 
+  - If you want evolutionary conflict graphs automatically generated, install also LaTeX/TikZ (with ```pdflatex``` in your ```PATH``` environment variable; 
     [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html)), circos ((with ```circos``` in your ```PATH``` environment variable; [http://circos.ca/software/installation](http://circos.ca/software/installation))
     
 #### Getting started with Treeomics
@@ -47,17 +49,21 @@ file with the sequencing depth at the position of this variant in each sample.
 ```python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf file directory> [-n <normal sample name>] [-e <sequencing error rate] [-z <prior absent probability>] [-p false positive rate] [-i false discovery rate] [-y <min absent coverage>] -O```
 
 ##### Optional parameters:
-- *-e <sequencing error rate>:* Error rate of the sequencing machine (default 0.5%).
+- *-e <sequencing error rate>:* Sequencing error rate in the Bayesian inference model (default 1.0%).
 - *-z <prior absent probability>:* Prior probability for a variant being absent (default 0.5).
 - *-x <output directory>:* Provide different output directory (default src/output).
 - *-n <normal sample name>:* If a normal sample is provided, variants significantly present in the normal are removed.
 - *-b <No bootstrapping samples>:* Number of bootstrapping samples (default 0).
-- *-u <Mixing (True/False)>:* Enables detection of subclones with separate evolutionary trajectories.
+- ```--no_subclone_detection``` Disables subclone detection.
+- ```--no_plots``` Disables generation of plots (useful for benchmarking; default ```True```).
 - *-p <false positive rate>:* False-positive rate of conventional binary classification.
 - *-i <false discovery rate>:* Targeted false-discovery rate of conventional binary classification.
-- *-y <min absent coverage>:* Minimum coverage for a powered absent variant
+- *-y <min absent coverage>:* Minimum coverage for a powered absent variant.
+- *-t <time limit>:* Maximum running time for CPLEX to solve the MILP (in seconds, default ```None```). If not ```None```, the obtained solution is no longer guaranteed to be optimal.
+- *-l <max no MPS>:* Maximum number of considered mutation patterns per variant (default ```None```). If not ```None```, the obtained solution is no longer guaranteed to be optimal.
 
 Default parameter values as well as output directory can be changed in ```treeomics\src\settings.py```.
+Moreover, the ```settings.py``` provides more options an annotation of driver genes and configuration of plot output names. 
 All plots, analysis and logging files, and the HTML report will be in this output directory.
 
 #### Examples
@@ -84,4 +90,4 @@ There is no warranty for this free software.
 
 ========
 
-Author: Johannes Reiter, Harvard University, [http://pub.ist.ac.at/~jreiter](http://pub.ist.ac.at/~jreiter)  
+Author: Johannes Reiter, Harvard University, [http://www.people.fas.harvard.edu/~reiter](http://www.people.fas.harvard.edu/~reiter)  

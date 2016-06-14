@@ -1,8 +1,10 @@
-__author__ = 'jreiter'
+#!/usr/bin/python
+"""Advanced configurations to run Treeomics"""
+__author__ = 'Johannes REITER'
 
 
 # Treeomics version number
-VERSION = (1, 3, 0)
+VERSION = (1, 5, 0)
 
 # DEFAULT PARAMETER VALUES
 # maximal number variants to show in a mutation table plot
@@ -10,7 +12,7 @@ MAX_MUTS_TABLE_PLOT = 1000
 
 # bayesian inference model
 # assumed posterior p0 probability when no sequencing data was reported in some sample
-NO_DATA_P0 = 0.9
+NO_DATA_P0 = 0.95
 
 # presence probability of a variant for calculating reliability score
 # is upper bounded because the same variant could have been independently acquired twice

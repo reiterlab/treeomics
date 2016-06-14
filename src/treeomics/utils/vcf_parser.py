@@ -168,10 +168,13 @@ def generate_variant(var, sample):
 
     # set read sequencing data
     variant.set_allelic_depth(sample.AD)
-    variant.set_total_depth(sample.DP)
 
-    # check if B allele frequency is provided otherwise calculate it from the allelic depth counts
-    try:
+    try:    # check if coverage data is provided otherwise calculate it from the allele read counts
+        variant.set_total_depth(sample.DP)
+    except AttributeError:
+        variant.set_total_depth(sum(variant.AD))
+
+    try:        # check if B allele frequency is provided otherwise calculate it from the allelic depth counts
         variant.set_baf(sample.FA)
     except AttributeError:
         if variant.AD[1] == 0:      # mutant allele has zero coverage
@@ -182,6 +185,11 @@ def generate_variant(var, sample):
             baf = float(variant.AD[1]) / (variant.AD[0] + variant.AD[1])
 
         variant.set_baf(baf)
+
+    try:  # check if cancer allele fractions are provided
+        variant.set_ccf(sample.CF)
+    except AttributeError:
+        pass
 
     return variant
 

@@ -42,13 +42,14 @@ class SimplePhylogeny(Phylogeny):
         # dictionary of the individual mutation pattern scores, dict key is given by the mut_idx
         self.mp_weights = None
 
-    def find_max_compatible_tree(self):
+    def find_max_compatible_tree(self, time_limit=None):
         """
         Find the largest set of compatible characters and create from this largest
         set a phylogenetic tree.
         For variants which are not significantly mutated a minimum coverage can be required.
         If the minimum coverage is not met, the variant status is unknown and both patterns (presence and
         absence) will be explored.
+        :param time_limit: time limit for MILP solver in seconds
         :return inferred evolutionary tree
         """
 
@@ -61,7 +62,7 @@ class SimplePhylogeny(Phylogeny):
 
         # translate the conflict graph into a minimum vertex cover problem
         # and solve this using integer linear programming
-        self.conflicting_nodes, _ = cps.solve_conflicting_phylogeny(self.cf_graph)
+        self.conflicting_nodes, _ = cps.solve_conflicting_phylogeny(self.cf_graph, time_limit=time_limit)
 
         self.compatible_nodes = dict()
 
