@@ -5,7 +5,7 @@ __author__ = 'Johannes REITER'
 # ######################### DEFAULT PARAMETER VALUES #############################
 
 # number of bootstrapping samples
-NO_BOOTSTRAP_SAMPLES = 109
+NO_BOOTSTRAP_SAMPLES = 0
 
 # subclone detection enabled
 SUBCLONE_DETECTION = True
