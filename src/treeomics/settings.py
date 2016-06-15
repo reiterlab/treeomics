@@ -23,7 +23,7 @@ SAMPLE_COVERAGE_THRESHOLD = 0   # samples with a lower median coverage are disca
 MAF_THRESHOLD = 0.0             # samples with a lower median mutant allele frequency are discarded
 
 # Bayesian sequencing data analysis settings                ######################
-BI_E = 0.005            # sequencing error rate for bayesian inference
+BI_E = 0.01            # sequencing error rate for bayesian inference
 BI_C0 = 0.5             # prior mixture parameter of delta function and uniform distribution for bayesian inference
 
 
