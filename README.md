@@ -1,4 +1,4 @@
-## Treeomics: Reconstructing phylogenies of metastatic cancers
+## Treeomics: Reconstructing metastatic seeding patterns of human cancers
 Developed by: JG Reiter<sup>1,2</sup>, AP Makohon-Moore<sup>3,4</sup>, JM Gerold<sup>1</sup>, I Bozic<sup>1,5</sup>, K Chatterjee<sup>2</sup>, C Iacobuzio-Donahue<sup>3,4,6</sup>, B Vogelstein<sup>7,8</sup>, MA Nowak<sup>1,5,9</sup>.
 
 <sup>1</sup> Program for Evolutionary Dynamics, Harvard University, Cambridge, MA, USA.
@@ -15,7 +15,8 @@ Developed by: JG Reiter<sup>1,2</sup>, AP Makohon-Moore<sup>3,4</sup>, JM Gerold
 
 ### What is Treeomics?
 Treeomics is a computational tool to reconstruct the phylogeny of metastases with commonly available sequencing technologies.
-The tool detects putative artifacts in noisy sequencing data and can therefore infer robust evolutionary trees.
+The tool detects putative artifacts in noisy sequencing data and infers robust evolutionary trees across a variety of evaluated scenarios.
+For more details, see our publication *Reconstructing metastatic seeding patterns of human cancers* ([http://dx.doi.org/10.1101/048157](http://dx.doi.org/10.1101/048157))
 
 <img align="middle" src="repository_illustration.png">
 
@@ -46,32 +47,36 @@ reads reporting a variant (row) in each sample (column) and ```<coverage table>`
 file with the sequencing depth at the position of this variant in each sample.
 
 ##### Usage: 
-```python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf file directory> [-n <normal sample name>] [-e <sequencing error rate] [-z <prior absent probability>] [-p false positive rate] [-i false discovery rate] [-y <min absent coverage>] -O```
+```python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf file directory> -O```
 
 ##### Optional parameters:
-- *-e <sequencing error rate>:* Sequencing error rate in the Bayesian inference model (default 1.0%).
-- *-z <prior absent probability>:* Prior probability for a variant being absent (default 0.5).
-- *-x <output directory>:* Provide different output directory (default src/output).
-- *-n <normal sample name>:* If a normal sample is provided, variants significantly present in the normal are removed.
-- *-b <No bootstrapping samples>:* Number of bootstrapping samples (default 0).
-- ```--no_subclone_detection``` Disables subclone detection.
-- ```--no_plots``` Disables generation of plots (useful for benchmarking; default ```True```).
-- *-p <false positive rate>:* False-positive rate of conventional binary classification.
-- *-i <false discovery rate>:* Targeted false-discovery rate of conventional binary classification.
-- *-y <min absent coverage>:* Minimum coverage for a powered absent variant.
-- *-t <time limit>:* Maximum running time for CPLEX to solve the MILP (in seconds, default ```None```). If not ```None```, the obtained solution is no longer guaranteed to be optimal.
-- *-l <max no MPS>:* Maximum number of considered mutation patterns per variant (default ```None```). If not ```None```, the obtained solution is no longer guaranteed to be optimal.
+- *-e <sequencing error rate>:* Sequencing error rate *e* in the Bayesian inference model (default 1.0%)
+- *-a <max absent VAF>:* Maximum VAF for an absent variant *f<sub>absent</sub>* before considering the estimated purity (default 5%)
+- *-z <prior absent probability>:* Prior probability for a variant being absent *c<sub>0</sub> (default 0.5).
+- *-x <output directory>:* Provide different output directory (default src/output)
+- *-n <normal sample name>:* If a normal sample is provided, variants significantly present in the normal are removed
+- *-b <No bootstrapping samples>:* Number of bootstrapping samples (default 0)
+- *-u:* Enables subclone detection (default ```False```)
+<!--- - ```--no_subclone_detection``` Disables subclone detection) -->
+- *-c <min median coverage>:* Minimum median coverage of a sample to be considered (default 0)
+- *-f <min median vaf>:* Minimum median mutant allele frequency of a sample to be considered (default 0)
+- *-p <false positive rate>:* False-positive rate of conventional binary classification (only relevant for artifact comparison)
+- *-i <false discovery rate>:* Targeted false-discovery rate of conventional binary classification  (only relevant for artifact comparison)
+- *-y <min absent coverage>:* Minimum coverage for a powered absent variant  (only relevant for artifact comparison)
+- *-t <time limit>:* Maximum running time for CPLEX to solve the MILP (in seconds, default ```None```). If not ```None```, the obtained solution is no longer guaranteed to be optimal
+- *-l <max no MPS>:* Maximum number of considered mutation patterns per variant (default ```None```). If not ```None```, the obtained solution is no longer guaranteed to be optimal
+- ```--no_plots``` Disables generation of plots (useful for benchmarking; default ```True```)
 
 Default parameter values as well as output directory can be changed in ```treeomics\src\settings.py```.
 Moreover, the ```settings.py``` provides more options an annotation of driver genes and configuration of plot output names. 
 All plots, analysis and logging files, and the HTML report will be in this output directory.
 
 #### Examples
-Example 1: ```python treeomics -r input/Makohon2016/Pam03_mutant_reads.txt -s input/Makohon2016/Pam03_phredcoverage.txt -e 0.005 -z 0.5 -p 0.005 -i 0.05 -y 100 -O```  
+Example 1: ```python treeomics -r input/Makohon2016/Pam03_mutant_reads.txt -s input/Makohon2016/Pam03_phredcoverage.txt -e 0.005 -O```  
 Reconstructs the phylogeny of pancreatic cancer patient Pam03 based on targeted sequencing data 
 of 5 distinct liver metastases, 3 distinct lung metastases, and 2 samples of the primary tumor.
 
-Example 2: ```python treeomics -r input/Bashashati2013/Case5_mutant_reads.txt -s input/Bashashati2013/Case5_coverage.txt -e 0.005 -z 0.5 -p 0.01 -i 0.05 -y 100 -O```
+Example 2: ```python treeomics -r input/Bashashati2013/Case5_mutant_reads.txt -s input/Bashashati2013/Case5_coverage.txt -e 0.005 -O```
 Reconstructs the phylogeny of the high-grade serous ovarian cancer of Case 5 in Bashashati et al. (2013).
 
 ========

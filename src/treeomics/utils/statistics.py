@@ -96,7 +96,13 @@ def get_log_p0(n, k, e, c0, pseudo_alpha=None, pseudo_beta=None, cutoff_f=None):
 
     # cutoff frequency
     if cutoff_f is None:
-        cutoff_f = 2*e
+        cutoff_f = 0.05
+        logger.warn('Cutoff absent frequency was not set in the Bayesian inference model! Assumed {:1e}.'.format(
+            cutoff_f))
+
+    if e > cutoff_f:
+        raise RuntimeError('Error rate e={} can not be higher than the calculated cutoff absent frequency {}'.format(
+            e, cutoff_f))
 
     if pseudo_alpha is None:
         pseudo_alpha = def_sets.PSEUDO_ALPHA
@@ -139,6 +145,6 @@ def get_log_p0(n, k, e, c0, pseudo_alpha=None, pseudo_beta=None, cutoff_f=None):
             p1 = math.log(-math.expm1(p0))
     except ValueError:
         logger.error('ERROR: {}'.format(p0))
-        raise
+        raise RuntimeError('Posterior probability could not be calculated!')
 
     return p0, p1

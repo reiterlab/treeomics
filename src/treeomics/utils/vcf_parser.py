@@ -65,7 +65,8 @@ class VCFParser(object):
                 if row[0].startswith('##'):
                     # skip the meta-information
                     continue
-                elif row[0].startswith('#'):                # process VCF header
+
+                elif row[0].startswith('#CHROM'):                # process VCF header
                     headers = [p_replace.sub('_', p_remove.sub('', e)) for e in row]
 
                     logger.debug('Header: {}'.format(headers))
@@ -80,6 +81,10 @@ class VCFParser(object):
 
                     else:
                         raise ValueError('No data is found in the provided VCF file: {}'.format(filename))
+
+                elif row[0].startswith('#'):                # comment
+                    # skip
+                    continue
 
                 else:                                       # process variants
                     var = named_row(*row)

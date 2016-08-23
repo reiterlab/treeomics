@@ -371,5 +371,9 @@ def write_mutation_patterns(phylogeny, filepath):
             #         self.mlh_unique_mutations[sa_idx].add(mut_idx)
             # else:
             #     self.mlh_absent_mutations.add(mut_idx)
+
+            if len(mp) == 0:
+                continue
+
             mp_writer.writerow(sorted([phylogeny.patient.sample_names[sa_idx] if phylogeny.patient.sc_names is None
                                        else phylogeny.patient.sc_names[sa_idx] for sa_idx in mp]))

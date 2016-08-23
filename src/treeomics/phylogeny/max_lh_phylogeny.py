@@ -29,7 +29,7 @@ class MaxLHPhylogeny(Phylogeny):
     Infer evolutionary tree from the resolved data
     """
 
-    def __init__(self, patient, mps):
+    def __init__(self, patient, mps, loh_frequency=0.0):
 
         Phylogeny.__init__(self, patient, mps)
 
@@ -76,36 +76,55 @@ class MaxLHPhylogeny(Phylogeny):
         pres_lp = math.log(0.5)
         lh = 1.0
         for sa_idx, sample_name in enumerate(patient.sample_names):
-            for k in range(500):
+            # calculate posterior according to prior, estimated purity and data
+            for k in range(5000):
                 _, p1 = get_log_p0(np.median(patient.sample_coverages[sample_name]), k, self.patient.bi_error_rate,
-                                   self.patient.bi_c0, pseudo_alpha=def_sets.PSEUDO_ALPHA,
-                                   pseudo_beta=patient.betas[sample_name])
+                                   self.patient.bi_c0, cutoff_f=self.patient.get_cutoff_frequency(sample_name),
+                                   pseudo_alpha=def_sets.PSEUDO_ALPHA, pseudo_beta=patient.betas[sample_name])
                 if p1 > pres_lp:
                     k_mins.append(k)
                     break
+
             logger.debug('{}: Minimum number of mutant reads such that presence probability is greater than 50%: {}.'
                          .format(sample_name, k_mins[-1]))
-            called_ps.append(1.0 - binom.cdf(k_mins[-1]-1, np.median(patient.sample_coverages[sample_name]),
+            called_ps.append(1.0 - binom.cdf(k_mins[-1]-1, int(np.median(patient.sample_coverages[sample_name])),
                                              self.patient.bi_error_rate))
             logger.debug('Probability to observe an incorrectly called variant: {:.3%}'.format(called_ps[-1]))
 
             if sample_name in patient.estimated_purities:
-                missed_ps.append(binom.cdf(k_mins[-1]-1, np.median(patient.sample_coverages[sample_name]),
+                missed_ps.append(binom.cdf(k_mins[-1]-1, int(np.median(patient.sample_coverages[sample_name])),
                                            self.patient.estimated_purities[sample_name] / 2.0))
             else:
-                missed_ps.append(binom.cdf(k_mins[-1]-1, np.median(patient.sample_coverages[sample_name]),
+                missed_ps.append(binom.cdf(k_mins[-1]-1, int(np.median(patient.sample_coverages[sample_name])),
                                            np.median(self.patient.sample_mafs[sample_name])))
             logger.debug('Probability to miss a clonal variant: {:.1e}'.format(missed_ps[-1]))
 
             # probability that all calls are correct
-            lh *= 1.0 - called_ps[-1] - missed_ps[-1]
+            # ensure that this probability is positive but also not too close to 1
+            lh *= max((1.0 - max(called_ps[-1], 1.0 - def_sets.MAX_PRE_PROB) - missed_ps[-1] -
+                      max(loh_frequency, 1.0 - def_sets.MAX_ABS_PROB)), 0.5)
 
         # probability that at least one call is wrong
         lh = 1 - lh
-        self.min_score = -math.log(1.0 - lh)
-        logger.debug('Likelihood of a pattern with at least one false-positive or false-negative: {:.3e}'.format(lh))
+        subclone_th = 1.0
+        self.min_score = -math.log(1.0 - lh) * subclone_th
+        logger.debug('Likelihood of a pattern with at least one false-positive or false-negative' +
+                     ' and an LOH probability along a linage of {}: {:.3e}'.format(loh_frequency, lh))
+
         logger.info('Minimum reliability score value to be considered as a potential subclone: {:.3e}'.format(
             self.min_score))
+
+        lh_99 = 1.0 - math.pow(0.99, len(patient.sample_names))
+        logger.debug('Reliability score of a pattern with 99% certainty in each call: {:.3e}'.format(
+            -math.log(1.0 - lh_99)))
+
+        lh_999 = 1.0 - math.pow(0.999, len(patient.sample_names))
+        logger.debug('Reliability score of a pattern with 99.9% certainty in each call: {:.3e}'.format(
+            -math.log(1.0 - lh_999)))
+
+        lh_9999 = 1.0 - math.pow(0.9999, len(patient.sample_names))
+        logger.debug('Reliability score of a pattern with 99.99% certainty in each call: {:.3e}'.format(
+            -math.log(1.0 - lh_9999)))
 
     def infer_max_lh_tree(self, subclone_detection=False, no_bootstrap_samples=0, max_no_mps=None, time_limit=None):
         """
@@ -181,6 +200,8 @@ class MaxLHPhylogeny(Phylogeny):
                         #       self.mp_weights[mut_idx][mp_col_idx]))
 
                         # determine false positives and false negatives compared to original classification
+                        # TODO: in Treeomics 2 artifact calculation should be changed from the p-value based model
+                        # TDO: to Bayesian inference model
                         fps = set(self.patient.mutations[mut_idx].difference(self.idx_to_mp[mp_col_idx]))
 
                         # check if some of these false-positives are present in the newly created subclones
@@ -415,7 +436,9 @@ class MaxLHPhylogeny(Phylogeny):
         # find incompatible mutation pattern with the highest reliability score
         for mp in sorted(self.conflicting_nodes, key=lambda k: -self.node_scores[k]):
 
-            if self.node_scores[mp] < self.min_score:
+            if (self.node_scores[mp] < self.min_score or
+                    len(self.patient.sc_names) > len(self.patient.sample_names) +
+                    max(5, len(self.patient.sample_names)/2)):
                 # no incompatible mutation patterns with high reliability score exist
                 return updated_nodes, self.sc_sample_ids
 
@@ -437,9 +460,11 @@ class MaxLHPhylogeny(Phylogeny):
             # find highest ranked conflicting mutation pattern that is part of the current solution
             # step (a) in pseudo algorithm
             logger.debug('Highest ranked conflicting mutation pattern: {} and its neighbors'.format(mp))
+            logger.debug('Its neighbors: {}'.format(self.cf_graph.neighbors(mp)))
+            logger.debug('Conflicting nodes: {}'.format(self.conflicting_nodes))
             hcmp = max(set(self.cf_graph.neighbors(mp)).difference(self.conflicting_nodes),
                        key=lambda k: self.node_scores[k])
-            logger.info('Highest ranked evolutionary incompatible mutation pattern of MP {} (w: {:.2f}): {} (w: {:.2f})'
+            logger.info('Highest ranked evolutionary incompatible mutation pattern of MP {} (w: {:.2e}): {} (w: {:.2e})'
                         .format(', '.join(self.patient.sc_names[sc] for sc in mp), self.cf_graph.node[mp]['weight'],
                                 ', '.join(self.patient.sc_names[sc] for sc in hcmp),
                                 self.cf_graph.node[hcmp]['weight']))
@@ -447,9 +472,17 @@ class MaxLHPhylogeny(Phylogeny):
             # infer samples with putative mixed subclones
             msc_samples = list(mp.intersection(hcmp))
             if len(msc_samples) > 1:    # more than one subclone would be needed to generate, reconsider later
+                logger.info('Multiple subclones are needed to explain the evolutionary incompatibility. '
+                            'Continue search.')
                 continue
 
             sc_sa = msc_samples[0]      # sample where subclone is created
+
+            # if incompatibility is due to mutations in a generated subclone, ignore it
+            if sc_sa >= len(self.patient.sample_names):
+                logger.info('Multiple subclones within the same sample are needed to explain '
+                            'the evolutionary incompatibility. Continue search.')
+                continue
 
             # create new subclones if there is enough evidence
             created_scss = dict()

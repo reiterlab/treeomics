@@ -466,24 +466,24 @@ def _create_mp_nodes_files(mp_nodes_filename, mp_mutnode_data_filename, phylogen
 
             # show only a maximal number of mutation pattern
             if node_idx > max_no_mps:
-                mp_nodes_file.write(('<{:.2f}'.format(mp_weights[node]) if mp_weights[node] < 10
-                                     else '<{:.1f} '.format(mp_weights[node]) if mp_weights[node] < 100
-                                     else '<{:.0f} '.format(mp_weights[node]))+' 0 1 grey\n')
+                mp_nodes_file.write(('<{:.3f}'.format(mp_weights[node]) if mp_weights[node] < 0.05
+                                     else '<{:.2f} '.format(mp_weights[node]) if mp_weights[node] < 0.2
+                                     else '<{:.1f} '.format(mp_weights[node]))+' 0 1 grey\n')
                 del mp_nodes[node]
                 break
             # show only the nodes with a minimum reliability score
             elif mp_weights[node] < min_node_weight:
-                mp_nodes_file.write(('<{:.2f}'.format(min_node_weight) if mp_weights[node] < 10
-                                     else '<{:.1f} '.format(mp_weights[node]) if mp_weights[node] < 100
-                                     else '<{:.0f} '.format(mp_weights[node]))+' 0 1 grey\n')
+                mp_nodes_file.write(('<{:.3f}'.format(min_node_weight) if mp_weights[node] < 0.05
+                                     else '<{:.2f} '.format(mp_weights[node]) if mp_weights[node] < 0.2
+                                     else '<{:.1f} '.format(mp_weights[node]))+' 0 1 grey\n')
                 del mp_nodes[node]
                 break
 
             # write mutation pattern reliability score (weight) to file
             # mp_nodes_file.write('{}-{:.2f} '.format(len(phylogeny.nodes[node]), mp_weights[node]))
-            mp_nodes_file.write('{:.2f} '.format(mp_weights[node]) if mp_weights[node] < 10
-                                else '{:.1f} '.format(mp_weights[node]) if mp_weights[node] < 100
-                                else '{:.0f} '.format(mp_weights[node]))
+            mp_nodes_file.write('{:.3f} '.format(mp_weights[node]) if mp_weights[node] < 0.05
+                                else '{:.2f} '.format(mp_weights[node]) if mp_weights[node] < 0.2
+                                else '{:.1f} '.format(mp_weights[node]))
 
             # write start and end position of the node to the file
             # end position is given by the number of mutations present in this clone

@@ -45,7 +45,7 @@ def infer_max_compatible_tree(filepath, patient, drivers=set(), time_limit=None)
 
     # create tikz figure
     tikz.create_figure_file(simple_tree, tikz.TREE_ROOT, filepath,
-                            patient, caption, drivers=drivers, standalone=True)
+                            patient, phylogeny, caption, drivers=drivers, standalone=True)
     # add information about the ignored mutations and the position of the acquired mutations
     latex.add_branch_mut_info(filepath, phylogeny, simple_tree)
 
@@ -73,7 +73,8 @@ def infer_max_compatible_tree(filepath, patient, drivers=set(), time_limit=None)
 
 
 def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepath=None, subclone_detection=False,
-                       drivers=set(), max_no_mps=None, time_limit=None, plots=True, no_bootstrap_samples=0):
+                       loh_frequency=0.0, drivers=set(), max_no_mps=None, time_limit=None, plots=True,
+                       no_bootstrap_samples=0):
     """
     Create an evolutionary tree based on the maximum likelihood mutation patterns of each variant
     :param patient: data structure around the patient
@@ -81,6 +82,7 @@ def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepat
     :param mm_filepath: path to mutation matrix output file
     :param mp_filepath: path to mutation pattern output file
     :param subclone_detection: is subclone detection enabled?
+    :param loh_frequency: probability that a SNV along a lineage is lost due loss of heterozygosity
     :param drivers: set of putative driver gene names highlighted on each edge
     :param max_no_mps: only the given maximal number of most likely (by joint likelihood) mutation patterns
             is explored per variant; limits the solution space
@@ -90,7 +92,7 @@ def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepat
     :return: evolutionary tree as graph
     """
 
-    mlh_pg = MaxLHPhylogeny(patient, patient.mps)
+    mlh_pg = MaxLHPhylogeny(patient, patient.mps, loh_frequency=loh_frequency)
 
     mlh_tree = mlh_pg.infer_max_lh_tree(subclone_detection=subclone_detection, max_no_mps=max_no_mps,
                                         time_limit=time_limit, no_bootstrap_samples=no_bootstrap_samples)
@@ -127,7 +129,7 @@ def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepat
 
         if plots and tree_filepath is not None:
             tikz_tree = tikz.create_figure_file(
-                mlh_tree, tikz.TREE_ROOT, tree_filepath, patient, caption, drivers=drivers,
+                mlh_tree, tikz.TREE_ROOT, tree_filepath, patient, mlh_pg, caption, drivers=drivers,
                 germline_distance=10.0*max(1.0, len(mlh_pg.mlh_founders)/median_no_muts), standalone=True)
             # add information about the ignored mutations and the position of the acquired mutations
             latex.add_branch_mut_info(tree_filepath, mlh_pg, mlh_tree)

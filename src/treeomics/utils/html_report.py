@@ -281,11 +281,12 @@ class HTMLReport(object):
         self.file.flush()
         os.fsync(self.file.fileno())
 
-    def add_conflict_graph(self, patient, mp_graph_name):
+    def add_conflict_graph(self, patient, mp_graph_name, phylogeny=None):
         """
         Add evolutionary conflict plot graph to the HTML report
         :param patient: instance of class patient
         :param mp_graph_name: path to the evolutionary conflict graph plot file
+        :param phylogeny:
         """
 
         self.file.write(self._inds[self._ind]+'<h4>Evolutionary conflict graph</h4>\n')
@@ -311,10 +312,12 @@ class HTMLReport(object):
                         + ', '.join(sa_name.replace('_', ' ') for sa_name in patient.sample_names)
                         + '. Marks on these lines denote present variants. \n')
         self.file.write(
-            self._inds[self._ind]+'Labels denote the MP reliability scores. '
-            + 'Only nodes with the highest reliability score are depicted. '
-            + 'Blue colored nodes (MPs) are evolutionarily compatible '
-            + 'and red colored nodes are evolutionarily incompatible indicated by edges among the nodes.\n')
+            self._inds[self._ind]+'Labels denote the MP reliability scores. ' +
+            'Only nodes with the highest reliability score are depicted. ' +
+            'Blue colored nodes (MPs) are evolutionarily compatible ' +
+            'and red colored nodes are evolutionarily incompatible indicated by edges among the nodes.' +
+            '{}.\n'.format(' Minimum reliability score value to be considered as a potential subclone: {:.3f}'.format(
+                phylogeny.min_score)) if phylogeny is not None else '')
 
         self.file.write(self._inds[self._ind]+'</figcaption>\n')
         self.file.write(self._inds[self._ind]+'</div>\n')
@@ -562,11 +565,14 @@ class HTMLReport(object):
                 self._ind -= 1      # indentation level decreases by 1
                 self.file.write(self._inds[self._ind]+'</p>\n')
 
-    def end_report(self, e, c0, fpr, fdr, min_absent_cov, min_median_cov, min_median_maf):
+    def end_report(self, e, c0, max_absent_vaf, loh_frequency, fpr, fdr,
+                   min_absent_cov, min_median_cov, min_median_maf):
         """
         Add used parameter values, HTML file footer, and close the file
         :param e: sequencing error rate for bayesian inference
         :param c0: prior mixture parameter of delta function and uniform distribution for bayesian inference
+        :param max_absent_vaf: maximal absent VAF before considering estimated purity
+        :param loh_frequency: probability that a SNV along a lineage is lost due loss of heterozygosity
         :param fpr: false-positive rate
         :param fdr: false-discovery rate
         :param min_absent_cov: Minimum coverage for a variant to be called absent
@@ -580,6 +586,8 @@ class HTMLReport(object):
             self.file.write(
                 self._inds[self._ind] + ' sequencing error rate e: {}, '.format(e)
                 + 'prior absent probability c0: {}, '.format(c0)
+                + 'max absent VAF: {}, '.format(max_absent_vaf)
+                + 'LOH frequency: {}, '.format(loh_frequency)
                 + 'false discovery rate: {}, '.format(fdr)
                 + 'false-positive rate: {}. '.format(fpr)
                 + ('Absent classification minimum coverage: {}. '.format(min_absent_cov) if min_absent_cov > 0 else '')

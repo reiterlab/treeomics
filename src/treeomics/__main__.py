@@ -135,7 +135,7 @@ def get_driver_list(cgc_path):
 
 def get_output_fn_template(name, total_no_samples, subclone_detection=False, fpr=None, fdr=None,
                            min_absent_coverage=None, min_sa_coverage=None, min_sa_vaf=None,
-                           bi_e=None, bi_c0=None, no_boot=None, mode=None, max_no_mps=None):
+                           bi_e=None, bi_c0=None, max_absent_vaf=None, no_boot=None, mode=None, max_no_mps=None):
     """
     Generate common name template for output files
     :param name: subject name or id
@@ -148,6 +148,7 @@ def get_output_fn_template(name, total_no_samples, subclone_detection=False, fpr
     :param min_sa_vaf: minimum median variant allele frequency per sample
     :param bi_e: sequencing error for bayesian inference
     :param bi_c0: prior mixture parameter of delta function and uniform distribution for bayesian inference
+    :param max_absent_vaf: maximal absent VAF before considering estimated purity
     :param no_boot: number of bootstrapping samples
     :param mode: mode of Treeomics
     :param max_no_mps: maximal number of considered most likely distinct mutation patterns per variant
@@ -164,6 +165,7 @@ def get_output_fn_template(name, total_no_samples, subclone_detection=False, fpr
                 settings.MIN_VAR_READS > 0 else '') +
                ('_e={}'.format(bi_e) if bi_e is not None else '') +
                ('_c0={}'.format(bi_c0) if bi_c0 is not None else '') +
+               ('_af={}'.format(max_absent_vaf) if max_absent_vaf is not None else '') +
                ('_mps={}'.format(max_no_mps) if max_no_mps is not None else '') +
                ('_b={}'.format(no_boot) if no_boot is not None and no_boot > 0 else '') +
                ('_s' if mode is not None and mode == 2 else ''))
@@ -197,7 +199,7 @@ def main():
                         type=int, default=1)
 
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("-a", "--csv_file", help="path to the CSV file", type=str)
+    group.add_argument("--csv_file", help="path to the CSV file", type=str)
     group.add_argument("-v", "--vcf_file", help="path to the VCF file", type=str)
     group.add_argument("-d", "--directory", help="directory with multiple VCF files", type=str)
 
@@ -214,6 +216,8 @@ def main():
                         type=float, default=settings.BI_E)
     parser.add_argument("-z", "--prob_zero", help="prior probability of being absent",
                         type=float, default=settings.BI_C0)
+    parser.add_argument("-a", "--max_absent_vaf", help="maximal absent vaf before considering purity",
+                        type=float, default=settings.MAX_ABSENT_VAF)
 
     parser.add_argument("-c", "--min_median_coverage",
                         help="minimum median coverage of a sample",
@@ -263,6 +267,11 @@ def main():
         fh.setLevel(logging.INFO)
         ch.setLevel(logging.INFO)
 
+    if args.subclone_detection:
+        logger.info('Subclone detection is enabled.')
+    else:
+        logger.info('Subclone detection is disabled.')
+
     if args.plots:
         logger.info('Plot generation is enabled.')
     else:
@@ -300,6 +309,9 @@ def main():
         logger.info('Solution space is limited to the {} most likely mutation patterns per variant.'.format(
             args.max_no_mps))
 
+    if args.max_absent_vaf < args.error_rate:
+        raise AttributeError('The maximal absent VAF has to be larger than the error rate in the Bayesian model!')
+
     fpr = args.false_positive_rate
     logger.info('False positive rate for the statistical test: {}.'.format(fpr))
     fdr = args.false_discovery_rate
@@ -324,7 +336,8 @@ def main():
         if patient_name.find('_') != -1:
             patient_name = patient_name[:patient_name.find('_')]
         logger.debug('Patient name: {}'.format(patient_name))
-        patient = Patient(patient_name, min_absent_cov=min_absent_cov, error_rate=args.error_rate, c0=args.prob_zero)
+        patient = Patient(error_rate=args.error_rate, c0=args.prob_zero, max_absent_vaf=args.max_absent_vaf,
+                          pat_name=patient_name, min_absent_cov=min_absent_cov)
         read_no_samples = patient.process_raw_data(
             fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf, var_table=args.mut_reads,
             cov_table=args.coverage, normal_sample=normal_sample_name)
@@ -335,7 +348,8 @@ def main():
         if patient_name.find('_') != -1:
             patient_name = patient_name[:patient_name.find('_')]
         logger.debug('Patient name: {}'.format(patient_name))
-        patient = Patient(patient_name, min_absent_cov=min_absent_cov, error_rate=args.error_rate, c0=args.prob_zero)
+        patient = Patient(error_rate=args.error_rate, c0=args.prob_zero, max_absent_vaf=args.max_absent_vaf,
+                          pat_name=patient_name, min_absent_cov=min_absent_cov)
         read_no_samples = patient.process_raw_data(
             fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf, csv_file=args.csv_file,
             normal_sample=normal_sample_name)
@@ -347,7 +361,10 @@ def main():
             usage()
 
         patient_name = get_patients_name(vcf_file)
-        patient = Patient(patient_name, error_rate=args.error_rate, c0=args.prob_zero)
+        if patient_name.find('_') != -1:
+            patient_name = patient_name[:patient_name.find('_')]
+        patient = Patient(error_rate=args.error_rate, c0=args.prob_zero, max_absent_vaf=args.max_absent_vaf,
+                          pat_name=patient_name)
         read_no_samples = patient.read_vcf_file(vcf_file, fpr, fdr, min_sa_cov=args.min_median_coverage,
                                                 min_sa_maf=args.min_median_vaf, min_absent_cov=args.min_absent_coverage,
                                                 normal_sample_name=normal_sample_name)
@@ -362,7 +379,8 @@ def main():
 
         patient_name = get_patients_name(
             vcf_directory[:-1] if vcf_directory.endswith('/') else vcf_directory)
-        patient = Patient(patient_name, error_rate=args.error_rate, c0=args.prob_zero)
+        patient = Patient(error_rate=args.error_rate, c0=args.prob_zero, max_absent_vaf=args.max_absent_vaf,
+                          pat_name=patient_name)
         read_no_samples = patient.read_vcf_directory(vcf_directory, args.min_median_coverage, args.min_median_vaf,
                                                      fpr, fdr, min_absent_cov, normal_sample_name)
 
@@ -402,14 +420,15 @@ def main():
     # create output filename pattern
     fn_pattern = get_output_fn_template(patient.name, read_no_samples, fpr=fpr, fdr=fdr, mode=args.mode,
                                         min_absent_coverage=min_absent_cov, min_sa_coverage=args.min_median_coverage,
-                                        min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0)
+                                        min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0,
+                                        max_absent_vaf=patient.max_absent_vaf)
 
     # do basic analysis on provided input data
-    patient.analyze_data(post_table_filepath=os.path.join(
-        output_directory, get_output_fn_template(patient.name, read_no_samples,
-                                                 min_sa_coverage=args.min_median_coverage,
-                                                 min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate,
-                                                 bi_c0=patient.bi_c0)+'_posterior.txt'))
+    patient.analyze_data(post_table_filepath=os.path.join(output_directory,
+                         get_output_fn_template(patient.name, read_no_samples, min_sa_coverage=args.min_median_coverage,
+                                                min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate,
+                                                bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf) +
+                                                '_posterior.txt'))
 
     if plots_report:   # deactivate plot generation for debugging and benchmarking
 
@@ -422,9 +441,10 @@ def main():
 
         if len(col_labels) < def_sets.MAX_MUTS_TABLE_PLOT and plots_report:
             mut_table_name = \
-                ('bayesian_data_table_' + get_output_fn_template(
+                (get_output_fn_template(
                     patient.name, read_no_samples, min_sa_coverage=args.min_median_coverage,
-                    min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0))
+                    min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0,
+                    max_absent_vaf=patient.max_absent_vaf)+'_bayesian_data_table')
 
             plts.bayesian_hinton(patient.log_p01, output_directory, mut_table_name,
                                  row_labels=patient.sample_names, column_labels=col_labels,
@@ -438,25 +458,26 @@ def main():
 
     if plots_paper:     # deactivate plot generation for regular analysis
         # generate violin coverage distribution plot
-        plts.coverage_plot(os.path.join(output_directory, 'coverage_distr_'+patient.name+'.pdf'), patient)
+        plts.coverage_plot(os.path.join(output_directory, patient.name+'_coverage_distr.pdf'), patient)
 
         # generate box plots with MAFs per sample
         # plts.boxplot(os.path.join(output_directory, 'fig_mafs_'+patient.name+'.pdf'), patient)
         # generate violin VAF distribution plot
-        plts.vaf_distribution_plot(os.path.join(output_directory, 'vaf_distr_'+patient.name+'.pdf'), patient)
+        plts.vaf_distribution_plot(os.path.join(output_directory, patient.name+'_vaf_distr.pdf'), patient)
 
     # create raw data analysis file
-    analysis.create_data_analysis_file(patient, os.path.join(output_directory, 'data_'+fn_pattern+'.txt'))
+    analysis.create_data_analysis_file(patient, os.path.join(output_directory, fn_pattern+'_data.txt'))
     # utils.analysis.print_genetic_distance_table(patient)
 
     # create output filename pattern
     fn_pattern = get_output_fn_template(patient.name, read_no_samples, fpr=fpr, fdr=fdr, mode=args.mode,
                                         min_absent_coverage=min_absent_cov, min_sa_coverage=args.min_median_coverage,
                                         min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate,
-                                        bi_c0=patient.bi_c0, max_no_mps=args.max_no_mps)
+                                        bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf,
+                                        max_no_mps=args.max_no_mps)
 
     # create HTML analysis report
-    html_report = HTMLReport(os.path.join(output_directory, 'report_'+fn_pattern+'.html'), patient_name)
+    html_report = HTMLReport(os.path.join(output_directory, fn_pattern+'_report.html'), patient_name)
     html_report.start_report()
     html_report.add_sequencing_information(
         patient, mut_table_path=mut_table_name+'.png' if mut_table_name is not None else None)
@@ -478,18 +499,20 @@ def main():
             fn_tree = get_output_fn_template(
                 patient.name, read_no_samples, subclone_detection=args.subclone_detection,
                 min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf, no_boot=args.boot,
-                max_no_mps=args.max_no_mps, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, mode=args.mode)
+                max_no_mps=args.max_no_mps, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0,
+                max_absent_vaf=patient.max_absent_vaf, mode=args.mode)
             fn_matrix = get_output_fn_template(
                 patient.name, read_no_samples, subclone_detection=args.subclone_detection,
                 min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf, max_no_mps=args.max_no_mps,
-                bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, mode=args.mode)
+                bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf, mode=args.mode)
             # determine mutation patterns based on standard binary classification to generate an overview graph
             phylogeny = ti.create_max_lh_tree(
                 patient, tree_filepath=os.path.join(output_directory, fn_tree+'_mlhtree.tex'),
                 mm_filepath=os.path.join(output_directory, fn_matrix+'_treeomics_mm.csv'),
                 mp_filepath=os.path.join(output_directory, fn_matrix+'_treeomics_mps.tsv'),
-                subclone_detection=args.subclone_detection, drivers=subject_drivers, no_bootstrap_samples=args.boot,
-                max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=plots_report)
+                subclone_detection=args.subclone_detection, loh_frequency=settings.LOH_FREQUENCY,
+                drivers=subject_drivers, no_bootstrap_samples=args.boot, max_no_mps=args.max_no_mps,
+                time_limit=args.time_limit, plots=plots_report)
 
             # previously used for benchmarking
             # if plots_paper:     # generate Java Script D3 trees
@@ -504,13 +527,14 @@ def main():
                 # (convenient for large numbers of variants)
                 fn_mp_plot = get_output_fn_template(
                     patient.name, read_no_samples, min_sa_coverage=args.min_median_coverage, max_no_mps=args.max_no_mps,
-                    min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, mode=args.mode)
+                    min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0,
+                    max_absent_vaf=patient.max_absent_vaf, mode=args.mode)
 
                 if args.subclone_detection:
                     pg = ti.create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepath=None,
-                                               subclone_detection=False, drivers=subject_drivers,
-                                               no_bootstrap_samples=0, max_no_mps=args.max_no_mps,
-                                               time_limit=args.time_limit, plots=False)
+                                               subclone_detection=False, loh_frequency=settings.LOH_FREQUENCY,
+                                               drivers=subject_drivers, no_bootstrap_samples=0,
+                                               max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=False)
                 else:
                     pg = phylogeny
 
@@ -520,7 +544,7 @@ def main():
                     circos_max_no_mps=settings.CIRCOS_MAX_NO_MPS)
 
                 if mp_graph_name is not None:
-                    html_report.add_conflict_graph(patient, mp_graph_name)
+                    html_report.add_conflict_graph(patient, mp_graph_name, phylogeny=pg)
 
                 # create plot only if there is enough space for all the incompatible mutations
                 if (0 < len(phylogeny.false_positives) + len(phylogeny.false_negatives) +
@@ -528,12 +552,12 @@ def main():
 
                     # illustrative mutation table plot of incompatible mutation patterns and their putative artifacts
                     x_length, y_length = plts.create_incompatible_mp_table(
-                        patient, os.path.join(output_directory, settings.artifacts_plot_prefix+fn_pattern),
+                        patient, os.path.join(output_directory, fn_pattern+settings.artifacts_plot_suffix),
                         phylogeny, row_labels=patient.sample_names, column_labels=col_labels)
                     if x_length > 0 and y_length > 0:
                         # add information about putative false-positives and false-negatives to the HTML report
                         html_report.add_artifacts_information(
-                            phylogeny, artifacts_plot_filepath=settings.artifacts_plot_prefix+fn_pattern+'.png',
+                            phylogeny, artifacts_plot_filepath=fn_pattern+settings.artifacts_plot_suffix+'.png',
                             plot_width=x_length*7)
                 else:
                     html_report.add_artifacts_information(phylogeny)
@@ -541,7 +565,7 @@ def main():
         # find evolutionary incompatible mutation patterns based on standard binary classification
         elif args.mode == 2:
 
-            phylogeny = ti.infer_max_compatible_tree(os.path.join(output_directory, 'btree_'+fn_pattern+'.tex'),
+            phylogeny = ti.infer_max_compatible_tree(os.path.join(output_directory, fn_pattern+'_btree.tex'),
                                                      patient, drivers=subject_drivers)
 
             if plots_report:
@@ -560,13 +584,13 @@ def main():
                 if len(phylogeny.conflicting_mutations) < def_sets.MAX_MUTS_TABLE_PLOT:
                     # illustrative mutation table plot of incompatible mutation patterns
                     x_length, y_length = plts.create_incompatible_mp_table(
-                        patient, os.path.join(output_directory, settings.incomp_mps_plot_prefix+fn_pattern),
+                        patient, os.path.join(output_directory, fn_pattern+settings.incomp_mps_plot_suffix),
                         phylogeny, row_labels=patient.sample_names, column_labels=col_labels)
 
                     if x_length > 0 and y_length > 0:
                         # add information about evolutionarily incompatible mutation patterns to the HTML report
                         html_report.add_inc_mp_information(
-                            phylogeny, incomp_mps_plot_filepath=settings.incomp_mps_plot_prefix+fn_pattern+'.png',
+                            phylogeny, incomp_mps_plot_filepath=fn_pattern+settings.incomp_mps_plot_suffix + '.png',
                             plot_width=x_length*7)
                 else:
                     # too many evolutionarily incompatible mutation to create mutation table plot
@@ -575,10 +599,10 @@ def main():
 
         # generate analysis file to provide an overview about the derived results
         analysis.create_analysis_file(patient, args.min_median_coverage,
-                                      os.path.join(output_directory, 'analysis_'+fn_pattern+'.txt'), phylogeny)
+                                      os.path.join(output_directory, fn_pattern+'_analysis.txt'), phylogeny)
 
         # create input data file for circos conflict graph plots
-        if plots_paper:
+        if plots_report:
             circos.create_raw_data_file(os.path.join(output_directory, 'fig_data_'+fn_pattern+'_mutdata.txt'),
                                         patient.mutations, patient.mut_positions, data=patient.data,
                                         sample_names=patient.sample_names)
@@ -621,8 +645,8 @@ def main():
         raise RuntimeError("No mode was provided (e.g. -m 1) to infer the phylogenetic tree.")
 
     # finalize HTML report
-    html_report.end_report(patient.bi_error_rate, patient.bi_c0, fpr, fdr,
-                           min_absent_cov, args.min_median_coverage, args.min_median_vaf)
+    html_report.end_report(patient.bi_error_rate, patient.bi_c0, patient.max_absent_vaf, settings.LOH_FREQUENCY,
+                           fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf)
     logger.info('Treeomics finished evolutionary analysis.')
 
 if __name__ == '__main__':

@@ -1,11 +1,11 @@
 #!/usr/bin/python
 """Helper functions to generate latex source code for a tikz tree plot"""
-__author__ = 'jreiter'
-
 import logging
 import itertools
 import numpy as np
 from phylogeny.phylogeny_utils import TREE_ROOT
+__author__ = 'jreiter'
+
 
 # get logger for application
 logger = logging.getLogger('treeomics')
@@ -42,7 +42,8 @@ def write_tikz_header(latex_file, germline_distance=2.0, standalone=False):
     latex_file.write('\\tikzset{edge from parent/.append style={->,line width=1.2,'
                      + 'shorten >=2.5pt,shorten <=2.5pt}}\n')
     latex_file.write('% Define styles for leafs\n')
-    latex_file.write('\\tikzset{every leaf node/.style={draw,text width=1.09cm,inner sep=2pt,align=center}}\n\n')
+    latex_file.write('\\tikzset{every leaf node/.style={draw,text width=1.09cm,inner sep=2pt,'
+                     'minimum height=0.4cm,align=center}}\n\n')
 
     if not standalone:
         latex_file.write('\\begin{flushright}\n')

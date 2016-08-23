@@ -29,7 +29,7 @@ class Patient(object):
     """ Patient: sample data processing
     """
 
-    def __init__(self, pat_name='Patient', min_absent_cov=0, error_rate=0.01, c0=0.5):
+    def __init__(self, error_rate, c0, max_absent_vaf, pat_name='Patient', min_absent_cov=0):
         """
         Constructor
         """
@@ -48,9 +48,10 @@ class Patient(object):
         self.log_p01 = defaultdict(list)
         self.bi_error_rate = error_rate     # sequencing error rate for bayesian inference
         self.bi_c0 = c0    # prior mixture parameter of delta function and uniform distribution for bayesian inference
+        self.max_absent_vaf = max_absent_vaf  # maximal absent VAF before considering estimated purity
         self.betas = None
-        logger.info('Bayesian inference model uses an error rate of {} and p0 prior weight of {}.'.format(
-            self.bi_error_rate, self.bi_c0))
+        logger.info('Bayesian inference model: error rate e {}, prior weight c0 {}, max absent vaf {}.'.format(
+            self.bi_error_rate, self.bi_c0, self.max_absent_vaf))
 
         # raw sequencing data of the variants
         self.mut_reads = None
@@ -158,18 +159,18 @@ class Patient(object):
         low_vaf_artifacts = 0
         for mut_key in list(self.mut_reads.keys()):
 
-            # check if variant is present in the normal sample
-            if normal_sample is not None:
-                if norm_var[mut_key] >= 3 and float(norm_var[mut_key]) / norm_cov[mut_key] > 0.02:
-                    logger.debug('Excluded variant {} ({}) present at a VAF of {:.1%} ({}/{}) in the normal sample.'
-                                 .format(gene_names[mut_key], mut_key, float(norm_var[mut_key]) / norm_cov[mut_key],
-                                         norm_var[mut_key], norm_cov[mut_key]))
-                    putative_sequencing_artifacts += 1
-                    # exclude these variants
-                    del self.mut_reads[mut_key]
-                    del self.coverage[mut_key]
-                    del gene_names[mut_key]
-                    continue
+            # # check if variant is present in the normal sample
+            # if normal_sample is not None:
+            #     if norm_var[mut_key] >= 3 and float(norm_var[mut_key]) / norm_cov[mut_key] > 0.02:
+            #         logger.debug('Excluded variant {} ({}) present at a VAF of {:.1%} ({}/{}) in the normal sample.'
+            #                      .format(gene_names[mut_key], mut_key, float(norm_var[mut_key]) / norm_cov[mut_key],
+            #                              norm_var[mut_key], norm_cov[mut_key]))
+            #         putative_sequencing_artifacts += 1
+            #         # exclude these variants
+            #         del self.mut_reads[mut_key]
+            #         del self.coverage[mut_key]
+            #         del gene_names[mut_key]
+            #         continue
 
             # check for minimum VAF in at least on of the samples
             if all(float(self.mut_reads[mut_key][sample_name]) / self.coverage[mut_key][sample_name] <
@@ -284,15 +285,18 @@ class Patient(object):
                 if self.coverage[mut_key][sample_name] > 0:
                     self.vafs[len(self.mut_keys)-1, sa_id] = (float(self.mut_reads[mut_key][sample_name]) /
                                                               self.coverage[mut_key][sample_name])
+                else:
+                    self.vafs[len(self.mut_keys) - 1, sa_id] = 0.0
 
                 # calculate posterior: log probability that VAF = 0
                 if self.coverage[mut_key][sample_name] < 0:   # no sequencing data in this sample
                     self.log_p01[len(self.mut_keys)-1].append([non_log_p0, non_log_p1])
 
-                else:                                               # calculate posterior according to prior and data
+                else:                          # calculate posterior according to prior, estimated purity and data
+
                     # calculate posterior: log probability that VAF = 0, log probability that VAF > 0
                     p0, p1 = get_log_p0(self.coverage[mut_key][sample_name], self.mut_reads[mut_key][sample_name],
-                                        self.bi_error_rate, self.bi_c0,
+                                        self.bi_error_rate, self.bi_c0, cutoff_f=self.get_cutoff_frequency(sample_name),
                                         pseudo_alpha=def_sets.PSEUDO_ALPHA, pseudo_beta=self.betas[sample_name])
                     self.log_p01[len(self.mut_keys)-1].append([p0, p1])
                 # logger.debug('p0: {;.2e}, k: {}, n: {}.'.format(
@@ -331,8 +335,8 @@ class Patient(object):
                         self.unknowns[1][sample_name] += 1
 
         for sample_name in self.sample_names:
-            logger.debug('Sample {} conventional classifications: '.format(sample_name)
-                         + '{} positives; {} negatives; {} unknowns;'.format(
+            logger.debug('Sample {} conventional classifications: '.format(sample_name) +
+                         '{} positives; {} negatives; {} unknowns;'.format(
                          self.positives[sample_name], self.negatives[sample_name],
                          self.unknowns[0][sample_name]+self.unknowns[1][sample_name]))
 
@@ -386,11 +390,11 @@ class Patient(object):
 
                     # check if the columns with needed information were found
                     if col_function == -1:
-                        logger.info('Data file {} does not contain information '.format(maf_filename)
-                                    + 'about the function of the mutated region. ')
+                        logger.info('Data file {} does not contain information '.format(maf_filename) +
+                                    'about the function of the mutated region. ')
                     if col_chr == -1 or col_start_pos == -1 or col_end_pos == -1:
-                        logger.info('Data file {} does not contain information '.format(maf_filename)
-                                    + 'about the exact mutation position on the chromosome. ')
+                        logger.info('Data file {} does not contain information '.format(maf_filename) +
+                                    'about the exact mutation position on the chromosome. ')
 
                 # ignore line
                 elif line.startswith("#") or line == '\n':
@@ -602,20 +606,30 @@ class Patient(object):
         # based on an estimated purity of shared mutations
         self._calculate_hyperparameters()
 
+        self.vafs = np.zeros((len(self.mut_keys), len(self.sample_names)))
+
         # ##################################################################################
         # - - - - - - - - CLASSIFY MUTATIONS with BAYESION INFERENCE MODEL - - - - - - - - -
         # ##################################################################################
         for mut_id, mut_key in enumerate(self.mut_keys):
 
-            for sample_name in self.sample_names:
+            for sa_id, sample_name in enumerate(self.sample_names):
+
+                # add VAF
+                if self.coverage[mut_key][sample_name] > 0:
+                    self.vafs[mut_id, sa_id] = (float(self.mut_reads[mut_key][sample_name]) /
+                                                self.coverage[mut_key][sample_name])
+                else:
+                    self.vafs[mut_id, sa_id] = 0.0
 
                 # calculate posterior: log probability that VAF = 0
                 if self.coverage[mut_key][sample_name] < 0:   # no sequencing data in this sample
                     self.log_p01[mut_id].append([non_log_p0, non_log_p1])
 
-                else:                                               # calculate posterior according to prior and data
+                else:                        # calculate posterior according to prior, estimated purity and data
+
                     p0, p1 = get_log_p0(self.coverage[mut_key][sample_name], self.mut_reads[mut_key][sample_name],
-                                        self.bi_error_rate, self.bi_c0,
+                                        self.bi_error_rate, self.bi_c0, cutoff_f=self.get_cutoff_frequency(sample_name),
                                         pseudo_alpha=def_sets.PSEUDO_ALPHA, pseudo_beta=self.betas[sample_name])
                     self.log_p01[mut_id].append([p0, p1])
 
@@ -654,14 +668,14 @@ class Patient(object):
                         self.unknowns[1][sample_name] += 1
 
         for sample_name in self.sample_names:
-            logger.info('Sample {} classifications: '.format(sample_name)
-                        + '{} positives; {} negatives; {} unknowns;'.format(
+            logger.info('Sample {} classifications: '.format(sample_name) +
+                        '{} positives; {} negatives; {} unknowns;'.format(
                         self.positives[sample_name], self.negatives[sample_name],
                         self.unknowns[0][sample_name]+self.unknowns[1][sample_name]))
 
         for sample_name in self.sample_names:
-            logger.debug('Sample {} classifications: '.format(sample_name)
-                         + '{} positives; {} negatives; {} positive unknowns, {} negative unknowns;'.format(
+            logger.debug('Sample {} classifications: '.format(sample_name) +
+                         '{} positives; {} negatives; {} positive unknowns, {} negative unknowns;'.format(
                          self.positives[sample_name], self.negatives[sample_name],
                          self.unknowns[0][sample_name], self.unknowns[1][sample_name]))
 
@@ -725,8 +739,8 @@ class Patient(object):
                 self.coverage[mut_key][sample_name] = -1   # -1 = unknown which is different from 0
 
         # check for minimum VAF in at least on of the samples
-        if all(float(self.mut_reads[mut_key][sample_name]) / self.coverage[mut_key][sample_name]
-               < settings.MIN_VAF for sample_name in self.mut_reads[mut_key].keys()
+        if all(float(self.mut_reads[mut_key][sample_name]) / self.coverage[mut_key][sample_name] <
+                settings.MIN_VAF for sample_name in self.mut_reads[mut_key].keys()
                if self.mut_reads[mut_key][sample_name] >= max(1, settings.MIN_VAR_READS)):
 
             # exclude these variants
@@ -734,6 +748,7 @@ class Patient(object):
             del self.coverage[mut_key]
             del self.mut_keys[-1]
             del self.mut_positions[-1]
+
         else:
             logger.debug('Variant {}{} did not pass filtering.'.format(
                 mut_key, ' ({})'.format(self.gene_names[mut_key]) if self.gene_names is not None else ''))
@@ -892,8 +907,8 @@ class Patient(object):
             # discard a sample if its median MAF is lower than the threshold
             elif np.median(self.sample_mafs[sample_name]) < min_sa_maf:
 
-                logger.warn('Sample {} is discarded!'.format(sample_name)
-                            + ' Median mutant allele frequency (MAF) of {:.3f} is below the threshold {}.'.format(
+                logger.warn('Sample {} is discarded!'.format(sample_name) +
+                            ' Median mutant allele frequency (MAF) of {:.3f} is below the threshold {}.'.format(
                             np.median(self.sample_mafs[sample_name]), min_sa_maf))
 
                 self.sample_coverages.pop(sample_name)
@@ -914,6 +929,30 @@ class Patient(object):
 
         return discarded_samples
 
+    def get_cutoff_frequency(self, sample_name):
+        """
+        Calculate cutoff frequency (max absent frequency given an estimated purity)
+        Cutoff frequency lower bound is 1%
+        :param sample_name:
+        :return:
+        """
+
+        # what if purity estimation is not available? use mean of other samples, otherwise use 80%
+        if sample_name in self.estimated_purities.keys():
+            cutoff_f = max(self.max_absent_vaf * self.estimated_purities[sample_name], 0.01,
+                           self.bi_error_rate)
+
+        # no purity was estimated: use 80% for each
+        elif np.isnan(np.median([p for p in self.estimated_purities.values()])):
+            cutoff_f = max(self.max_absent_vaf * 0.8, 0.01, self.bi_error_rate)
+
+        # purity was estimated for some samples: use that one
+        else:
+            cutoff_f = max(self.max_absent_vaf * np.median([p for p in self.estimated_purities.values()]),
+                           0.01, self.bi_error_rate)
+
+        return cutoff_f
+
     def _calculate_hyperparameters(self):
         """
         Compute hyperparameters for the prior in the Bayesian inference model based on the estimated purities
@@ -928,11 +967,11 @@ class Patient(object):
         for sample_name in self.sample_names:
             if sample_name in self.estimated_purities:
                 self.betas[sample_name] = 1.0 / self.estimated_purities[sample_name]
-                logger.info('Beta for prior in sample {}: {:.1f}'.format(sample_name, self.betas[sample_name]))
+                logger.debug('Beta for prior in sample {}: {:.1f}'.format(sample_name, self.betas[sample_name]))
             else:
                 self.betas[sample_name] = def_sets.PSEUDO_BETA
-                logger.warn('Purity was not estimated. Use default beta for prior in sample {}: {:.1f}'.format(
-                    sample_name, self.betas[sample_name]))
+                logger.warn('Purity could not be estimated. Used default beta for prior in sample {}: {:.1f}'.format(
+                            sample_name, self.betas[sample_name]))
 
     def _estimate_purities(self):
         """
@@ -941,34 +980,52 @@ class Patient(object):
         """
 
         pres_lp = math.log(0.5)
-        clonal_vafs = defaultdict(list)
+        clonal_vafs = defaultdict(lambda: defaultdict(list))
         for mut_key in self.mut_reads.keys():
             present_samples = list()        # samples where variant is likely to be present
             for sample_name in self.mut_reads[mut_key].keys():
-                if self.mut_reads[mut_key][sample_name] > 3:
+                if self.mut_reads[mut_key][sample_name] > 2:
 
                     _, p1 = get_log_p0(self.coverage[mut_key][sample_name], self.mut_reads[mut_key][sample_name],
-                                       self.bi_error_rate, self.bi_c0, pseudo_alpha=def_sets.PSEUDO_ALPHA,
-                                       pseudo_beta=def_sets.PSEUDO_BETA)
+                                       self.bi_error_rate, self.bi_c0, cutoff_f=0.05,
+                                       pseudo_alpha=def_sets.PSEUDO_ALPHA, pseudo_beta=def_sets.PSEUDO_BETA)
 
                     if p1 > pres_lp:        # probability to be present is greater than 50%
                         present_samples.append(sample_name)
 
-            if len(present_samples) > 1:        # variant is present in multiple samples
+            if len(present_samples) >= max(2, len(self.sample_names)/3):     # variant is present in multiple samples
                 # hence, not a private mutation and therefore helpful to estimate purity
                 for sample_name in present_samples:
-                    clonal_vafs[sample_name].append(
+                    clonal_vafs[sample_name][len(present_samples)].append(
                         float(self.mut_reads[mut_key][sample_name]) / self.coverage[mut_key][sample_name])
 
         self.estimated_purities = dict()
         for sample_name in self.sample_names:
-            if sample_name in clonal_vafs:
-                self.estimated_purities[sample_name] = 2 * np.median(clonal_vafs[sample_name])
+            if sample_name in clonal_vafs.keys() and \
+                            sum(len(clonal_vafs[sample_name][k]) for k in clonal_vafs[sample_name].keys()) > 5:
+
+                shared_vafs = list()
+                for no_shared, vafs in sorted(clonal_vafs[sample_name].items(), key=lambda k: -k[0]):
+                    shared_vafs += vafs
+                    if len(shared_vafs) > max(min(10, len(self.mut_reads)*0.3), len(self.mut_reads)*0.02):
+                        break
+                self.estimated_purities[sample_name] = 2 * np.median(shared_vafs)
                 logger.info('Identified {} shared variants in sample {}. Estimated purity: {:.1%}.'.format(
-                    len(clonal_vafs[sample_name]), sample_name, self.estimated_purities[sample_name]))
+                    len(shared_vafs), sample_name, self.estimated_purities[sample_name]))
+                if self.estimated_purities[sample_name] > 0.995:
+                    logger.warn('Sample {} has unusual high estimated purity of {}.'.format(
+                        sample_name, self.estimated_purities[sample_name]))
+                    self.estimated_purities[sample_name] = 0.99
+
+            elif 0.05 < np.median(self.sample_mafs[sample_name]) < 0.5:
+                self.estimated_purities[sample_name] = 2 * np.median(self.sample_mafs[sample_name])
+                logger.warn('Insufficient shared variants in '
+                            'sample {} to reliably estimate purity. Used median VAF for estimation: {:.1%}'.format(
+                             sample_name, self.estimated_purities[sample_name]))
             else:
-                logger.warn('Only private mutations identified in sample {}. Unable to estimate purity!'.format(
-                    sample_name))
+                logger.warn('Only {} private mutations with median VAF of {:.1%} identified in sample {}. '.format(
+                    len(self.sample_mafs[sample_name]), np.median(self.sample_mafs[sample_name]),
+                    sample_name) + 'Unable to estimate purity!')
 
     def _get_present_mutations(self):
         """
@@ -995,6 +1052,9 @@ class Patient(object):
 
         self.gen_dis = [[0 for _ in range(self.n)] for _ in range(self.n)]
         self.sim_coff = [[0 for _ in range(self.n)] for _ in range(self.n)]
+        self.sim_coff_ex = [[0 for _ in range(self.n)] for _ in range(self.n)]      # excluding founders
+
+        founders = sum(1 for mut_idx in self.data.keys() if all(vaf > 0 for vaf in self.data[mut_idx]))
 
         for s1_idx in range(len(self.data[0])):
             for s2_idx in range(len(self.data[0])):
@@ -1046,6 +1106,9 @@ class Patient(object):
                 self.sim_coff[s1_idx][s2_idx] = 1.0 if no_known_variants == 0 \
                     else (float(present_agree) / no_known_variants)
 
+                self.sim_coff_ex[s1_idx][s2_idx] = 1.0 if no_known_variants - founders <= 0 \
+                    else ((float(present_agree) - founders) / (no_known_variants - founders))
+
         # Produce latex table with the genetic distance between samples
         # print('Genetic distance across the samples:')
         # print('Sample & '+' & '.join(self.sample_names[sa_idx].replace('_', ' ') for sa_idx in range(self.n))+' \\\\')
@@ -1054,9 +1117,27 @@ class Patient(object):
         #     print('{} & '.format(self.sample_names[s1_idx].replace('_', ' '))
         #           + ' & '.join('${}$'.format(self.gen_dis[s1_idx][s2_idx]) for s2_idx in range(self.n))+' \\\\')
         #
-        # print('Similarity index based on the fraction of shared mutations:')
-        # print('Sample & '+' & '.join(self.sample_names[sa_idx].replace('_', ' ') for sa_idx in range(self.n))+' \\\\')
-        # print('\\hline ')
+        # print('Similarity index based on the fraction of shared mutations (including founders):')
+        # print('Sample \t '+' \t '.join(self.sample_names[sa_idx].replace('_', ' ') for sa_idx in range(self.n))+'')
         # for s1_idx in range(self.n):
-        #     print('{} & '.format(self.sample_names[s1_idx].replace('_', ' '))
-        #           + ' & '.join('${:.2f}$'.format(self.sim_coff[s1_idx][s2_idx]) for s2_idx in range(self.n))+' \\\\')
+        #     print('{} \t '.format(self.sample_names[s1_idx].replace('_', ' ')) +
+        #           ' \t '.join('{:.2f}'.format(self.sim_coff[s1_idx][s2_idx]) for s2_idx in range(self.n))+'')
+        #
+        # print()
+        #
+        # print('Similarity index based on the fraction of shared mutations (excluding founders):')
+        # print('Sample \t '+' \t '.join(self.sample_names[sa_idx].replace('_', ' ') for sa_idx in range(self.n))+'')
+        # for s1_idx in range(self.n):
+        #     print('{} \t '.format(self.sample_names[s1_idx].replace('_', ' ')) +
+        #           ' \t '.join('{:.2f}'.format(self.sim_coff_ex[s1_idx][s2_idx]) for s2_idx in range(self.n))+'')
+        #
+        # print()
+        #
+        # # Produce table with the genetic distance between samples
+        # print('Genetic distance across the samples:')
+        # print('Sample \t '+' \t '.join(self.sample_names[sa_idx].replace('_', ' ') for sa_idx in range(self.n)))
+        # for s1_idx in range(self.n):
+        #     print('{} \t '.format(self.sample_names[s1_idx].replace('_', ' ')) +
+        #           ' \t '.join('{}'.format(self.gen_dis[s1_idx][s2_idx]) for s2_idx in range(self.n))+'')
+        #
+        # print()
