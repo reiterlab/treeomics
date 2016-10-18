@@ -749,8 +749,11 @@ class Patient(object):
             del self.mut_keys[-1]
             del self.mut_positions[-1]
 
-        else:
             logger.debug('Variant {}{} did not pass filtering.'.format(
+                mut_key, ' ({})'.format(self.gene_names[mut_key]) if self.gene_names is not None else ''))
+
+        else:
+            logger.debug('Variant {}{} passed filtering.'.format(
                 mut_key, ' ({})'.format(self.gene_names[mut_key]) if self.gene_names is not None else ''))
 
     def analyze_data(self, post_table_filepath=None):
@@ -1055,6 +1058,8 @@ class Patient(object):
         self.sim_coff_ex = [[0 for _ in range(self.n)] for _ in range(self.n)]      # excluding founders
 
         founders = sum(1 for mut_idx in self.data.keys() if all(vaf > 0 for vaf in self.data[mut_idx]))
+        likely_founders = set(mut_idx for mut_idx in self.data.keys()
+                              if all(vaf > 0 or vaf < 0 for vaf in self.data[mut_idx]))
 
         for s1_idx in range(len(self.data[0])):
             for s2_idx in range(len(self.data[0])):
@@ -1062,6 +1067,7 @@ class Patient(object):
                 disagree = 0
                 present_agree = 0
                 no_known_variants = 0
+                considered_vars = set()
 
                 for mut_idx in range(len(self.data)):
 
@@ -1069,11 +1075,13 @@ class Patient(object):
                         if self.data[mut_idx][s2_idx] == 0:     # disagree
                             no_known_variants += 1
                             disagree += 1
+                            considered_vars.add(mut_idx)
 
                         # mutation present in both
                         elif self.data[mut_idx][s2_idx] > 0:    # agree
                             no_known_variants += 1
                             present_agree += 1
+                            considered_vars.add(mut_idx)
 
                         elif self.data[mut_idx][s2_idx] == NEG_UNKNOWN:
                             # no indication of a mutation at this position but low coverage
@@ -1083,8 +1091,10 @@ class Patient(object):
                         if self.data[mut_idx][s2_idx] > 0:
                             no_known_variants += 1
                             disagree += 1
+                            considered_vars.add(mut_idx)
 
                         elif self.data[mut_idx][s2_idx] == 0:   # agree
+                            # mutation is absent in both samples and is therefore not relevant for these calculations
                             pass
 
                         elif self.data[mut_idx][s2_idx] == POS_UNKNOWN:
@@ -1106,24 +1116,18 @@ class Patient(object):
                 self.sim_coff[s1_idx][s2_idx] = 1.0 if no_known_variants == 0 \
                     else (float(present_agree) / no_known_variants)
 
-                self.sim_coff_ex[s1_idx][s2_idx] = 1.0 if no_known_variants - founders <= 0 \
-                    else ((float(present_agree) - founders) / (no_known_variants - founders))
+                # determine the number of likely founders among variants which are
+                # known with certainty in the pair of samples
+                no_founders = len(likely_founders.intersection(considered_vars))
+                self.sim_coff_ex[s1_idx][s2_idx] = 1.0 if no_known_variants - no_founders <= 0 \
+                    else ((float(present_agree) - no_founders) / (no_known_variants - no_founders))
 
-        # Produce latex table with the genetic distance between samples
-        # print('Genetic distance across the samples:')
-        # print('Sample & '+' & '.join(self.sample_names[sa_idx].replace('_', ' ') for sa_idx in range(self.n))+' \\\\')
-        # print('\\hline ')
-        # for s1_idx in range(self.n):
-        #     print('{} & '.format(self.sample_names[s1_idx].replace('_', ' '))
-        #           + ' & '.join('${}$'.format(self.gen_dis[s1_idx][s2_idx]) for s2_idx in range(self.n))+' \\\\')
-        #
+        # Produce tables with the genetic distance between samples
         # print('Similarity index based on the fraction of shared mutations (including founders):')
         # print('Sample \t '+' \t '.join(self.sample_names[sa_idx].replace('_', ' ') for sa_idx in range(self.n))+'')
         # for s1_idx in range(self.n):
         #     print('{} \t '.format(self.sample_names[s1_idx].replace('_', ' ')) +
         #           ' \t '.join('{:.2f}'.format(self.sim_coff[s1_idx][s2_idx]) for s2_idx in range(self.n))+'')
-        #
-        # print()
         #
         # print('Similarity index based on the fraction of shared mutations (excluding founders):')
         # print('Sample \t '+' \t '.join(self.sample_names[sa_idx].replace('_', ' ') for sa_idx in range(self.n))+'')
@@ -1131,13 +1135,9 @@ class Patient(object):
         #     print('{} \t '.format(self.sample_names[s1_idx].replace('_', ' ')) +
         #           ' \t '.join('{:.2f}'.format(self.sim_coff_ex[s1_idx][s2_idx]) for s2_idx in range(self.n))+'')
         #
-        # print()
-        #
         # # Produce table with the genetic distance between samples
         # print('Genetic distance across the samples:')
         # print('Sample \t '+' \t '.join(self.sample_names[sa_idx].replace('_', ' ') for sa_idx in range(self.n)))
         # for s1_idx in range(self.n):
         #     print('{} \t '.format(self.sample_names[s1_idx].replace('_', ' ')) +
         #           ' \t '.join('{}'.format(self.gen_dis[s1_idx][s2_idx]) for s2_idx in range(self.n))+'')
-        #
-        # print()

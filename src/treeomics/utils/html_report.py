@@ -163,9 +163,10 @@ class HTMLReport(object):
         #                  / len(patient.sample_names))))
 
         self.file.write(self._inds[self._ind]+"Founders (variants present in all samples): {} ({:.1%}) </br>\n".format(
-            len(patient.founders), float(len(patient.founders))/len(patient.present_mutations)))
-        self.file.write(self._inds[self._ind]
-                        + 'Mean number of unique (private) variants per sample: {:.1f} ({:.1%}) </br>\n'
+            len(patient.founders), float(len(patient.founders))/len(patient.present_mutations) if
+            len(patient.present_mutations) > 0 else float('nan')))
+        self.file.write(self._inds[self._ind] +
+                        'Mean number of unique (private) variants per sample: {:.1f} ({:.1%}) </br>\n'
                         .format(float(len(patient.shared_muts[1])) / len(patient.sample_names),
                                 (float(len(patient.shared_muts[1])) / len(patient.sample_names)) /
                         (sum(len(muts) for sa_idx, muts in patient.samples.items()) / len(patient.sample_names))))

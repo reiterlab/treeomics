@@ -200,7 +200,7 @@ class MaxLHPhylogeny(Phylogeny):
                         #       self.mp_weights[mut_idx][mp_col_idx]))
 
                         # determine false positives and false negatives compared to original classification
-                        # TODO: in Treeomics 2 artifact calculation should be changed from the p-value based model
+                        # TODO: in Treeomics 2 artifact calculation should be changed to BI from the p-value based model
                         # TDO: to Bayesian inference model
                         fps = set(self.patient.mutations[mut_idx].difference(self.idx_to_mp[mp_col_idx]))
 
@@ -518,6 +518,9 @@ class MaxLHPhylogeny(Phylogeny):
             self.mp_col_ids[new_mp] = self.mp_col_ids[mp]
             del self.mp_col_ids[mp]
             updated_nodes[mp] = new_mp
+
+            # add subclone to nodes
+            self.node_scores[frozenset([sc_sa_idx])] = self.node_scores[frozenset([sc_sa])]
             logger.info('Created new subclones {}'.format(
                         ', '.join(self.patient.sc_names[sc] for sc in new_mp.difference(mp))))
 
