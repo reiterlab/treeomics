@@ -57,6 +57,7 @@ class VCFParser(object):
 
             # regex patterns for making column names in VCF files valid identifiers
             p_replace = re.compile(r'( |/)')
+            p_reseeded = re.compile(r'<')
             p_remove = re.compile(r'#')
 
             self.samples = dict()
@@ -67,7 +68,7 @@ class VCFParser(object):
                     continue
 
                 elif row[0].startswith('#CHROM'):                # process VCF header
-                    headers = [p_replace.sub('_', p_remove.sub('', e)) for e in row]
+                    headers = [p_replace.sub('_', p_remove.sub('', p_reseeded.sub('Res', e))) for e in row]
 
                     logger.debug('Header: {}'.format(headers))
                     named_row = namedtuple('variant', headers)
@@ -89,6 +90,8 @@ class VCFParser(object):
                 else:                                       # process variants
                     var = named_row(*row)
 
+                    failed_filter = False
+
                     for filter_name in var.FILTER.split(';'):
 
                         if filter_name == 'PASS':
@@ -99,54 +102,63 @@ class VCFParser(object):
                                 or filter_name == 'HARD_TO_VALIDATE':     # Variant data did not pass general filtering
                             # logger.debug('Mutation at chr {} and pos {} did not pass the filtering.'
                             #               .format(r.CHROM, r.POS))
-                            break
+                            failed_filter = True
+
                         elif filter_name == 'mf1':               # variant did not pass MuTect filtering
-                            break
+                            failed_filter = True
                         elif filter_name == 'GATKStandardFilter':               # variant did not pass GATK filtering
-                            break
+                            failed_filter = True
                         else:
                             logger.warn('Unrecognized filter value: {}'.format(filter_name))
-                            break
+                            failed_filter = True
 
-                    else:
-                        # variant passed filter and is called for all provided samples
+                    # exclude structural variants for now
+                    # TODO: include structural variants
+                    for info in var.INFO.split(','):
+                        if info == 'SVTYPE=DUP' or info == 'SVTYPE=DEL':
+                            failed_filter = True
 
-                        named_format = namedtuple('sample', var.FORMAT.split(':'))
+                    if failed_filter:
+                        # variant did not pass all filters
+                        continue
 
-                        # generate separate variant directories for each sample
-                        for sa_idx, sa in enumerate(var[9:], 9):
+                    # variant passed filter and is called for all provided samples
+                    named_format = namedtuple('sample', var.FORMAT.split(':'))
 
-                            # Standard cancer format: VCF files contains two samples named NORMAL and PRIMARY
-                            # if 'NORMAL' in headers and 'PRIMARY' in headers, NORMAL could be skipped
-                            # if headers[sa_idx] == 'NORMAL':
-                            #     continue
+                    # generate separate variant directories for each sample
+                    for sa_idx, sa in enumerate(var[9:], 9):
 
-                            try:
-                                sample = named_format(*(sa.split(':')))
+                        # Standard cancer format: VCF files contains two samples named NORMAL and PRIMARY
+                        # if 'NORMAL' in headers and 'PRIMARY' in headers, NORMAL could be skipped
+                        # if headers[sa_idx] == 'NORMAL':
+                        #     continue
 
-                                variant = generate_variant(var, sample)
+                        try:
+                            sample = named_format(*(sa.split(':')))
 
-                                # the reason for these are that multiple samples have been merged
-                                # in a single VCF file, but almost all point mutations occur only in one patient
-                                if filter_zero_maf and variant.BAF == 0:
-                                    # logger.warn('Excluded variant {} since its BAF is 0.'.format(str(variant)))
-                                    # self.variants[headers[sa_idx]][(variant.CHROM, variant.POS)] = variant
-                                    pass
-                                else:
-                                    # add variant to dictionary
-                                    # self.variants[headers[sa_idx]][(variant.CHROM, variant.POS)] = variant
-                                    self.samples[headers[sa_idx]].add_variant(variant)
+                            variant = generate_variant(var, sample)
 
-                                # logger.debug(row)
+                            # the reason for these are that multiple samples have been merged
+                            # in a single VCF file, but almost all point mutations occur only in one patient
+                            if filter_zero_maf and variant.BAF == 0:
+                                # logger.warn('Excluded variant {} since its BAF is 0.'.format(str(variant)))
+                                # self.variants[headers[sa_idx]][(variant.CHROM, variant.POS)] = variant
+                                pass
+                            else:
+                                # add variant to dictionary
+                                # self.variants[headers[sa_idx]][(variant.CHROM, variant.POS)] = variant
+                                self.samples[headers[sa_idx]].add_variant(variant)
 
-                            except TypeError:
-                                if sa == './.':
-                                    logger.debug('No data ({}) for sample {} at chr {} and pos {}'
-                                                 .format(sa, headers[sa_idx], var.CHROM, var.POS))
-                                else:
-                                    logger.warn('Could not parse data {} for sample {} at chr {} and pos {}'
-                                                .format(sa, headers[sa_idx], var.CHROM, var.POS))
-                                    logger.info('Row {}'.format(row))
+                            # logger.debug(row)
+
+                        except TypeError:
+                            if sa == './.':
+                                logger.debug('No data ({}) for sample {} at chr {} and pos {}'
+                                             .format(sa, headers[sa_idx], var.CHROM, var.POS))
+                            else:
+                                logger.warn('Could not parse data {} for sample {} at chr {} and pos {}'
+                                            .format(sa, headers[sa_idx], var.CHROM, var.POS))
+                                logger.info('Row {}'.format(row))
 
             for sample_name in headers[9:]:
                 logger.debug('{} variants were detected in sample {}.'.format(

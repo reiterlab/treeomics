@@ -1,26 +1,26 @@
 ## Treeomics: Reconstructing metastatic seeding patterns of human cancers
-Developed by: JG Reiter<sup>1,2</sup>, AP Makohon-Moore<sup>3,4</sup>, JM Gerold<sup>1</sup>, I Bozic<sup>1,5</sup>, K Chatterjee<sup>2</sup>, C Iacobuzio-Donahue<sup>3,4,6</sup>, B Vogelstein<sup>7,8</sup>, MA Nowak<sup>1,5,9</sup>.
+Developed by: JG Reiter, AP Makohon-Moore, JM Gerold, I Bozic, K Chatterjee, C Iacobuzio-Donahue, B Vogelstein, MA Nowak.
 
-<sup>1</sup> Program for Evolutionary Dynamics, Harvard University, Cambridge, MA, USA.
-<sup>2</sup> IST (Institute of Science and Technology) Austria, Klosterneuburg, Austria.
-<sup>3</sup> The David M. Rubenstein Center for Pancreatic Cancer Research, Memorial Sloan Kettering Cancer Center, New York, USA.
-<sup>4</sup> Human Oncology and Pathogenesis Program, Memorial Sloan Kettering Cancer Center, New York, USA.
-<sup>5</sup> Department of Mathematics, Harvard University, Cambridge, MA, USA.
-<sup>6</sup> Department of Pathology, Memorial Sloan Kettering Cancer Center, New York, USA.
-<sup>7</sup> The Sol Goldman Pancreatic Cancer Research Center, Johns Hopkins University School of Medicine, Baltimore, MD, USA. 
-<sup>8</sup> The Ludwig Center, Johns Hopkins University School of Medicine, Baltimore, MD, USA.
-<sup>9</sup> Department of Organismic and Evolutionary Biology, Harvard University, Cambridge, MA, USA.
  
 ========
 
 ### What is Treeomics?
 Treeomics is a computational tool to reconstruct the phylogeny of metastases with commonly available sequencing technologies.
 The tool detects putative artifacts in noisy sequencing data and infers robust evolutionary trees across a variety of evaluated scenarios.
-For more details, see our publication *Reconstructing metastatic seeding patterns of human cancers* ([http://dx.doi.org/10.1101/048157](http://dx.doi.org/10.1101/048157))
+For more details, see our publication *Reconstructing metastatic seeding patterns of human cancers* (Nature Communications, *in press*, [http://dx.doi.org/10.1038/ncomms14114](http://dx.doi.org/10.1038/ncomms14114)). 
+A preprint is available on biorxiv: ([http://dx.doi.org/10.1101/048157](http://dx.doi.org/10.1101/048157))
 
 <img align="middle" src="repository_illustration.png">
 
-#### Installation
+* <a href="#installation">Installation</a>
+* <a href="#getting">Getting started with Treeomics</a>
+* <a href="#examples">Examples</a>
+
+#### <a name="releases"> Releases
+* Treeomics 1.5.2 2016-10-18: Initial release with acceptance of the manuscript.
+* Treeomics 1.6.0 2016-12-09: Improves visualization of generated evolutionary trees by integrating ETE3. ILP solver explores a pool of the best solutions to more efficiently assess the support of the inferred branches.
+
+### <a name="installation"> Installation
 1. Open a terminal and clone the repository from GitHub with ```git clone https://github.com/johannesreiter/treeomics.git```
 2. Install required packages:
   - Install Python 3.4 ([https://www.python.org/downloads](https://www.python.org/downloads))
@@ -33,10 +33,11 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
   - Install the IBM ILOG CPLEX Optimization Studio ([http://www-01.ibm.com/support/docview.wss?uid=swg21444285](http://www-01.ibm.com/support/docview.wss?uid=swg21444285))
     and then setup the Python API ([http://www-01.ibm.com/support/knowledgecenter/SSSA5P_12.2.0/ilog.odms.cplex.help/Content/Optimization/Documentation/CPLEX/_pubskel/CPLEX20.html](http://www-01.ibm.com/support/knowledgecenter/SSSA5P_12.2.0/ilog.odms.cplex.help/Content/Optimization/Documentation/CPLEX/_pubskel/CPLEX20.html));
     An IBM Academic License to freely download CPLEX can be obtained here: [http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative](http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative)
-  - If you want evolutionary conflict graphs automatically generated, install also LaTeX/TikZ (with ```pdflatex``` in your ```PATH``` environment variable; 
-    [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html)), circos ((with ```circos``` in your ```PATH``` environment variable; [http://circos.ca/software/installation](http://circos.ca/software/installation))
+  - If you want evolutionary conflict graphs automatically generated, install circos ((with ```circos``` in your ```PATH``` environment variable; [http://circos.ca/software/installation](http://circos.ca/software/installation))
+  - For automatically generating evolutionary tree plots, install LaTeX/TikZ (with ```pdflatex``` in your ```PATH``` environment variable; 
+    [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html)) and/or ETE3 [https://github.com/etetoolkit/ete](https://github.com/etetoolkit/ete)
     
-#### Getting started with Treeomics
+### <a name="getting"> Getting started with Treeomics
 1. Input files: The input to ```__main__.py``` is either
   - two tab-delimited text files -- one for variant read data and one for coverage data. Please see the files ```input/Makohon2016/Pam03_mutant_reads.txt``` and ```input/Makohon2016/Pam03_phredcoverage.txt``` included in this repository for examples.
   - VCF-files of all samples
@@ -53,8 +54,9 @@ file with the sequencing depth at the position of this variant in each sample.
 - *-e <sequencing error rate>:* Sequencing error rate *e* in the Bayesian inference model (default 1.0%)
 - *-a <max absent VAF>:* Maximum VAF for an absent variant *f<sub>absent</sub>* before considering the estimated purity (default 5%)
 - *-z <prior absent probability>:* Prior probability for a variant being absent *c<sub>0</sub> (default 0.5).
-- *-x <output directory>:* Provide different output directory (default src/output)
+- *-o <output directory>:* Provide different output directory (default src/output)
 - *-n <normal sample name>:* If a normal sample is provided, variants significantly present in the normal are removed
+- ```--pool_size``` *<Pool size of ILP solver>:* Number of best solutions explored by ILP solver to assess the support of the inferred branches (default 1000)
 - *-b <No bootstrapping samples>:* Number of bootstrapping samples (default 0)
 - *-u:* Enables subclone detection (default ```False```)
 <!--- - ```--no_subclone_detection``` Disables subclone detection) -->
@@ -71,7 +73,7 @@ Default parameter values as well as output directory can be changed in ```treeom
 Moreover, the ```settings.py``` provides more options an annotation of driver genes and configuration of plot output names. 
 All plots, analysis and logging files, and the HTML report will be in this output directory.
 
-#### Examples
+### <a name="examples"> Examples
 Example 1: ```python treeomics -r input/Makohon2016/Pam03_mutant_reads.txt -s input/Makohon2016/Pam03_phredcoverage.txt -e 0.005 -O```  
 Reconstructs the phylogeny of pancreatic cancer patient Pam03 based on targeted sequencing data 
 of 5 distinct liver metastases, 3 distinct lung metastases, and 2 samples of the primary tumor.

@@ -44,6 +44,9 @@ class Phylogeny(object):
         # mutation pattern conflict graph
         self.cf_graph = None
 
+        # path to generated PNG of inferred tree for HTML report
+        self.tree_plot = None
+
     def infer_evolutionary_tree(self, updated_mps, founders, unique_mutations, confidence=None):
         """
         Construct a phylogenetic tree from the maximum set of compatible mutations
@@ -220,7 +223,7 @@ def compute_graph_nodes(mps, sample_names, mut_names, present_p_values, absent_p
     Compute the nodes (given by the pattern of the clones) in the conflict graph
     If the minimum required coverage at non-significantly mutated mutations is 0,
     the number of clones is identical to the number of nodes (i.e., no unknown positions)
-    :param mutation patterns:
+    :param mps: mutation patterns
     :param sample_names
     :param mut_names: mutation keys
     :param present_p_values: p-values for the confidence that a variant is present
@@ -341,7 +344,7 @@ def _add_evolutionary_node(tree, parent, mp, node_name, mutations, confidence=No
     :param parent:
     :param mp:
     :param node_name:
-    :param mutations:
+    :param mutations: set of mutation uniquely present in this node
     :param confidence: confidence in branching
     :return:
     """

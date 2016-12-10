@@ -4,7 +4,7 @@ __author__ = 'Johannes REITER'
 
 
 # Treeomics version number
-VERSION = (1, 5, 2)
+VERSION = (1, 6, 0)
 
 # DEFAULT PARAMETER VALUES
 # maximal number variants to show in a mutation table plot
@@ -17,12 +17,12 @@ NO_DATA_P0 = 0.95
 # presence probability of a variant for calculating reliability score
 # is upper bounded because the same variant could have been independently acquired twice
 # number of detected coding mutations divided by the size of the exome (1.5% of the genome)
-MAX_PRE_PROB = 1.0 - (100.0 / 45e06)
+MAX_PRE_PROB = 1.0 - 1e-03  # (100.0 / 45e06)
 
 # absence probability of a variant for calculating reliability score
 # should be upper bounded because the variant could have been lost by LOH
 # for most sequencing depth this lower bound is irrelevant
-MAX_ABS_PROB = 1.0 - 1e-04
+MAX_ABS_PROB = 1.0 - 2e-03      # (see McPherson et al., Nature Genetics, 2016)
 
 # default prior when variant is believed to be present
 PSEUDO_ALPHA = 1.0  # alpha parameter for the beta prior

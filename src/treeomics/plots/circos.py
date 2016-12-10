@@ -491,14 +491,15 @@ def _create_mp_nodes_files(mp_nodes_filename, mp_mutnode_data_filename, phylogen
             # write node color to the file which is given by the fact if the clone is
             # removed by the solution or kept
             if ((isinstance(phylogeny, SimplePhylogeny) and node in phylogeny.compatible_nodes) or
-                    (isinstance(phylogeny, MaxLHPhylogeny) and node in phylogeny.compatible_nodes) or len(node) == 0):
+                    (isinstance(phylogeny, MaxLHPhylogeny) and node in phylogeny.compatible_nodes)):
                 mp_nodes_file.write('blue')       # prefix p for pure color, e.g. pblue
             elif node in phylogeny.conflicting_nodes:
                 mp_nodes_file.write('red')         # prefix l or d for light or dark, e.g. lpblue
             else:
                 mp_nodes_file.write('lgrey')
-                logger.warn('Mutation pattern {} is neither conflicting nor compatible! It has to be either one.'
-                            .format(node))
+                if 1 < len(node) < len(phylogeny.patient.sample_names):
+                    logger.warn('Mutation pattern {} is neither conflicting nor compatible! It has to be either one.'
+                                .format(node))
 
             mp_nodes_file.write('\n')
 

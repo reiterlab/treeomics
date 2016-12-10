@@ -48,12 +48,11 @@ class MaxLHPhylogeny(Phylogeny):
         # map from mut_idx to the weight of the highest ranked evolutionarily compatible MP
         self.max_lh_weights = None
 
-        # confidence in each parsimony-informative branching
-        # reliability score of node divided by its own score plus the sum of all evolutionarily incompatible patterns
-        # (= sum of reliability scores of neighbors in the conflict graph)
-        self.branch_confidence = None
-
         self.bootstrapping_values = None
+
+        # weighted likelihood of the identified compatible mutation patterns based on the likelihood of the
+        # individual solutions in the solution space
+        self.weighted_node_lh = None
 
         # false positives and false negatives compared to original classification
         # likely technical or biological artifacts in the data
@@ -126,13 +125,15 @@ class MaxLHPhylogeny(Phylogeny):
         logger.debug('Reliability score of a pattern with 99.99% certainty in each call: {:.3e}'.format(
             -math.log(1.0 - lh_9999)))
 
-    def infer_max_lh_tree(self, subclone_detection=False, no_bootstrap_samples=0, max_no_mps=None, time_limit=None):
+    def infer_max_lh_tree(self, subclone_detection=False, pool_size=1, no_bootstrap_samples=0, max_no_mps=None,
+                          time_limit=None):
         """
         Infer maximum likelihood tree via calculation reliability scores for each
         possible mutation pattern from the likelihood that no variant has this pattern
         The inferred solution represents the reliable and evolutionary compatible mutation patterns
         The mutation pattern of each variant is given by the mp maximizing its likelihood
         :param subclone_detection: is subclone detection enabled?
+        :param pool_size: number of best solutions explored by ILP solver to estimate confidence
         :param max_no_mps: only the given maximal number of most likely (by joint likelihood) mutation patterns
             is explored per variant
         :param no_bootstrap_samples: number of samples with replacement for the bootstrapping
@@ -160,14 +161,20 @@ class MaxLHPhylogeny(Phylogeny):
 
         while True:
             # create conflict graph which forms the input to the ILP
-            self.cf_graph = create_conflict_graph(self.node_scores)
+            self.cf_graph = create_conflict_graph(self.node_scores, len(self.patient.sample_names))
 
             # translate the conflict graph into a minimum vertex cover problem
             # and solve this using integer linear programming
-            self.conflicting_nodes, self.compatible_nodes = cps.solve_conflicting_phylogeny(
-                self.cf_graph, time_limit=time_limit)
+            self.conflicting_nodes, self.compatible_nodes, self.weighted_node_lh = cps.solve_conflicting_phylogeny(
+                self.cf_graph, len(self.patient.log_p01), pool_size, time_limit=time_limit)
 
             # ##### assign each variant to the highest ranked evolutionarily compatible mutation pattern ########
+
+            # merge all identified compatible nodes with the parsimony-uninformative nodes (founders, unique)
+            sol_nodes = set(list(self.compatible_nodes))
+            for node in self.node_scores.keys():
+                if len(node) == 1 or len(node) == len(self.patient.sample_names):
+                    sol_nodes.add(node)
 
             # maps from each evolutionarily compatible MP to the selected set of variants
             self.max_lh_nodes = defaultdict(set)
@@ -188,7 +195,7 @@ class MaxLHPhylogeny(Phylogeny):
                 for sol_idx, (mp_col_idx, _) in enumerate(
                         sorted(self.mp_weights[mut_idx].items(), key=lambda k: -k[1]), 1):
 
-                    if self.idx_to_mp[mp_col_idx] in self.compatible_nodes:
+                    if self.idx_to_mp[mp_col_idx] in sol_nodes:
                         # found most likely pattern for this variant
                         self.max_lh_nodes[self.idx_to_mp[mp_col_idx]].add(mut_idx)
                         self.max_lh_mutations[mut_idx] = self.idx_to_mp[mp_col_idx]
@@ -325,9 +332,20 @@ class MaxLHPhylogeny(Phylogeny):
             else:
                 self.do_bootstrapping(no_bootstrap_samples, time_limit=time_limit)
 
+        if self.bootstrapping_values is not None:
+            confidence_values = self.bootstrapping_values
+            logger.info('Confidence values for branching are given by bootstrapping.')
+        elif self.weighted_node_lh is not None:
+            confidence_values = self.weighted_node_lh
+            logger.info('Confidence values for branching are given by exploring the whole solution space and '
+                        'the weighted likelihoods of each solution.')
+        else:
+            confidence_values = None
+            logger.info('Confidence values will not be provided.')
+
         # construct a phylogenetic tree from the maximum likelihood mutation patterns
         self.mlh_tree = self.infer_evolutionary_tree(self.shared_mlh_mps, self.mlh_founders,
-                                                     self.mlh_unique_mutations, confidence=self.bootstrapping_values)
+                                                     self.mlh_unique_mutations, confidence=confidence_values)
 
         return self.mlh_tree
 
@@ -758,12 +776,13 @@ def infer_ml_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None, max_n
     return node_scores, idx_to_mp, mp_col_ids, mp_weights
 
 
-def create_conflict_graph(reliability_scores):
+def create_conflict_graph(reliability_scores, no_samples):
     """
     Create a graph where the nodes are given by the mutation patterns and
     the edges model the evolutionary conflicts among them
     :param reliability_scores: each node in the graph is weighted corresponding to the confidence
     in the sequencing data of the mutation modeled by the reliability scores
+    :param no_samples: number of cancer samples in the input
     :return conflict graph
     """
 
@@ -772,7 +791,8 @@ def create_conflict_graph(reliability_scores):
     incompatible_mp = defaultdict(set)
 
     for node, score in reliability_scores.items():
-        cf_graph.add_node(node, weight=score)
+        if 1 < len(node):
+            cf_graph.add_node(node, weight=score)
 
     # since each mutation occurs at most once running through this is
     # in O(m^2 * n) = O(|mutations|*|mutations|*|samples|) as
@@ -781,7 +801,7 @@ def create_conflict_graph(reliability_scores):
 
         # variant need to appear at least in two samples and at most in n-1 samples
         # otherwise a conflict is not possible
-        if len(node1) < 2 or len(node2) < 2:
+        if not cf_graph.has_node(node1) or not cf_graph.has_node(node2):
             continue
 
         if len(node1.intersection(node2)) > 0:     # at least one sample where both characters are present (11)

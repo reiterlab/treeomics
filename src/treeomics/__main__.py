@@ -24,7 +24,7 @@ __date__ = 'March 31, 2014'
 
 # create logger for application
 logger = logging.getLogger('treeomics')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 # create file handler which logs even debug messages
 fh = logging.FileHandler('treeomics.log')
 fh.setLevel(logging.DEBUG)
@@ -33,7 +33,8 @@ fh.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 # create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s %(levelname)s %(pathname)s %(lineno)s: %(message)s')
+# formatter = logging.Formatter('%(asctime)s %(levelname)s %(pathname)s %(lineno)s: %(message)s')
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(filename)s %(lineno)s: %(message)s')
 fh.setFormatter(formatter)
 ch.setFormatter(formatter)
 # add the handlers to the logger
@@ -235,6 +236,8 @@ def main():
                         help="minimum coverage for a true negative (negative threshold)",
                         type=int, default=settings.MIN_ABSENT_COVERAGE)
 
+    # -v, --verbose Verbose mode to provide more information while running treeomics
+
     plots_parser = parser.add_mutually_exclusive_group(required=False)
     plots_parser.add_argument('--plots', dest='plots', action='store_true', help="Is plot generation enabled?")
     plots_parser.add_argument('--no_plots', dest='plots', action='store_false', help="Is plot detection disabled?")
@@ -242,6 +245,8 @@ def main():
 
     parser.add_argument('-b', '--boot', help='Number of bootstrapping samples', type=int,
                         default=settings.NO_BOOTSTRAP_SAMPLES)
+    parser.add_argument('--pool_size', help='number of best solutions explored by ILP solver', type=int,
+                        default=settings.POOL_SIZE)
 
     # limit search space exploration to decrease the run time
     parser.add_argument("-t", "--time_limit",
@@ -279,6 +284,8 @@ def main():
 
     plots_report = args.plots    # for debugging set to False
     plots_paper = logger.isEnabledFor(logging.DEBUG)
+    # plots_report = False  # for debugging set to False
+    # plots_paper = False
 
     if args.normal:
         normal_sample_name = args.normal
@@ -311,6 +318,9 @@ def main():
 
     if args.max_absent_vaf < args.error_rate:
         raise AttributeError('The maximal absent VAF has to be larger than the error rate in the Bayesian model!')
+
+    if args.pool_size < 1:
+        raise AttributeError('Solution pool size of ILP solver has to be at least 1!')
 
     fpr = args.false_positive_rate
     logger.info('False positive rate for the statistical test: {}.'.format(fpr))
@@ -481,7 +491,7 @@ def main():
     html_report.start_report()
     html_report.add_sequencing_information(
         patient, mut_table_path=mut_table_name+'.png' if mut_table_name is not None else None)
-    # html_report.add_similarity_information(patient)
+    html_report.add_similarity_information(patient)
 
     # ############################################################################################
     # infer evolutionary compatible mutation patterns and subsequently evolutionary trees based on
@@ -505,14 +515,14 @@ def main():
                 patient.name, read_no_samples, subclone_detection=args.subclone_detection,
                 min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf, max_no_mps=args.max_no_mps,
                 bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf, mode=args.mode)
-            # determine mutation patterns based on standard binary classification to generate an overview graph
+            # infer maximum likelihood tree
             phylogeny = ti.create_max_lh_tree(
-                patient, tree_filepath=os.path.join(output_directory, fn_tree+'_mlhtree.tex'),
+                patient, tree_filepath=os.path.join(output_directory, fn_tree+'_mlhtree'),
                 mm_filepath=os.path.join(output_directory, fn_matrix+'_treeomics_mm.csv'),
                 mp_filepath=os.path.join(output_directory, fn_matrix+'_treeomics_mps.tsv'),
                 subclone_detection=args.subclone_detection, loh_frequency=settings.LOH_FREQUENCY,
-                drivers=subject_drivers, no_bootstrap_samples=args.boot, max_no_mps=args.max_no_mps,
-                time_limit=args.time_limit, plots=plots_report)
+                drivers=subject_drivers, pool_size=args.pool_size, no_bootstrap_samples=args.boot,
+                max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=plots_report)
 
             # previously used for benchmarking
             # if plots_paper:     # generate Java Script D3 trees
@@ -520,8 +530,11 @@ def main():
             #     Phylogeny.save_json_tree(os.path.join(output_directory, json_file), phylogeny.mlh_tree)
             #     Phylogeny.write_html_file(os.path.join(output_directory, 'mlhtree_'+fn_tree+'.html'), json_file)
 
-            # determine mutation patterns based on standard binary classification to generate an overview graph
+            # determine mutation patterns and generate an overview graph
             if plots_report:
+                if phylogeny.tree_plot is not None:     # add generated tree plot to HTML report
+                    html_report.add_tree_plot(patient, phylogeny)
+
                 # create mutation pattern overview plot
                 # show only the different patterns and not the individual variants
                 # (convenient for large numbers of variants)
@@ -531,10 +544,10 @@ def main():
                     max_absent_vaf=patient.max_absent_vaf, mode=args.mode)
 
                 if args.subclone_detection:
-                    pg = ti.create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepath=None,
-                                               subclone_detection=False, loh_frequency=settings.LOH_FREQUENCY,
-                                               drivers=subject_drivers, no_bootstrap_samples=0,
-                                               max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=False)
+                    pg = ti.create_max_lh_tree(
+                        patient, tree_filepath=None, mm_filepath=None, mp_filepath=None, subclone_detection=False,
+                        loh_frequency=settings.LOH_FREQUENCY, drivers=subject_drivers, pool_size=args.pool_size,
+                        no_bootstrap_samples=0, max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=False)
                 else:
                     pg = phylogeny
 

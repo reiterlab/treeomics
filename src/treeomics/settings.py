@@ -4,6 +4,9 @@ __author__ = 'Johannes REITER'
 
 # ######################### DEFAULT PARAMETER VALUES #############################
 
+# Explore the solution space to assess the support of the inferred branches
+POOL_SIZE = 1000        # number of best solutions explored by ILP solver
+
 # number of bootstrapping samples
 NO_BOOTSTRAP_SAMPLES = 0
 
@@ -23,7 +26,7 @@ BI_E = 0.01            # sequencing error rate for bayesian inference
 BI_C0 = 0.5            # prior mixture parameter of delta function and uniform distribution for bayesian inference
 MAX_ABSENT_VAF = 0.05  # maximal absent VAF before considering estimated purity
 
-LOH_FREQUENCY = 0.0   # probability that a SNV along a lineage is lost due loss of heterozygosity
+LOH_FREQUENCY = 0.0   # probability that a somatic SNV along a lineage is lost due to loss of heterozygosity
 
 
 # Conventional binary sequencing data analysis settings     ######################

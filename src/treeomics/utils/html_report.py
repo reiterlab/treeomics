@@ -282,12 +282,56 @@ class HTMLReport(object):
         self.file.flush()
         os.fsync(self.file.fileno())
 
+    def add_tree_plot(self, patient, phylogeny):
+        """
+        Add create ete3 tree of the inferred phylogeny to the HTML report
+        :param patient: instance of class patient
+        :param phylogeny: data structure around the inferred phylogenetic tree
+        """
+
+        self.file.write(self._inds[self._ind]+'<h4>Inferred cancer phylogeny</h4>\n')
+
+        self.file.write(self._inds[self._ind]+'<div align="center">\n')
+        self.file.write(self._inds[self._ind]+'<div style="width:98%;max-width:700px">\n')
+        self._ind += 1      # indentation level increases by 1
+
+        self.file.write(self._inds[self._ind]+'<figure>\n')
+        self._ind += 1      # indentation level increases by 1
+        self.file.write(self._inds[self._ind]+'<img class="img-responsive" src="'
+                        + os.path.basename(phylogeny.tree_plot) + '" alt="Evolutionary tree" width="750"/>'+'\n')
+        self.file.write(self._inds[self._ind]+'<div align="left">\n')
+        self.file.write(self._inds[self._ind]+'<figcaption>\n')
+
+        self.file.write(
+            self._inds[self._ind]+'<b>Phylogenetic tree illustrating the evolutionary history of '
+                                  'the cancer in {}.</b>\n'.format(patient.name))
+        self.file.write(
+            self._inds[self._ind] + 'Numbers on top of each branch indicate the number of acquired variants '
+                                    '(including likely driver gene mutations reported separately in orange).\n')
+        self.file.write(
+            self._inds[self._ind] + 'Numbers on bottom of each branch indicate the estimated support values.\n')
+
+        if logger.isEnabledFor(logging.DEBUG):
+            self.file.write(
+                self._inds[self._ind] + 'Frequencies in brackets denote the median VAF of the mutations on a branch.\n')
+
+        self.file.write(self._inds[self._ind]+'</figcaption>\n')
+        self.file.write(self._inds[self._ind]+'</div>\n')
+        self._ind -= 1      # indentation level decreases by 1
+        self.file.write(self._inds[self._ind]+'</figure>\n')
+
+        self._ind -= 1      # indentation level decreases by 1
+        self.file.write(self._inds[self._ind]+'</div>\n')
+        self.file.write(self._inds[self._ind]+'</div>\n')
+
+        self.file.write(self._inds[self._ind]+'</br>\n\n')
+
     def add_conflict_graph(self, patient, mp_graph_name, phylogeny=None):
         """
         Add evolutionary conflict plot graph to the HTML report
         :param patient: instance of class patient
         :param mp_graph_name: path to the evolutionary conflict graph plot file
-        :param phylogeny:
+        :param phylogeny: data structure around the inferred phylogenetic tree
         """
 
         self.file.write(self._inds[self._ind]+'<h4>Evolutionary conflict graph</h4>\n')
