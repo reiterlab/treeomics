@@ -1,7 +1,9 @@
-__author__ = 'Johannes REITER'
-
+#!/usr/bin/python
+"""Data structure around sequencing sample"""
 import logging
 import heapq
+
+__author__ = 'Johannes REITER'
 
 # create logger for application
 logger = logging.getLogger('vcf-parser')
@@ -35,7 +37,8 @@ class Variant(object):
     Data structure class for a DNA variant (SNV or short indel)
     """
 
-    def __init__(self, chrom, pos, identifier, ref, alt, qual=None, filter_info=None, info=None):
+    def __init__(self, chrom, pos, identifier, ref, alt, qual=None, filter_info=None, info=None,
+                 gene_name=None, ccf=None, var_type=None):
         if chrom.startswith('chr'):
             self.CHROM = chrom[3:]          # chromosome
         else:
@@ -51,12 +54,15 @@ class Variant(object):
         self.AD = None              # allelic depths for the ref and alt alleles (in ordered list)
         self.DP = None              # total read depth
         self.BAF = None             # B-allele frequency
-        self.CCF = None             # Cancer cell fraction for the ref and alt alleles in the order listed
+        self.GENE_NAME = gene_name  # name of gene where variant occurred
+        # functional type of mutation, eg. missense; instance of class VarType (utils.var_type.py)
+        self.VAR_TYPE = var_type
+        self.CCF = ccf              # Cancer cell fraction
 
         # self.mut_key = '{}_{}_{}>{}'.format(self.CHROM, self.POS, self.REF, self.ALT[0])
 
         if len(self.ALT) > 1:
-            logger.warn('Multiple alternate alleles are given.')
+            logger.warning('Multiple alternate alleles are given.')
 
     def set_allelic_depth(self, ad):
         """
@@ -83,7 +89,7 @@ class Variant(object):
         """
 
         if len(self.ALT) > 1:
-            logger.warn("List of BAFs should be calculated for multiple alternate alleles.")
+            logger.warning("List of BAFs should be calculated for multiple alternate alleles.")
 
         self.BAF = float(fa)
 
@@ -93,7 +99,8 @@ class Variant(object):
         :param ccf: list of cancer cell fractions for reference and alternates
         """
 
-        self.CCF = [float(ccf) for ccf in ccf.split(',')]
+        # self.CCF = [float(ccf) for ccf in ccf.split(',')]
+        self.CCF = float(ccf)
 
     def __lt__(self, other):    # called if x < y
 

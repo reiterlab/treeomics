@@ -19,6 +19,8 @@ import os.path
 from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
 from phylogeny.simple_phylogeny import SimplePhylogeny
 from phylogeny.max_lh_phylogeny import MaxLHPhylogeny
+import utils.int_settings as def_sets
+from utils.driver import Driver
 
 __author__ = 'Johannes REITER'
 __date__ = 'April, 2014'
@@ -170,7 +172,10 @@ def bayesian_hinton(log_p01, output_directory, filename, row_labels=None, column
             ax.text(x_pos * width+(width/2)+0.2, label_y_pos+(height+y_spacing) * (len(log_p01[mut_idx])),
                     _format_gene_name(column_labels[mut_idx], max_length=12),
                     rotation='vertical', horizontalalignment='center', verticalalignment='bottom', fontsize=8,
-                    color='red' if drivers is not None and column_labels[mut_idx] in drivers else 'black')
+                    color=(Driver.colors()[len(drivers[column_labels[mut_idx]][1])]
+                           if drivers is not None and column_labels[mut_idx] in drivers else 'black'),
+                    weight=('bold' if drivers is not None and column_labels[mut_idx] in drivers and
+                            drivers[column_labels[mut_idx]][2] else 'normal'))
 
     ax.autoscale_view()
     plt.savefig(os.path.join(output_directory, filename+'.pdf'), dpi=150, bbox_inches='tight', transparent=True)
@@ -354,13 +359,17 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
     cb_width = 30.0
     x_space = 5.0
 
+    # log probability to be classified with at least the given confidence threshold
+    conf_clas_lpth = math.log(def_sets.CLA_CONFID_TH)
+    opt_sol = phylogeny.solutions[0]  # optimal solution
+
     if isinstance(phylogeny, SimplePhylogeny):
         displayed_mutations = [mut_idx for mut_idx in phylogeny.conflicting_mutations]
     elif isinstance(phylogeny, MaxLHPhylogeny):
         displayed_mutations = [mut_idx for mut_idx in
-                               set(phylogeny.false_positives.keys()).union(set(phylogeny.false_negatives.keys()))]
-        if phylogeny.conflicting_mutations is not None:
-            for mut_idx in phylogeny.conflicting_mutations:
+                               set(opt_sol.false_positives.keys()).union(set(opt_sol.false_negatives.keys()))]
+        if opt_sol.conflicting_mutations is not None:
+            for mut_idx in opt_sol.conflicting_mutations:
                 displayed_mutations.append(mut_idx)
 
     # elif isinstance(phylogeny, SubclonalPhylogeny):
@@ -400,7 +409,7 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
     for x_pos, mut_idx in enumerate(
             sorted(displayed_mutations, key=lambda k: (column_labels[k].lower() if column_labels is not None else k))):
 
-        for sa_idx, maf in enumerate(patient.data[mut_idx]):
+        for sa_idx, (p0, p1) in enumerate(patient.log_p01[mut_idx]):
 
             cov = float(patient.coverage[patient.mut_keys[mut_idx]][patient.sample_names[sa_idx]])
             if cov > 0:
@@ -408,16 +417,12 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
             else:
                 raw_maf = 0.0
 
-            if maf > 0:     # mutation is present
+            if p1 > conf_clas_lpth:     # mutation is present
                 class_color = present_color
-            elif maf == POS_UNKNOWN:
-                # merge the two unknown categories when variants are displayed
-                class_color = unknown_color
-            elif maf == NEG_UNKNOWN:
-                # merge the two unknown categories when variants are displayed
-                class_color = unknown_color
-            else:
+            elif p0 > conf_clas_lpth:   # mutation is absent
                 class_color = absent_color
+            else:                       # mutation can not be classified according to the Bayesian inference model
+                class_color = unknown_color
 
             maf_color = plt.cm.Blues(2.0 * raw_maf if raw_maf < 0.5 else 1.0)
             cov_color = plt.cm.Greens(math.log(cov, 10)/3 if 0 < cov < 1000 else 0.0 if cov <= 0.0 else 1.0)
@@ -435,15 +440,15 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
             ax.add_patch(rect_cov)
 
             if isinstance(phylogeny, MaxLHPhylogeny):
-                if mut_idx in phylogeny.false_positives.keys() and \
-                        sa_idx in phylogeny.false_positives[mut_idx]:
+                if mut_idx in opt_sol.false_positives.keys() and \
+                        sa_idx in opt_sol.false_positives[mut_idx]:
 
                     af = plt.Rectangle([(x_pos * width * 3), (height+y_spacing) *
                                         (len(patient.data[mut_idx]) - sa_idx - 1)],
                                        width*2, height/2, facecolor=absent_color, linewidth=0)
                     ax.add_patch(af)
 
-                elif mut_idx in phylogeny.false_negatives.keys() and sa_idx in phylogeny.false_negatives[mut_idx]:
+                elif mut_idx in opt_sol.false_negatives.keys() and sa_idx in opt_sol.false_negatives[mut_idx]:
                     af = plt.Rectangle([(x_pos * width * 3), (height+y_spacing) *
                                         (len(patient.data[mut_idx]) - sa_idx - 1)],
                                        width*2, height/2, facecolor=present_color, linewidth=0)

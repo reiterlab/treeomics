@@ -1,11 +1,11 @@
 #!/usr/bin/python
 """Helper functions to generate latex source code for a tikz tree plot"""
-__author__ = 'jreiter'
-
 import logging
 import itertools
 import numpy as np
 from phylogeny.phylogeny_utils import TREE_ROOT
+__author__ = 'jreiter'
+
 
 # get logger for application
 logger = logging.getLogger('treeomics')
@@ -42,7 +42,8 @@ def write_tikz_header(latex_file, germline_distance=2.0, standalone=False):
     latex_file.write('\\tikzset{edge from parent/.append style={->,line width=1.2,'
                      + 'shorten >=2.5pt,shorten <=2.5pt}}\n')
     latex_file.write('% Define styles for leafs\n')
-    latex_file.write('\\tikzset{every leaf node/.style={draw,text width=1.09cm,inner sep=2pt,align=center}}\n\n')
+    latex_file.write('\\tikzset{every leaf node/.style={draw,text width=1.09cm,inner sep=2pt,'
+                     'minimum height=0.4cm,align=center}}\n\n')
 
     if not standalone:
         latex_file.write('\\begin{flushright}\n')
@@ -180,16 +181,17 @@ def add_artifact_info(file_path, phylogeny):
             latex_file.write('\\begin{comment} \n')
 
             pat = phylogeny.patient
+            opt_sol = phylogeny.solutions[0]    # optimal solution
 
             if pat.gene_names is not None:
-                if phylogeny.conflicting_mutations is not None and len(phylogeny.conflicting_mutations) > 0:
+                if opt_sol.conflicting_mutations is not None and len(opt_sol.conflicting_mutations) > 0:
                     # print evolutionarily incompatible (unclassified artifacts) due to limited solution space
                     latex_file.write('Evolutionarily incompatible variants due to limited search space: {} \n\n'.format(
                         ', '.join('{} ({})'.format(pat.gene_names[mut_idx], pat.mut_keys[mut_idx])
-                                  for mut_idx in sorted(phylogeny.conflicting_mutations,
+                                  for mut_idx in sorted(opt_sol.conflicting_mutations,
                                                         key=lambda x: pat.gene_names[x].lower()))))
 
-                    for mut_idx in sorted(phylogeny.conflicting_mutations, key=lambda x: pat.gene_names[x].lower()):
+                    for mut_idx in sorted(opt_sol.conflicting_mutations, key=lambda x: pat.gene_names[x].lower()):
                         latex_file.write('Evolutionarily incompatible {} ({}): '.format(
                                          pat.gene_names[mut_idx], pat.mut_keys[mut_idx]))
                         for sa_idx in sorted(range(len(pat.sample_names)), key=lambda x: pat.sample_names[x]):
@@ -200,7 +202,7 @@ def add_artifact_info(file_path, phylogeny):
                         latex_file.write('\n')
 
                 # print putative false positives
-                for mut_idx, samples in sorted(phylogeny.false_positives.items(),
+                for mut_idx, samples in sorted(opt_sol.false_positives.items(),
                                                key=lambda x: pat.gene_names[x[0]].lower()):
                     for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
                         # putative false-positive
@@ -212,20 +214,20 @@ def add_artifact_info(file_path, phylogeny):
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
 
                 fp_cov = [pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]
-                          for mut_idx, samples in phylogeny.false_positives.items() for sa_idx in samples]
+                          for mut_idx, samples in opt_sol.false_positives.items() for sa_idx in samples]
                 fp_var = [pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]
-                          for mut_idx, samples in phylogeny.false_positives.items() for sa_idx in samples]
+                          for mut_idx, samples in opt_sol.false_positives.items() for sa_idx in samples]
                 fp_vaf = [(pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]] /
                           pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]])
                           if pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]] > 0 else 0.0
-                          for mut_idx, samples in phylogeny.false_positives.items() for sa_idx in samples]
+                          for mut_idx, samples in opt_sol.false_positives.items() for sa_idx in samples]
                 latex_file.write('False-positives: coverage: mean {}, median {}; vars: mean {}, median {}\n'.format(
                     np.mean(fp_cov), np.median(fp_cov), np.mean(fp_var), np.median(fp_var)))
                 latex_file.write('False-positives: VAF: mean {:.2%}, median {:.2%}\n\n'.format(
                     np.mean(fp_vaf), np.median(fp_vaf)))
 
                 # print putative false negatives
-                for mut_idx, samples in sorted(phylogeny.false_negatives.items(),
+                for mut_idx, samples in sorted(opt_sol.false_negatives.items(),
                                                key=lambda x: pat.gene_names[x[0]].lower()):
                     for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
                         latex_file.write('Putative powered false-negative {} ({}) in sample {}'.format(
@@ -235,12 +237,12 @@ def add_artifact_info(file_path, phylogeny):
                             pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
                 pfn_cov = [pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]
-                           for mut_idx, samples in phylogeny.false_negatives.items() for sa_idx in samples]
+                           for mut_idx, samples in opt_sol.false_negatives.items() for sa_idx in samples]
                 latex_file.write('Powered false-negatives: Coverage: mean {}, median {}\n\n'.format(
                     np.mean(pfn_cov), np.median(pfn_cov)))
 
                 # print putative false negatives with too low coverage (unknowns)
-                for mut_idx, samples in sorted(phylogeny.false_negative_unknowns.items(),
+                for mut_idx, samples in sorted(opt_sol.false_negative_unknowns.items(),
                                                key=lambda x: pat.gene_names[x[0]].lower()):
                     for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
                         latex_file.write('Putative under-powered false-negative {} ({}) in sample {}'.format(
@@ -250,14 +252,14 @@ def add_artifact_info(file_path, phylogeny):
                             pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
                 upfn_cov = [pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]
-                            for mut_idx, samples in phylogeny.false_negative_unknowns.items() for sa_idx in samples]
+                            for mut_idx, samples in opt_sol.false_negative_unknowns.items() for sa_idx in samples]
                 latex_file.write('Under-powered false-negatives: Coverage: mean {}, median {}\n\n'.format(
                     np.mean(upfn_cov), np.median(upfn_cov)))
 
             else:
-                if phylogeny.conflicting_mutations is not None and len(phylogeny.conflicting_mutations) > 0:
+                if opt_sol.conflicting_mutations is not None and len(opt_sol.conflicting_mutations) > 0:
                     # print evolutionarily incompatible (unclassified artifacts) due to limited solution space
-                    for mut_idx in sorted(phylogeny.conflicting_mutations, key=lambda x: pat.gene_names[x].lower()):
+                    for mut_idx in sorted(opt_sol.conflicting_mutations, key=lambda x: pat.gene_names[x].lower()):
                         latex_file.write('Evolutionarily incompatible {}: '.format(pat.mut_keys[mut_idx]))
                         for sa_idx in sorted(range(len(pat.sample_names)), key=lambda x: pat.sample_names[x]):
                             latex_file.write('{} (reads {}/{}); '.format(
@@ -266,7 +268,7 @@ def add_artifact_info(file_path, phylogeny):
                                 pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
                         latex_file.write('\n')
                 # print putative false positives
-                for mut_idx, samples in sorted(phylogeny.false_positives.items(),
+                for mut_idx, samples in sorted(opt_sol.false_positives.items(),
                                                key=lambda x: pat.mut_keys[x[0]]):
                     for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
                         # putative false-positive
@@ -277,7 +279,7 @@ def add_artifact_info(file_path, phylogeny):
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
 
                 # print putative false negatives
-                for mut_idx, samples in sorted(phylogeny.false_negatives.items(),
+                for mut_idx, samples in sorted(opt_sol.false_negatives.items(),
                                                key=lambda x: pat.mut_keys[x[0]]):
                     for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
                         latex_file.write('Putative false-negative {} in sample {}'.format(
@@ -287,7 +289,7 @@ def add_artifact_info(file_path, phylogeny):
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
 
                 # print putative false negatives with too low coverage (unknowns)
-                for mut_idx, samples in sorted(phylogeny.false_negative_unknowns.items(),
+                for mut_idx, samples in sorted(opt_sol.false_negative_unknowns.items(),
                                                key=lambda x: pat.mut_keys[x[0]]):
                     for sa_idx in sorted(samples, key=lambda x: pat.sample_names[x]):
                         latex_file.write('Putative positive unknown {} in sample {}'.format(
@@ -300,26 +302,26 @@ def add_artifact_info(file_path, phylogeny):
 
             latex_file.write('\\begin{comment} \n')
             # produce latex table for paper
-            latex_file.write(' & '.join('\\textbf{'+col_name.replace('_','~')+'}' for col_name in itertools.chain(
+            latex_file.write(' & '.join('\\textbf{'+col_name.replace('_', '~')+'}' for col_name in itertools.chain(
                 ['Sample'], pat.sample_names)) + '\\\\\n')
             latex_file.write('\\hline \n')
 
             ufns = [0 for _ in range(pat.n)]
-            for mut_idx, samples in phylogeny.false_negative_unknowns.items():
+            for mut_idx, samples in opt_sol.false_negative_unknowns.items():
                 for sa_idx in samples:
                     ufns[sa_idx] += 1
             latex_file.write('\\textbf{Under-powered false-negatives} & '
                              + ' & '.join('$'+str(f)+'$' for f in ufns) + ' \\\\\n')
 
             fns = [0 for _ in range(pat.n)]
-            for mut_idx, samples in phylogeny.false_negatives.items():
+            for mut_idx, samples in opt_sol.false_negatives.items():
                 for sa_idx in samples:
                     fns[sa_idx] += 1
             latex_file.write('\\textbf{Powered false-negatives} & '
                              + ' & '.join('$'+str(f)+'$' for f in fns) + ' \\\\\n')
 
             fps = [0 for _ in range(pat.n)]
-            for mut_idx, samples in phylogeny.false_positives.items():
+            for mut_idx, samples in opt_sol.false_positives.items():
                 for sa_idx in samples:
                     fps[sa_idx] += 1
             latex_file.write('\\textbf{False-positives} & '

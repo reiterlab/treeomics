@@ -1,18 +1,174 @@
 #!/usr/bin/python
 """Generates analysis file providing an overview of the results"""
-__author__ = 'Johannes REITER'
-
 
 import logging
 import csv
 import math
+from collections import defaultdict
 from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
 import numpy as np
+from utils.similarity_analysis import calculate_genetic_similarity, calculate_bi_genetic_similarity
+from utils.data_tables import write_posterior_table
 from phylogeny.simple_phylogeny import SimplePhylogeny
 from phylogeny.max_lh_phylogeny import MaxLHPhylogeny
 
+
+__author__ = 'Johannes REITER'
+
 # get logger for application
 logger = logging.getLogger('treeomics')
+
+
+def analyze_data(patient, post_table_filepath=None):
+    """
+    Process data and write posterior table
+    Possibility of apply various filters
+    :param patient: data structure around sequencing data of a subject
+    :param post_table_filepath: file path for generating a table with posterior probabilities
+    """
+
+    # Possibility to implement filters!!!
+    # Look at the average/median frequency of founder mutations
+    # Filter mutations out with less than half of the average founder mutation frequency
+    # data_utils.remove_contradicting_mutations(patient.data)
+
+    # determine in which samples each mutation is present (positives)
+    for mut in range(len(patient.data)):
+        for sa_idx, maf in enumerate(patient.data[mut]):
+            if 0 < maf:
+                patient.samples[sa_idx].add(mut)
+                patient.mutations[mut].add(sa_idx)
+
+    avg_mutations = 0
+    for sa_idx, sa_name in enumerate(patient.sample_names):
+        # logger.debug("Mutations present in sample {}: {}, {}".format(
+        #     sa_name, len(patient.samples[sa_idx]),
+        #     str(patient.samples[sa_idx]) if len(patient.samples[sa_idx]) < 200 else ''))
+        avg_mutations += len(patient.samples[sa_idx])
+
+    avg_mutations /= float(len(patient.sample_names))
+    logger.info('The average number of mutations per sample in patient {} is {:.1f}.'.format(
+        patient.name, avg_mutations))
+
+    for mut_idx in range(len(patient.mut_keys)):
+        patient.mutations[mut_idx] = frozenset(patient.mutations[mut_idx])
+        # logger.debug("Mutation {} ({}) is present in: {}".format(patient.mut_names[mut_idx],
+        #            patient.gene_names[mut_idx],
+        #            (','.join(patient.sample_names[sa_idx] for sa_idx in patient.mutations[mut_idx]))))
+
+    determine_sharing_status(patient)
+
+    # keep list of mutations present in some of the used samples
+    patient.present_mutations = get_present_mutations(patient.log_p01)
+
+    # calculate homogeneity index (Jaccard similarity coefficient)
+    patient.gen_dis, patient.sim_coeff, patient.sim_coeff_ex = calculate_genetic_similarity(patient)
+    patient.bi_gen_dis, patient.bi_sim_coeff = calculate_bi_genetic_similarity(patient)
+
+    if post_table_filepath is not None:
+        # write file with posterior probabilities
+        write_posterior_table(
+            post_table_filepath, patient.sample_names, patient.estimated_purities, patient.sample_mafs,
+            patient.mut_positions, patient.gene_names, patient.log_p01, patient.betas)
+
+
+def determine_sharing_status(patient):
+    """
+    Determine which samples share the various mutations based on the Bayesian inference model
+    :param patient: data structure around sequencing data of a subject
+    """
+
+    pres_lp = math.log(0.5)  # log probability of 50%
+    for mut_idx, ps in patient.log_p01.items():
+
+        if all(p1 > pres_lp for _, p1 in ps):
+            patient.founders.add(mut_idx)
+        else:
+            patient.shared_muts[sum(1 for _, p1 in ps if p1 > pres_lp)].add(mut_idx)
+
+    logger.info("{:.1%} ({}/{}) of all distinct mutations are founders.".format(
+        float(len(patient.founders)) / len(patient.mutations), len(patient.founders), len(patient.mutations)))
+    logger.info('In average {:.1f} ({:.1%}) mutations are unique (private) per sample.'.format(
+        float(len(patient.shared_muts[1])) / len(patient.sample_names),
+        (float(len(patient.shared_muts[1])) / len(patient.sample_names)) /
+        (sum(len(muts) for sa_idx, muts in patient.samples.items()) / len(patient.sample_names))))
+
+    # for shared in range(len(patient.sample_names)-1, -1, -1):
+    #     if len(patient.shared_muts[shared]) > 0:
+    #         logger.debug('Mutations shared in {} samples ({} of {} = {:.3f}): {}'.format(shared,
+    #                      len(patient.shared_muts[shared]), len(patient.mutations),
+    #                      float(len(patient.shared_muts[shared])) / len(patient.mutations),
+    #                      patient.shared_muts[shared] if len(patient.shared_muts[shared]) < 200 else ''))
+
+    # compute the number of shared and additional mutations among the sample pairs
+    # similar to a distance matrix
+    patient.common_muts = [[set() for _ in range(patient.n)] for _ in range(patient.n)]
+    patient.add_muts = [[0 for _ in range(patient.n)] for _ in range(patient.n)]
+
+    # helper to save calculation time:
+    cmuts = [[0 for _ in range(patient.n)] for _ in range(patient.n)]
+
+    for s1 in range(patient.n):
+        for s2 in range(patient.n):
+            patient.common_muts[s1][s2] = patient.samples[s1].intersection(patient.samples[s2])
+            cmuts[s1][s2] = len(patient.common_muts[s1][s2])
+            patient.add_muts[s1][s2] = patient.samples[s1].difference(patient.samples[s2])
+
+            # logger.debug('Sample {} has {} mutations in common with sample {} and {} in addition. '.format(
+            #    patient.sample_names[s1], cmuts[s1][s2], patient.sample_names[s2], len(patient.add_muts[s1][s2])))
+
+            # logger.debug(
+            #     ('Sample {} has most ({}) mutations in common with sample(s) {}'
+            #      ' and least ({}) with sample(s) {}. ').format(
+            #      patient.sample_names[s1],
+            #      max(cms for idx, cms in enumerate(cmuts[s1]) if idx != s1),
+            #      str([patient.sample_names[idx] for idx, cms in enumerate(cmuts[s1])
+            #          if cms == max(cms for idx, cms in enumerate(cmuts[s1]) if idx != s1)]),
+            #      min(cmuts[s1]),
+            #      str([patient.sample_names[idx] for idx, cms in enumerate(cmuts[s1]) if cms == min(cmuts[s1])])))
+
+    # displays common mutations among the samples excluding founder mutations
+    # similar to a distance matrix
+    # logger.debug('Parsimony-informative mutations among the samples: ')
+    # for s1 in range(patient.n):
+    #     logger.debug(patient.sample_names[s1]+': '
+    #                  + ' '.join((str((muts-len(patient.founders)) if muts != -1 else -1)) for muts in cmuts[s1]))
+
+    # mutation patterns are sharing its mutations in exactly the same samples (basis for the weighting scheme)
+    patient.mps = defaultdict(set)
+
+    # Compute all clones sharing mutations in exactly the same samples
+    # Clones with mutations in all or only one sample are uninformative for
+    # the creation of the most parsimonious tree
+    for mut_idx, samples in patient.mutations.items():
+        # if 1 < len(samples) < len(patient.sample_names):
+        if 0 < len(samples):
+            patient.mps[samples].add(mut_idx)
+
+    # show the 10 clones supported by the most mutations
+    # for key, value in islice(sorted(patient.mps.items(), key=lambda x: len(x[1]), reverse=True), 10):
+    #     logger.debug('Mutation pattern {} shares mutations: {} '.format(str(key), value))
+
+    logger.info('Total number of distinct mutation patterns: {}'.format(len(patient.mps)))
+
+
+def get_present_mutations(log_p01):
+        """
+        Return list of mutations which are present in a least one sample
+        :param log_p01: list of tuple posterior (log probability that VAF = 0, log probability that VAF > 0)
+                        for each variant
+        :return: list of indices of present variants
+        """
+
+        # indices list of the present mutations
+        present_mutations = []
+        pres_lp = math.log(0.5)  # log probability of 50%
+        for mut_idx, ps in log_p01.items():
+
+            if any(p1 > pres_lp for _, p1 in ps):
+                present_mutations.append(mut_idx)
+
+        return present_mutations
 
 
 def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None, comp_node_frequencies=None,
@@ -97,8 +253,8 @@ def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None,
             # how many mutations are are compatible on an evolutionary tree
             analysis_file.write(
                 '# Phylogeny: {:.2%} ({} / {}) of all mutations are compatible on an evolutionary tree. \n'.format(
-                    float(len(phylogeny.compatible_mutations)) / no_present_mutations,
-                    len(phylogeny.compatible_mutations), no_present_mutations))
+                    float(len(phylogeny.solutions[0].compatible_mutations)) / no_present_mutations,
+                    len(phylogeny.solutions[0].compatible_mutations), no_present_mutations))
 
             # Percentage of conflicting mutations versus shared mutations (excluding unique and founder mutations)
             # evidence for contradictions in the current evolutionary theory of cancer???
@@ -107,40 +263,27 @@ def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None,
             analysis_file.write(
                 '# Phylogeny: {:.2%} ({} / {}) of all shared (excluding unique and founding) '
                 + 'mutations are conflicting. \n'.format(
-                    float(len(phylogeny.conflicting_mutations)) / no_shared_muts,
-                    len(phylogeny.conflicting_mutations), no_shared_muts))
-
-            # # write robustness analysis to file
-            # if comp_node_frequencies is not None:
-            #     analysis_file.write('# Robustness analysis through {} replications \n'.format(no_replications))
-            #     analysis_file.write('# Mutation pattern  \t {} \n'.format(' \t '.join(
-            #                         '{}%'.format(fr) for fr in sorted(comp_node_frequencies.keys()))))
-            #     for node in sorted(phylogeny.compatible_nodes.keys(),
-            #                        key=lambda k: -phylogeny.node_weights[k]):
-            #         # print only parsimony informative MPs
-            #         if 1 < len(node) < len(patient.sample_names):
-            #             analysis_file.write('# ({}) \t {} \n'.format(','.join(str(n+1) for n in sorted(node)), ' \t '.join(
-            #                 '{:.3f}'.format(
-            #                     comp_node_frequencies[fr][node]) for fr in sorted(comp_node_frequencies.keys()))))
+                    float(len(phylogeny.solutions[0].conflicting_mutations)) / no_shared_muts,
+                    len(phylogeny.solutions[0].conflicting_mutations), no_shared_muts))
 
         if isinstance(phylogeny, MaxLHPhylogeny) and phylogeny.mlh_tree is not None:
             # how many positions are evolutionarily incompatible
             analysis_file.write(
                 '# Maximum likelihood phylogeny: {} putative false-positives and {} putative false-negatives. \n'
-                .format(len(phylogeny.false_positives), len(phylogeny.false_negatives)))
+                .format(len(phylogeny.solutions[0].false_positives), len(phylogeny.solutions[0].false_negatives)))
 
             # add information about false-positives
-            for mut_idx, samples in phylogeny.false_positives.items():
+            for mut_idx, samples in phylogeny.solutions[0].false_positives.items():
                 analysis_file.write('# Putative false-positive of variant {} in samples {}\n'.format(
                     patient.mut_keys[mut_idx], ', '.join(patient.sample_names[sa_idx] for sa_idx in samples)))
 
             # add information about false-negatives
-            for mut_idx, samples in phylogeny.false_negatives.items():
+            for mut_idx, samples in phylogeny.solutions[0].false_negatives.items():
                 analysis_file.write('# Putative false-negative of variant {} in samples {}\n'.format(
                     patient.mut_keys[mut_idx], ', '.join(patient.sample_names[sa_idx] for sa_idx in samples)))
 
             # add information about false-negatives due to too low coverage (unknowns)
-            for mut_idx, samples in phylogeny.false_negative_unknowns.items():
+            for mut_idx, samples in phylogeny.solutions[0].false_negative_unknowns.items():
                 analysis_file.write('# Putative present mutation of unknown variant {} in samples {}\n'.format(
                     patient.mut_keys[mut_idx], ', '.join(patient.sample_names[sa_idx] for sa_idx in samples)))
 

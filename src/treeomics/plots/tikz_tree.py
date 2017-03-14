@@ -1,16 +1,21 @@
-__author__ = 'jreiter'
-
+#!/usr/bin/python
+"""Function to generate a tree figure with latex and tikz"""
 import logging
 import copy
 import networkx as nx
+import numpy as np
+from itertools import islice
 import utils.latex_output as latex_output
 from phylogeny.phylogeny_utils import TREE_ROOT
+import os
+
+__author__ = 'jreiter'
 
 # get logger for application
 logger = logging.getLogger('treeomics')
 
 
-def create_figure_file(tree, tree_root_key, filename, patient, figure_caption, drivers=set(),
+def create_figure_file(tree, tree_root_key, filename, patient, phylogeny, figure_caption, drivers=set(),
                        germline_distance=2.0, standalone=False):
     """
     Takes a networkx tree and creates a tikz source file such that a pdf can be generated with latex
@@ -18,6 +23,7 @@ def create_figure_file(tree, tree_root_key, filename, patient, figure_caption, d
     :param tree_root_key:
     :param filename: path to output file
     :param patient: data structure around patient
+    :param phylogeny:
     :param figure_caption: caption for tikz figure
     :param drivers: optional set of known driver gene names highlighted on each edge
     :return path to the generated latex/tikz tree
@@ -31,7 +37,7 @@ def create_figure_file(tree, tree_root_key, filename, patient, figure_caption, d
             latex_output.write_figure_header(latex_file, standalone)
 
             # generate tikz tree and write it to the opened file
-            _write_tikz_tree(tree, tree_root_key, latex_file, 0, patient,
+            _write_tikz_tree(tree, tree_root_key, latex_file, 0, patient, phylogeny,
                              gene_names=patient.gene_names, mut_keys=patient.mut_keys, drivers=drivers)
 
             # generate latex file footers
@@ -39,6 +45,15 @@ def create_figure_file(tree, tree_root_key, filename, patient, figure_caption, d
 
             latex_file.write('\\end{document}\n')
             logger.info('Generated tree in tikz latex format: {}'.format(filename))
+
+            # study mutation signatures by investigating the signatures on the individual branches
+            # mat_file, extension = os.path.splitext(filename)
+            # mat_file += '_matrix.txt'
+            # logger.info("Writing matrix file!")
+            # with open(mat_file, 'w') as matrix_file:
+            #     _write_assigned_mutation_matrix(tree, tree_root_key, matrix_file, 0, patient, drivers=drivers,
+            #                                     gene_names=patient.gene_names, mut_keys=patient.mut_keys)
+
             return filename
 
     except OSError:
@@ -46,10 +61,24 @@ def create_figure_file(tree, tree_root_key, filename, patient, figure_caption, d
         return None
 
 
-def _write_tikz_tree(tree, cur_node, latex_file, level, patient, gene_names=None, mut_keys=None, drivers=set()):
+def _write_tikz_tree(tree, cur_node, latex_file, level, patient, pg,
+                     gene_names=None, mut_keys=None, drivers=set()):
     """
     Run recursively through the tree and write the tree in tikz format to the opened file
+    :param tree:
+    :param cur_node:
+    :param latex_file:
+    :param level:
+    :param patient:
+    :param pg: phylogeny
+    :param gene_names:
+    :param mut_keys:
+    :param drivers:
+    :return:
     """
+
+    # maximal number of depicted driver gene names per branch
+    MAX_DR_NAS = 6
 
     tree.node[cur_node]['level'] = level
     # calculate indentation dependent on the level of the node
@@ -83,31 +112,36 @@ def _write_tikz_tree(tree, cur_node, latex_file, level, patient, gene_names=None
             else:
                 acquired_drivers = list()
 
-            latex_file.write(pre+'\t\\edge node[above, NavyBlue]{'
-                             + (('\\footnotesize{+'+str(len(tree[cur_node][child]['muts']))
-                                 + (' ('+(','.join(d for d in sorted(acquired_drivers)))+')'
-                                    if len(acquired_drivers) > 0 else '') + '}')
-                                if 'muts' in tree[cur_node][child] and len(tree[cur_node][child]['muts']) > 0 else '')
-                             + '}'
-                             + (' node[below, red!70]{\\footnotesize{'+str(-len(tree[cur_node][child]['dels']))+'}}'
-                                if 'dels' in tree[cur_node][child] and len(tree[cur_node][child]['dels']) > 0 else '')
-                             + (' node[below, black!60]{\\footnotesize{'+'{:.0f}\\%'.format(
-                                tree.node[child]['conf']*100.0)+'}}'
-                                if 'conf' in tree.node[child] else '')
-                             + ';\n ')
+            latex_file.write(
+                pre+'\t\\edge node[above, NavyBlue]{' +
+                (('\\footnotesize{+'+str(len(tree[cur_node][child]['muts'])) +
+                 (' ('+(','.join(d for d in sorted(islice(acquired_drivers, 0, MAX_DR_NAS)))) +
+                 (',...+{})'.format(len(acquired_drivers)-MAX_DR_NAS) if len(acquired_drivers) > MAX_DR_NAS
+                  else ')') if len(acquired_drivers) > 0 else '') + '}')
+                 if 'muts' in tree[cur_node][child] and len(tree[cur_node][child]['muts']) > 0 else '') + '}' +
+                (' node[below, red!70]{\\footnotesize{'+str(-len(tree[cur_node][child]['dels']))+'}}'
+                 if 'dels' in tree[cur_node][child] and len(tree[cur_node][child]['dels']) > 0 else '') +
+                (' node[below, black!60]{\\footnotesize{'+'{:.0f}\\%'.format(
+                    tree.node[child]['conf']*100.0)+'}}' if 'conf' in tree.node[child] else '') + ';\n ')
 
             # mutations which have been acquired on the edge from the parent to this child
             if 'muts' in tree[cur_node][child] and len(tree[cur_node][child]['muts']) > 0:
                 if gene_names is not None:
-                    latex_file.write(pre+'\t% Acquired mutations ({}): '.format(len(tree[cur_node][child]['muts']))
-                                     + ', '.join(sorted(gene_names[m] for m in tree[cur_node][child]['muts']))+'\n')
+                    latex_file.write(pre+'\t% Acquired mutations ({}): '.format(len(tree[cur_node][child]['muts'])) +
+                                     ', '.join(sorted(gene_names[m] for m in tree[cur_node][child]['muts']))+'\n')
                 if mut_keys is not None:
-                    latex_file.write(pre+'\t% Acquired mutations ({}): '.format(len(tree[cur_node][child]['muts']))
-                                     + ', '.join(sorted(mut_keys[m] for m in tree[cur_node][child]['muts']))+'\n')
-                latex_file.write(pre+'\t% Acquired mutations ({}): '.format(len(tree[cur_node][child]['muts']))
-                                 + ','.join(sorted((str(m) for m in tree[cur_node][child]['muts']), key=int))+'\n')
+                    latex_file.write(pre+'\t% Acquired mutations ({}): '.format(len(tree[cur_node][child]['muts'])) +
+                                     ', '.join(sorted(mut_keys[m] for m in tree[cur_node][child]['muts']))+'\n')
+                latex_file.write(pre+'\t% Acquired mutations ({}): '.format(len(tree[cur_node][child]['muts'])) +
+                                 ','.join(sorted((str(m) for m in tree[cur_node][child]['muts']), key=int))+'\n')
+                latex_file.write(pre + '\t% VAF of acquired mutations: mean {:.2%}; median {:.2%}'.format(
+                    np.mean([patient.vafs[m, pg.sc_sample_ids[sa_idx] if sa_idx in pg.sc_sample_ids else sa_idx]
+                             for m in tree[cur_node][child]['muts'] for sa_idx in child]),
+                    np.median([patient.vafs[m, pg.sc_sample_ids[sa_idx] if sa_idx in pg.sc_sample_ids else sa_idx]
+                               for m in tree[cur_node][child]['muts'] for sa_idx in child])) +
+                                 '\n')
 
-            _write_tikz_tree(tree, child, latex_file, level+1, patient, gene_names=gene_names,
+            _write_tikz_tree(tree, child, latex_file, level+1, patient, pg, gene_names=gene_names,
                              mut_keys=mut_keys, drivers=drivers)
 
         latex_file.write(pre+']\n')
@@ -150,6 +184,60 @@ def _write_tikz_tree(tree, cur_node, latex_file, level, patient, gene_names=None
         if acquired_muts > 0:
             latex_file.write(pre+'% Present mutations: {}; Reported mutations: {} \n'.format(
                 acquired_muts-lost_muts, reported_muts))
+
+
+def _write_assigned_mutation_matrix(tree, cur_node, matrix_file, level, patient, gene_names=None, mut_keys=None,
+                                    drivers=set()):
+    """
+    Run recursively through the tree and write mutations per branch to a file to study mutation signatures
+    :author Jeff Gerold
+    """
+
+    tree.node[cur_node]['level'] = level
+    # calculate indentation dependent on the level of the node
+    pre = ''.join('\t' for _ in range(level))
+
+    if len(tree.neighbors(cur_node)) > 0 or \
+            ('name' in tree.node[cur_node] and (cur_node == TREE_ROOT or tree.node[cur_node]['name'] == TREE_ROOT)):
+
+        if tree.node[cur_node]['name'] == TREE_ROOT or cur_node == TREE_ROOT:
+            # Remove underscores in patient names as tikz can not process underscores
+            tree_name = str(tree.node[cur_node]['name']).replace(' ', '~')
+
+        # internal subclone
+        else:
+            node_name = str(tree.node[cur_node]['name']).replace(' ', '~')
+            if node_name.startswith('Pam'):
+                node_name = node_name[5:]
+
+        # add edges to its children and information about the acquired mutations
+        # for child in tree.successors(parent):     had to change to be able to handle undirected graph
+        for child in sorted(tree.neighbors(cur_node), key=lambda k: tree.node[k]['name']):
+
+            # check if not has been covered already
+            if 'level' in tree.node[child] and tree.node[child]['level'] < level:
+                continue
+
+            # mutations which have been acquired on the edge from the parent to this child
+            if 'muts' in tree[cur_node][child] and len(tree[cur_node][child]['muts']) > 0:
+                mut_key_list = [patient.mut_keys[m] for m in tree[cur_node][child]['muts']]
+                for x in mut_key_list:
+                    if len(x) >= 3:
+                        reference = x[-3]
+                        alt = x[-1]
+                        if cur_node == 'germline':
+                            parent_str = cur_node
+                        else:
+                            parent_str = ' '.join(sorted(patient.sample_names[int(s)] for s in cur_node))
+                        child_str = ' '.join(sorted(patient.sample_names[int(s)] for s in child))
+                        outstr = parent_str + '\t' + child_str + '\t' + reference + '\t' + alt + '\t' + x + '\n'
+                        matrix_file.write(outstr)
+
+            _write_assigned_mutation_matrix(tree, child, matrix_file, level+1, patient, gene_names=gene_names,
+                                            mut_keys=mut_keys, drivers=drivers)
+
+    else:
+        pass  # node is a leaf
 
 
 def name_internal_nodes(tree, node, level, root_path, prename, idx):

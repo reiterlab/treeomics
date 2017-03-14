@@ -295,6 +295,7 @@ def create_mlh_graph_files(res_nodes_filename, res_mutnode_labels_filename, res_
 
     # dictionary with mapping from clones (nodes) to node id in the circos files
     res_nodes = dict()
+    opt_sol = phylogeny.solutions[0]    # optimal solution
 
     # open file
     with open(res_nodes_filename, 'w') as res_nodes_file, \
@@ -307,21 +308,21 @@ def create_mlh_graph_files(res_nodes_filename, res_mutnode_labels_filename, res_
 
         founders = dict()
         founding_mp = frozenset(sa for sa in range(phylogeny.patient.n))
-        founders[founding_mp] = phylogeny.mlh_founders
+        founders[founding_mp] = opt_sol.mlh_founders
         unique_mutations = dict()
-        for sa_idx, muts in phylogeny.mlh_unique_mutations.items():
+        for sa_idx, muts in opt_sol.mlh_unique_mutations.items():
             if len(muts) > 0:
                 unique_mutations[frozenset([sa_idx])] = muts
 
         absent_mp = frozenset([])
         absent_muts = dict()
-        absent_muts[absent_mp] = phylogeny.mlh_absent_mutations
+        absent_muts[absent_mp] = opt_sol.mlh_absent_mutations
 
         for node_idx, (mp, muts) in enumerate(
-                chain(founders.items(), sorted(phylogeny.shared_mlh_mps.items(), key=lambda k: -len(k[0])),
+                chain(founders.items(), sorted(opt_sol.shared_mlh_mps.items(), key=lambda k: -len(k[0])),
                       sorted(unique_mutations.items(), key=lambda k: k[0]), absent_muts.items()), 1):
 
-            if len(mp) == 0 and all(mut_idx not in phylogeny.false_positives.keys() for mut_idx in muts):
+            if len(mp) == 0 and all(mut_idx not in opt_sol.false_positives.keys() for mut_idx in muts):
                 node_idx -= 1
                 continue
 
@@ -333,7 +334,7 @@ def create_mlh_graph_files(res_nodes_filename, res_mutnode_labels_filename, res_
             # write start and end position of the node to the file
             # end position is given by the number of mutations present in this clone
             res_nodes_file.write('0 '+str(len(muts) if len(mp) > 0 else sum(
-                1 for mut_idx in muts if mut_idx in phylogeny.false_positives.keys()))+' ')
+                1 for mut_idx in muts if mut_idx in opt_sol.false_positives.keys()))+' ')
             # write node color to the file which is blue since all conflicts are resolved
             res_nodes_file.write('blue')
             res_nodes_file.write('\n')
@@ -344,7 +345,7 @@ def create_mlh_graph_files(res_nodes_filename, res_mutnode_labels_filename, res_
                     muts, key=lambda k: phylogeny.patient.gene_names[k]
                     if phylogeny.patient.gene_names is not None else 0):
 
-                if len(mp) == 0 and mut_idx not in phylogeny.false_positives.keys():
+                if len(mp) == 0 and mut_idx not in opt_sol.false_positives.keys():
                     continue
 
                 # create label entry in the according label file
@@ -354,24 +355,24 @@ def create_mlh_graph_files(res_nodes_filename, res_mutnode_labels_filename, res_
                     str(1) if mut_idx in driver_pathways else str(0)))
 
                 # create mutation pattern entry in the according data file
-                for sa_idx in chain(mp, phylogeny.false_positives[mut_idx], phylogeny.false_negatives[mut_idx],
-                                    phylogeny.false_negative_unknowns[mut_idx]):
+                for sa_idx in chain(mp, opt_sol.false_positives[mut_idx], opt_sol.false_negatives[mut_idx],
+                                    opt_sol.false_negative_unknowns[mut_idx]):
                     res_data_file.write('n'+str(node_idx)+' '+str(pos)+' '+str(pos+1) +
                                         ' '+str(sa_idx+1) + ' '+'shared='+str(len(mp)))
                     # check if this data was given or resolved
-                    if mut_idx in phylogeny.false_negatives.keys() \
-                            and sa_idx in phylogeny.false_negatives[mut_idx]:
+                    if mut_idx in opt_sol.false_negatives.keys() \
+                            and sa_idx in opt_sol.false_negatives[mut_idx]:
 
                         # this mutation has been added
                         res_data_file.write(',resolved=1')
 
-                    elif mut_idx in phylogeny.false_positives.keys() \
-                            and sa_idx in phylogeny.false_positives[mut_idx]:
+                    elif mut_idx in opt_sol.false_positives.keys() \
+                            and sa_idx in opt_sol.false_positives[mut_idx]:
 
                         # mutation has been removed
                         res_data_file.write(',resolved=-1')
-                    elif mut_idx in phylogeny.false_negative_unknowns.keys() \
-                            and sa_idx in phylogeny.false_negative_unknowns[mut_idx]:
+                    elif mut_idx in opt_sol.false_negative_unknowns.keys() \
+                            and sa_idx in opt_sol.false_negative_unknowns[mut_idx]:
 
                         # this mutation has been added
                         res_data_file.write(',resolved=1')
@@ -466,39 +467,40 @@ def _create_mp_nodes_files(mp_nodes_filename, mp_mutnode_data_filename, phylogen
 
             # show only a maximal number of mutation pattern
             if node_idx > max_no_mps:
-                mp_nodes_file.write(('<{:.2f}'.format(mp_weights[node]) if mp_weights[node] < 10
-                                     else '<{:.1f} '.format(mp_weights[node]) if mp_weights[node] < 100
-                                     else '<{:.0f} '.format(mp_weights[node]))+' 0 1 grey\n')
+                mp_nodes_file.write(('<{:.3f}'.format(mp_weights[node]) if mp_weights[node] < 0.05
+                                     else '<{:.2f} '.format(mp_weights[node]) if mp_weights[node] < 0.2
+                                     else '<{:.1f} '.format(mp_weights[node]))+' 0 1 grey\n')
                 del mp_nodes[node]
                 break
             # show only the nodes with a minimum reliability score
             elif mp_weights[node] < min_node_weight:
-                mp_nodes_file.write(('<{:.2f}'.format(min_node_weight) if mp_weights[node] < 10
-                                     else '<{:.1f} '.format(mp_weights[node]) if mp_weights[node] < 100
-                                     else '<{:.0f} '.format(mp_weights[node]))+' 0 1 grey\n')
+                mp_nodes_file.write(('<{:.3f}'.format(min_node_weight) if mp_weights[node] < 0.05
+                                     else '<{:.2f} '.format(mp_weights[node]) if mp_weights[node] < 0.2
+                                     else '<{:.1f} '.format(mp_weights[node]))+' 0 1 grey\n')
                 del mp_nodes[node]
                 break
 
             # write mutation pattern reliability score (weight) to file
             # mp_nodes_file.write('{}-{:.2f} '.format(len(phylogeny.nodes[node]), mp_weights[node]))
-            mp_nodes_file.write('{:.2f} '.format(mp_weights[node]) if mp_weights[node] < 10
-                                else '{:.1f} '.format(mp_weights[node]) if mp_weights[node] < 100
-                                else '{:.0f} '.format(mp_weights[node]))
+            mp_nodes_file.write('{:.3f} '.format(mp_weights[node]) if mp_weights[node] < 0.05
+                                else '{:.2f} '.format(mp_weights[node]) if mp_weights[node] < 0.2
+                                else '{:.1f} '.format(mp_weights[node]))
 
             # write start and end position of the node to the file
             # end position is given by the number of mutations present in this clone
             mp_nodes_file.write('0 {} '.format(1))
             # write node color to the file which is given by the fact if the clone is
             # removed by the solution or kept
-            if ((isinstance(phylogeny, SimplePhylogeny) and node in phylogeny.compatible_nodes) or
-                    (isinstance(phylogeny, MaxLHPhylogeny) and node in phylogeny.compatible_nodes) or len(node) == 0):
+            if ((isinstance(phylogeny, SimplePhylogeny) and node in phylogeny.solutions[0].compatible_nodes) or
+                    (isinstance(phylogeny, MaxLHPhylogeny) and node in phylogeny.solutions[0].compatible_nodes)):
                 mp_nodes_file.write('blue')       # prefix p for pure color, e.g. pblue
-            elif node in phylogeny.conflicting_nodes:
+            elif node in phylogeny.solutions[0].incompatible_nodes:
                 mp_nodes_file.write('red')         # prefix l or d for light or dark, e.g. lpblue
             else:
                 mp_nodes_file.write('lgrey')
-                logger.warn('Mutation pattern {} is neither conflicting nor compatible! It has to be either one.'
-                            .format(node))
+                if 1 < len(node) < len(phylogeny.patient.sample_names):
+                    logger.warning('Mutation pattern {} is neither conflicting nor compatible! It has to be either one.'
+                                   .format(node))
 
             mp_nodes_file.write('\n')
 

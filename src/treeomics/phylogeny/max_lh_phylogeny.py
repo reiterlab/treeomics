@@ -29,7 +29,7 @@ class MaxLHPhylogeny(Phylogeny):
     Infer evolutionary tree from the resolved data
     """
 
-    def __init__(self, patient, mps):
+    def __init__(self, patient, mps, loh_frequency=0.0):
 
         Phylogeny.__init__(self, patient, mps)
 
@@ -48,26 +48,18 @@ class MaxLHPhylogeny(Phylogeny):
         # map from mut_idx to the weight of the highest ranked evolutionarily compatible MP
         self.max_lh_weights = None
 
-        # confidence in each parsimony-informative branching
-        # reliability score of node divided by its own score plus the sum of all evolutionarily incompatible patterns
-        # (= sum of reliability scores of neighbors in the conflict graph)
-        self.branch_confidence = None
-
         self.bootstrapping_values = None
 
-        # false positives and false negatives compared to original classification
-        # likely technical or biological artifacts in the data
-        self.false_positives = None
-        self.false_negatives = None
-        self.false_negative_unknowns = None
+        # weighted likelihood of the identified compatible mutation patterns based on the likelihood of the
+        # individual solutions in the solution space
+        self.weighted_node_lh = None
 
-        # updated clones after artifacts in the data have been removed
-        self.shared_mlh_mps = None
-        self.mlh_founders = None
-        self.mlh_unique_mutations = None
-        self.mlh_absent_mutations = None
+        # list of solutions as inferred by the MILP solution pool
+        self.solutions = None
 
         self.mlh_tree = None
+
+        self.max_no_mps = None
 
         # calculate the minimal number of variant reads k_min at the median coverage and purity such that p_1 > 50%
         k_mins = []
@@ -76,45 +68,66 @@ class MaxLHPhylogeny(Phylogeny):
         pres_lp = math.log(0.5)
         lh = 1.0
         for sa_idx, sample_name in enumerate(patient.sample_names):
-            for k in range(500):
+            # calculate posterior according to prior, estimated purity and data
+            for k in range(5000):
                 _, p1 = get_log_p0(np.median(patient.sample_coverages[sample_name]), k, self.patient.bi_error_rate,
-                                   self.patient.bi_c0, pseudo_alpha=def_sets.PSEUDO_ALPHA,
-                                   pseudo_beta=patient.betas[sample_name])
+                                   self.patient.bi_c0, cutoff_f=self.patient.get_cutoff_frequency(sample_name),
+                                   pseudo_alpha=def_sets.PSEUDO_ALPHA, pseudo_beta=patient.betas[sample_name])
                 if p1 > pres_lp:
                     k_mins.append(k)
                     break
+
             logger.debug('{}: Minimum number of mutant reads such that presence probability is greater than 50%: {}.'
                          .format(sample_name, k_mins[-1]))
-            called_ps.append(1.0 - binom.cdf(k_mins[-1]-1, np.median(patient.sample_coverages[sample_name]),
+            called_ps.append(1.0 - binom.cdf(k_mins[-1]-1, int(np.median(patient.sample_coverages[sample_name])),
                                              self.patient.bi_error_rate))
             logger.debug('Probability to observe an incorrectly called variant: {:.3%}'.format(called_ps[-1]))
 
             if sample_name in patient.estimated_purities:
-                missed_ps.append(binom.cdf(k_mins[-1]-1, np.median(patient.sample_coverages[sample_name]),
+                missed_ps.append(binom.cdf(k_mins[-1]-1, int(np.median(patient.sample_coverages[sample_name])),
                                            self.patient.estimated_purities[sample_name] / 2.0))
             else:
-                missed_ps.append(binom.cdf(k_mins[-1]-1, np.median(patient.sample_coverages[sample_name]),
+                missed_ps.append(binom.cdf(k_mins[-1]-1, int(np.median(patient.sample_coverages[sample_name])),
                                            np.median(self.patient.sample_mafs[sample_name])))
             logger.debug('Probability to miss a clonal variant: {:.1e}'.format(missed_ps[-1]))
 
             # probability that all calls are correct
-            lh *= 1.0 - called_ps[-1] - missed_ps[-1]
+            # ensure that this probability is positive but also not too close to 1
+            lh *= max((1.0 - max(called_ps[-1], 1.0 - def_sets.MAX_PRE_PROB) - missed_ps[-1] -
+                      max(loh_frequency, 1.0 - def_sets.MAX_ABS_PROB)), 0.5)
 
         # probability that at least one call is wrong
         lh = 1 - lh
-        self.min_score = -math.log(1.0 - lh)
-        logger.debug('Likelihood of a pattern with at least one false-positive or false-negative: {:.3e}'.format(lh))
+        subclone_th = 1.0
+        self.min_score = -math.log(1.0 - lh) * subclone_th
+        logger.debug('Likelihood of a pattern with at least one false-positive or false-negative' +
+                     ' and an LOH probability along a linage of {}: {:.3e}'.format(loh_frequency, lh))
+
         logger.info('Minimum reliability score value to be considered as a potential subclone: {:.3e}'.format(
             self.min_score))
 
-    def infer_max_lh_tree(self, subclone_detection=False, no_bootstrap_samples=0, max_no_mps=None, time_limit=None):
+        lh_99 = 1.0 - math.pow(0.99, len(patient.sample_names))
+        logger.debug('Reliability score of a pattern with 99% certainty in each call: {:.3e}'.format(
+            -math.log(1.0 - lh_99)))
+
+        lh_999 = 1.0 - math.pow(0.999, len(patient.sample_names))
+        logger.debug('Reliability score of a pattern with 99.9% certainty in each call: {:.3e}'.format(
+            -math.log(1.0 - lh_999)))
+
+        lh_9999 = 1.0 - math.pow(0.9999, len(patient.sample_names))
+        logger.debug('Reliability score of a pattern with 99.99% certainty in each call: {:.3e}'.format(
+            -math.log(1.0 - lh_9999)))
+
+    def infer_max_lh_tree(self, subclone_detection=False, pool_size=1, no_bootstrap_samples=0, max_no_mps=None,
+                          time_limit=None):
         """
         Infer maximum likelihood tree via calculation reliability scores for each
         possible mutation pattern from the likelihood that no variant has this pattern
         The inferred solution represents the reliable and evolutionary compatible mutation patterns
         The mutation pattern of each variant is given by the mp maximizing its likelihood
         :param subclone_detection: is subclone detection enabled?
-        :param max_no_mps: only the given maximal number of most likely (by joint likelihood) mutation patterns
+        :param pool_size: number of best solutions explored by ILP solver to estimate confidence
+        :param max_no_mps: only the given number of most likely (by joint likelihood) mutation patterns
             is explored per variant
         :param no_bootstrap_samples: number of samples with replacement for the bootstrapping
         :param time_limit: time limit for MILP solver in seconds
@@ -126,13 +139,11 @@ class MaxLHPhylogeny(Phylogeny):
         else:
             self.patient.sc_names = None
 
+        # only the given number of most likely (by joint likelihood) mutation patterns is explored per variant
+        self.max_no_mps = max_no_mps
+
         # necessary to map from identified putative subclones to their original sample
         self.sc_sample_ids = dict()
-
-        if max_no_mps is not None and max_no_mps < math.pow(2, self.patient.n):
-            logger.warn('Some variants might be evolutionarily incompatible since the '
-                        'solution space is only partially explored!')
-            self.conflicting_mutations = set()
 
         # compute various mutation patterns (nodes) and their reliability scores
         self.node_scores, self.idx_to_mp, self.mp_col_ids, self.mp_weights = infer_ml_graph_nodes(
@@ -145,99 +156,25 @@ class MaxLHPhylogeny(Phylogeny):
 
             # translate the conflict graph into a minimum vertex cover problem
             # and solve this using integer linear programming
-            self.conflicting_nodes, self.compatible_nodes = cps.solve_conflicting_phylogeny(
-                self.cf_graph, time_limit=time_limit)
+            self.solutions, self.weighted_node_lh = cps.solve_conflicting_phylogeny(
+                self.cf_graph, len(self.patient.log_p01), pool_size, time_limit=time_limit)
 
-            # ##### assign each variant to the highest ranked evolutionarily compatible mutation pattern ########
-
-            # maps from each evolutionarily compatible MP to the selected set of variants
-            self.max_lh_nodes = defaultdict(set)
-            # map from mut_idx to the highest ranked evolutionarily compatible MP
-            self.max_lh_mutations = dict()
-            # map from mut_idx to the weight of the highest ranked evolutionarily compatible MP
-            self.max_lh_weights = dict()
-
-            # dictionaries from mut_idx to putative artifacts
-            self.false_positives = defaultdict(set)
-            self.false_negatives = defaultdict(set)
-            self.false_negative_unknowns = defaultdict(set)
-
-            # find the highest ranked evolutionarily compatible mutation pattern for each variant
-            for mut_idx in range(len(self.mp_weights)):
-
-                # sort by descending log likelihood
-                for sol_idx, (mp_col_idx, _) in enumerate(
-                        sorted(self.mp_weights[mut_idx].items(), key=lambda k: -k[1]), 1):
-
-                    if self.idx_to_mp[mp_col_idx] in self.compatible_nodes:
-                        # found most likely pattern for this variant
-                        self.max_lh_nodes[self.idx_to_mp[mp_col_idx]].add(mut_idx)
-                        self.max_lh_mutations[mut_idx] = self.idx_to_mp[mp_col_idx]
-                        self.max_lh_weights[mut_idx] = self.mp_weights[mut_idx][mp_col_idx]
-                        # logger.debug('Chose {}th highest ranked pattern.'.format(sol_idx)
-                        #     + 'Max LH pattern of variant in {} is {} with log likelihood {:.1e}.'.format(
-                        #       self.patient.gene_names[mut_idx] if self.patient.gene_names is not None
-                        #       else self.patient.mut_keys[mut_idx], self.idx_to_mp[mp_col_idx],
-                        #       self.mp_weights[mut_idx][mp_col_idx]))
-
-                        # determine false positives and false negatives compared to original classification
-                        fps = set(self.patient.mutations[mut_idx].difference(self.idx_to_mp[mp_col_idx]))
-
-                        # check if some of these false-positives are present in the newly created subclones
-                        for sc_idx, sa_idx in self.sc_sample_ids.items():
-                            if sc_idx in self.idx_to_mp[mp_col_idx] and sa_idx in fps:
-                                fps.remove(sa_idx)
-                        if len(fps) > 0:
-                            self.false_positives[mut_idx] = fps
-
-                        # distinguish between real false negatives and variants classified as unknown
-                        for sc_idx in self.idx_to_mp[mp_col_idx].difference(self.patient.mutations[mut_idx]):
-
-                            # map from identified putative subclones to their original sample
-                            if sc_idx in self.sc_sample_ids.keys():
-                                while sc_idx in self.sc_sample_ids.keys():
-                                    sc_idx = self.sc_sample_ids[sc_idx]
-                                if sc_idx in self.patient.mutations[mut_idx]:
-                                    # mutation was already classified as present in original sample
-                                    # => no false-negative
-                                    continue
-                                # mutation was not classified as present in original sample
-                                # => must be a false-negative
-                                if self.patient.data[mut_idx][sc_idx] < 0.0:      # unknown classified mutation
-                                    self.false_negative_unknowns[mut_idx].add(sc_idx)
-                                else:
-                                    self.false_negatives[mut_idx].add(sc_idx)
-                            else:
-                                if self.patient.data[mut_idx][sc_idx] < 0.0:      # unknown classified mutation
-                                    self.false_negative_unknowns[mut_idx].add(sc_idx)
-                                else:
-                                    self.false_negatives[mut_idx].add(sc_idx)
-
-                        # search can be stopped since most likely pattern has been found for this variant
-                        break
-
-                # no evolutionarily compatible mutation pattern was among the <max_no_mps> most likely pattern
-                # of this variant; variant will be incompatible to the inferred tree!
-                else:
-
-                    # check if indeed the solution space is only partially explored
-                    assert max_no_mps is not None and max_no_mps < math.pow(2, self.patient.n), \
-                        'Compatible mutation pattern must exist when the full solution space is explored!'
-
-                    self.conflicting_mutations.add(mut_idx)
+            opt_sol = self.solutions[0]
+            opt_sol.assign_variants(self, max_no_mps)
+            opt_sol.find_artifacts(self)
 
             logger.info('Putative false-positives {}, putative false-negatives {}, put. false neg. unknowns {}'.format(
-                sum(len(fps) for mut_idx, fps in self.false_positives.items()),
-                sum(len(fns) for mut_idx, fns in self.false_negatives.items()),
-                sum(len(fns) for mut_idx, fns in self.false_negative_unknowns.items())))
-            if self.conflicting_mutations is not None and len(self.conflicting_mutations) > 0:
-                logger.warn('{} evolutionarily incompatible variants occurred{}'.format(
-                    len(self.conflicting_mutations),
-                    ' in: '+', '.join(self.patient.gene_names[mut_idx] for mut_idx in self.conflicting_mutations) if
+                sum(len(fps) for mut_idx, fps in opt_sol.false_positives.items()),
+                sum(len(fns) for mut_idx, fns in opt_sol.false_negatives.items()),
+                sum(len(fns) for mut_idx, fns in opt_sol.false_negative_unknowns.items())))
+            if opt_sol.conflicting_mutations is not None and len(opt_sol.conflicting_mutations) > 0:
+                logger.warning('{} evolutionarily incompatible variants occurred{}'.format(
+                    len(opt_sol.conflicting_mutations),
+                    ' in: '+', '.join(self.patient.gene_names[mut_idx] for mut_idx in opt_sol.conflicting_mutations) if
                     self.patient.gene_names is not None else '.'))
 
             # find parsimony-informative evolutionarily incompatible mps with high likelihood
-            if subclone_detection and max_no_mps is None:
+            if subclone_detection:
 
                 self.sc_sample_ids, found_subclones = self.find_subclones()
                 if not found_subclones:
@@ -254,46 +191,17 @@ class MaxLHPhylogeny(Phylogeny):
                                                                                     len(self.patient.sc_names)))))
         if max_no_mps is not None:
             logger.info('{}/{} are compatible on the inferred evolutionary tree. '.format(
-                len(self.max_lh_mutations), len(self.max_lh_mutations)+len(self.conflicting_mutations)) +
+                len(opt_sol.max_lh_mutations), len(opt_sol.max_lh_mutations)+len(opt_sol.conflicting_mutations)) +
                 '{} ({:.3%}) of the mutations are conflicting.'.format(
-                len(self.conflicting_mutations), float(len(self.conflicting_mutations)) /
-                    (len(self.max_lh_mutations)+len(self.conflicting_mutations))))
+                len(opt_sol.conflicting_mutations), float(len(opt_sol.conflicting_mutations)) /
+                    (len(opt_sol.max_lh_mutations)+len(opt_sol.conflicting_mutations))))
 
-        # find founders and unique mutations in updated mutation list
-        # build up a dictionary of resolved clones where
-        # the likely sequencing errors have been updated
-        self.mlh_founders = set()                       # set of founding mutations present in all samples
-        self.mlh_unique_mutations = defaultdict(set)    # private mutations only appear in the leaves
-        self.mlh_absent_mutations = set()               # mutations inferred to be absent in all samples
-        self.shared_mlh_mps = defaultdict(set)          # parsimony-informative mps
-
-        for mut_idx, samples in self.max_lh_mutations.items():
-            if len(samples) == len(self.patient.sample_names) + len(self.sc_sample_ids):          # founder mut.
-                self.mlh_founders.add(mut_idx)
-            elif 1 < len(samples) < len(self.patient.sample_names) + len(self.sc_sample_ids):     # shared mut.
-                self.shared_mlh_mps[frozenset(samples)].add(mut_idx)
-            elif len(samples) == 1:                                                          # unique mut.
-                for sa_idx in samples:
-                    self.mlh_unique_mutations[sa_idx].add(mut_idx)
-            else:
-                self.mlh_absent_mutations.add(mut_idx)
-
-        # compute the number of persistent and present mutations inferred
-        # in the evolutionary trajectory of each sample
-        for sa_idx in range(len(self.patient.sample_names)):
-            for mut_idx in self.mlh_founders:
-                self.patient.variants[sa_idx].append(mut_idx)
-            for mut_idx in self.mlh_unique_mutations[sa_idx]:
-                self.patient.variants[sa_idx].append(mut_idx)
-
-        for mps, muts in self.shared_mlh_mps.items():
-            for sa_idx in mps:
-                for mut_idx in muts:
-                    self.patient.variants[sa_idx].append(mut_idx)
+        # find founders, shared and unique mutations in updated mutation list
+        opt_sol.infer_mutation_patterns(self)
 
         for sa_idx, sample_name in enumerate(self.patient.sample_names):
             logger.info('Inferred number of variants in sample {} in a perfect and persistent phylogeny: {}'.format(
-                sample_name, len(self.patient.variants[sa_idx])))
+                sample_name, len(opt_sol.variants[sa_idx])))
 
         # is bootstrapping enabled?
         if no_bootstrap_samples > 0:
@@ -304,9 +212,21 @@ class MaxLHPhylogeny(Phylogeny):
             else:
                 self.do_bootstrapping(no_bootstrap_samples, time_limit=time_limit)
 
+        if self.bootstrapping_values is not None:
+            confidence_values = self.bootstrapping_values
+            logger.info('Confidence values for branching are given by bootstrapping.')
+
+        elif self.weighted_node_lh is not None:
+            confidence_values = self.weighted_node_lh
+            logger.info('Confidence values for branching are given by exploring the whole solution space and '
+                        'the weighted likelihoods of each solution.')
+        else:
+            confidence_values = None
+            logger.info('Confidence values will not be provided.')
+
         # construct a phylogenetic tree from the maximum likelihood mutation patterns
-        self.mlh_tree = self.infer_evolutionary_tree(self.shared_mlh_mps, self.mlh_founders,
-                                                     self.mlh_unique_mutations, confidence=self.bootstrapping_values)
+        self.mlh_tree = self.infer_evolutionary_tree(opt_sol.shared_mlh_mps, opt_sol.mlh_founders,
+                                                     opt_sol.mlh_unique_mutations, confidence=confidence_values)
 
         return self.mlh_tree
 
@@ -328,7 +248,7 @@ class MaxLHPhylogeny(Phylogeny):
 
         # calculate the frequency with which compatible mutation patterns are reproduced
         # when bootstrapping is used
-        for node in self.compatible_nodes:
+        for node in self.solutions[0].compatible_nodes:
 
             # consider only parsimony-informative MPs
             if len(node) <= 1 or len(node) == len(self.patient.sample_names):
@@ -361,11 +281,11 @@ class MaxLHPhylogeny(Phylogeny):
 
         # calculate the frequency with which compatible mutation patterns are reproduced
         # when only a subset of variants are used
-        no_comp_pars_inf_mps = sum(1 for node in self.compatible_nodes
+        no_comp_pars_inf_mps = sum(1 for node in self.solutions[0].compatible_nodes
                                    if 1 < len(node) < len(self.patient.sample_names))
         for sample_fraction in sorted(node_frequencies.keys()):
             freq = 0
-            for node in self.compatible_nodes:
+            for node in self.solutions[0].compatible_nodes:
 
                 # consider only parsimony-informative MPs
                 if len(node) <= 1 or len(node) == len(self.patient.sample_names):
@@ -415,7 +335,9 @@ class MaxLHPhylogeny(Phylogeny):
         # find incompatible mutation pattern with the highest reliability score
         for mp in sorted(self.conflicting_nodes, key=lambda k: -self.node_scores[k]):
 
-            if self.node_scores[mp] < self.min_score:
+            if (self.node_scores[mp] < self.min_score or
+                    len(self.patient.sc_names) > len(self.patient.sample_names) +
+                    max(5, len(self.patient.sample_names)/2)):
                 # no incompatible mutation patterns with high reliability score exist
                 return updated_nodes, self.sc_sample_ids
 
@@ -437,9 +359,11 @@ class MaxLHPhylogeny(Phylogeny):
             # find highest ranked conflicting mutation pattern that is part of the current solution
             # step (a) in pseudo algorithm
             logger.debug('Highest ranked conflicting mutation pattern: {} and its neighbors'.format(mp))
+            logger.debug('Its neighbors: {}'.format(self.cf_graph.neighbors(mp)))
+            logger.debug('Conflicting nodes: {}'.format(self.conflicting_nodes))
             hcmp = max(set(self.cf_graph.neighbors(mp)).difference(self.conflicting_nodes),
                        key=lambda k: self.node_scores[k])
-            logger.info('Highest ranked evolutionary incompatible mutation pattern of MP {} (w: {:.2f}): {} (w: {:.2f})'
+            logger.info('Highest ranked evolutionary incompatible mutation pattern of MP {} (w: {:.2e}): {} (w: {:.2e})'
                         .format(', '.join(self.patient.sc_names[sc] for sc in mp), self.cf_graph.node[mp]['weight'],
                                 ', '.join(self.patient.sc_names[sc] for sc in hcmp),
                                 self.cf_graph.node[hcmp]['weight']))
@@ -447,9 +371,17 @@ class MaxLHPhylogeny(Phylogeny):
             # infer samples with putative mixed subclones
             msc_samples = list(mp.intersection(hcmp))
             if len(msc_samples) > 1:    # more than one subclone would be needed to generate, reconsider later
+                logger.info('Multiple subclones are needed to explain the evolutionary incompatibility. '
+                            'Continue search.')
                 continue
 
             sc_sa = msc_samples[0]      # sample where subclone is created
+
+            # if incompatibility is due to mutations in a generated subclone, ignore it
+            if sc_sa >= len(self.patient.sample_names):
+                logger.info('Multiple subclones within the same sample are needed to explain '
+                            'the evolutionary incompatibility. Continue search.')
+                continue
 
             # create new subclones if there is enough evidence
             created_scss = dict()
@@ -485,6 +417,9 @@ class MaxLHPhylogeny(Phylogeny):
             self.mp_col_ids[new_mp] = self.mp_col_ids[mp]
             del self.mp_col_ids[mp]
             updated_nodes[mp] = new_mp
+
+            # add subclone to nodes
+            self.node_scores[frozenset([sc_sa_idx])] = self.node_scores[frozenset([sc_sa])]
             logger.info('Created new subclones {}'.format(
                         ', '.join(self.patient.sc_names[sc] for sc in new_mp.difference(mp))))
 
@@ -610,26 +545,43 @@ def infer_ml_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None, max_n
 
     trunk_mp = frozenset([sa_idx for sa_idx in range(n)])
 
-    # generate all possible mutation patterns for <n> given samples and index them
     mp_idx = 0
-    for no_pres_vars in range(0, n+1):     # number of present variants in the generated MPs (mutation patterns)
-        # generate all mps with length no_pres_vars
-        for mp in combinations(range(n), no_pres_vars):
-            node = frozenset(mp)        # create mutation pattern
-            idx_to_mp.append(node)
-            mp_col_ids[node] = mp_idx
+    if max_no_mps is None:
+        # generate all possible mutation patterns for <n> given samples and index them
+        for no_pres_vars in range(0, n+1):     # number of present variants in the generated MPs (mutation patterns)
+            # generate all mps with length no_pres_vars
+            for mp in combinations(range(n), no_pres_vars):
+                node = frozenset(mp)        # create mutation pattern
+                idx_to_mp.append(node)
+                mp_col_ids[node] = mp_idx
 
-            mp_idx += 1
+                mp_idx += 1
+    else:
+        # generate the <max_no_mps> most likely mutation patterns of each variant
+        for mut_idx in range(m):
+            mlog_pre_probs = list()
+            mlog_abs_probs = list()
+            for sa_idx in range(n):
+                mlog_pre_probs.append(-min(log_p01[mut_idx][sa_idx][1], max_pre_llh))
+                mlog_abs_probs.append(-min(log_p01[mut_idx][sa_idx][0], max_abs_llh))
 
-    # run through all mutations and generate either the <max_no_mps> of mutation patterns for each variant or
-    # generate each possible mutation pattern for each variant
+            for i, (mlog_prob, ml_mp, not_flipped_sas) in enumerate(
+                    _get_ml_mps(n, mlog_pre_probs, mlog_abs_probs, max_no_mps)):
+
+                # check if this pattern already belongs to one of the most likely one for another variant
+                if ml_mp not in mp_col_ids:
+                    idx_to_mp.append(ml_mp)
+                    mp_col_ids[ml_mp] = mp_idx
+                    mp_idx += 1
+
+                # logger.debug('{} {}th: {} {:.3f}'.format(gene_names[mut_idx], i + 1, ml_mp, math.exp(-mlog_prob)))
+
+        logger.info('Only {} mutation patterns will be explored in total.'.format(mp_idx))
+
+    # calculate the reliability scores for all as above as relevant determined mutation patterns
     for mut_idx in range(m):
 
         mp_weights.append(dict())
-
-        if max_no_mps is not None:  # not the full solution space is explored
-            # generate heap to keep track of the most likely <max_no_mps> of mutation patterns
-            heap = list()   # element at heap[0] is always the minimal element hence lowest log likelihood
 
         for mp_idx, node in enumerate(idx_to_mp):
 
@@ -656,28 +608,28 @@ def infer_ml_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None, max_n
                     if len(node) == 0 or len(node) == 1 or len(node) == n:
                         logger.debug('Underflow warning. Set probability to minimal float value!')
                     else:
-                        logger.warn('Underflow error. Set probability to minimal float value!')
+                        logger.warning('Underflow error. Set probability to minimal float value!')
                     log_ml = -200
 
                 assert log_ml < 0.0, ('Underflow error while calculating the probability that the ' +
                                       'variant {} does not have pattern {}.'.format(
                                        mut_keys[mut_idx], ', '.join(sample_names[sa_idx] for sa_idx in node)))
 
-            if max_no_mps is not None:  # not the full solution space is explored
-                # use heapq to keep track of the most likely <max_no_mps> of mutation patterns
-                if len(heap) < max_no_mps:
-                    heapq.heappush(heap, (log_ml, mp_idx))
-                elif log_ml > heap[0][0]:      # likelihood of currently considered MP is higher than smallest in heap
-                    # log likelihood of mp that is more likely for the currently considered variant
-                    heapq.heapreplace(heap, (log_ml, mp_idx))
-            else:                       # full solution space is explored, weight of every pattern is relevant
-                # assign calculated log probability that this variant has this mutation pattern
-                mp_weights[mut_idx][mp_idx] = log_ml
-
-        if max_no_mps is not None:          # most likely MPs for this variant if the solution space is limited
+            # if max_no_mps is not None:  # not the full solution space is explored
+            #     # use heapq to keep track of the most likely <max_no_mps> of mutation patterns
+            #     if len(heap) < max_no_mps:
+            #         heapq.heappush(heap, (log_ml, mp_idx))
+            #     elif log_ml > heap[0][0]:      # likelihood of currently considered MP is higher than smallest in heap
+            #         # log likelihood of mp that is more likely for the currently considered variant
+            #         heapq.heapreplace(heap, (log_ml, mp_idx))
+            # else:                       # full solution space is explored, weight of every pattern is relevant
             # assign calculated log probability that this variant has this mutation pattern
-            for log_ml, mp_idx in heap:
-                mp_weights[mut_idx][mp_idx] = log_ml
+            mp_weights[mut_idx][mp_idx] = log_ml
+
+        # if max_no_mps is not None:          # most likely MPs for this variant if the solution space is limited
+        #     # assign calculated log probability that this variant has this mutation pattern
+        #     for log_ml, mp_idx in heap:
+        #         mp_weights[mut_idx][mp_idx] = log_ml
 
         # run through all relevant MPs for this variant and sum their log likelihoods
         # to calculate the reliability scores
@@ -717,7 +669,7 @@ def infer_ml_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None, max_n
 
     # Show nodes with highest reliability score
     for node, score in itertools.islice(sorted(node_scores.items(), key=lambda k: -k[1]), 0, 25):
-        logger.info('Pattern {} has a normalized reliability score of {:.2e}.'.format(node, score))
+        logger.debug('Pattern {} has a normalized reliability score of {:.2e}.'.format(node, score))
 
     return node_scores, idx_to_mp, mp_col_ids, mp_weights
 
@@ -736,7 +688,8 @@ def create_conflict_graph(reliability_scores):
     incompatible_mp = defaultdict(set)
 
     for node, score in reliability_scores.items():
-        cf_graph.add_node(node, weight=score)
+        if 1 < len(node):
+            cf_graph.add_node(node, weight=score)
 
     # since each mutation occurs at most once running through this is
     # in O(m^2 * n) = O(|mutations|*|mutations|*|samples|) as
@@ -745,7 +698,7 @@ def create_conflict_graph(reliability_scores):
 
         # variant need to appear at least in two samples and at most in n-1 samples
         # otherwise a conflict is not possible
-        if len(node1) < 2 or len(node2) < 2:
+        if not cf_graph.has_node(node1) or not cf_graph.has_node(node2):
             continue
 
         if len(node1.intersection(node2)) > 0:     # at least one sample where both characters are present (11)
@@ -765,6 +718,80 @@ def create_conflict_graph(reliability_scores):
         cf_graph.order(), sum(data['weight'] for _, data in cf_graph.nodes_iter(data=True)), cf_graph.size()))
 
     return cf_graph
+
+
+def _get_ml_mps(n, mlog_pre_probs, mlog_abs_probs, k):
+    """
+    Return k most likely mps of a variant where its presence
+    probability in each sample is given in log_pre_probs and absence probability in log_abs_probs
+    :param n: number of samples
+    :param mlog_pre_probs: list of -log probabilities to be present in a sample
+    :param mlog_abs_probs: list of -log probabilities to be absent in a sample
+    :param k: number of most likely mutation patterns to be returned
+    """
+    heap = []
+    explored_mps = set()
+
+    # most likely pattern is given by the most likely classification in each sample
+    mp = []
+    mlog_prob = 0.0
+    for sa_idx in range(n):
+        if mlog_pre_probs[sa_idx] < mlog_abs_probs[sa_idx]:  # variant more likely to be present in sample sa_idx
+            mlog_prob += mlog_pre_probs[sa_idx]
+            mp.append(sa_idx)
+        else:
+            mlog_prob += mlog_abs_probs[sa_idx]
+
+    heapq.heappush(heap, (mlog_prob, frozenset(mp), set([i for i in range(n)])))
+    explored_mps.add(frozenset(mp))
+    # logger.debug('Pushed ml pattern {}: {:.3f}'.format(mp, math.exp(-mlog_prob)))
+
+    # return the k most likely mps
+    for _ in range(k):
+        yield _next_ml_mp(heap, mlog_pre_probs, mlog_abs_probs, explored_mps, n)
+
+
+def _next_ml_mp(heap, mlog_pre_probs, mlog_abs_probs, explored_mps, n):
+    """
+    Get next less likely mutation pattern and further explore even less likely patterns
+    :param heap:
+    :param mlog_pre_probs: list of -log probabilities to be present in a sample
+    :param mlog_abs_probs: list of -log probabilities to be absent in a sample
+    :param explored_mps: set of mutation patterns that were already explored
+    :param n: number of samples
+    :return: next less likely mutation pattern
+    """
+
+    ml_p, ml_mp, not_flipped_sas = heapq.heappop(heap)
+    # logger.debug('Popped {}: {:.3f}'.format(ml_mp, math.exp(-ml_p)))
+
+    # investigate flipping individually all the not yet flipped samples
+    # and put them on the heap (equivalent to breath-first-search)
+    for sa_to_flip in not_flipped_sas:
+        nfs = set(not_flipped_sas)
+        nfs.remove(sa_to_flip)
+        mlog_prob = 0.0
+        mp = []
+        for sa_idx in range(n):
+            if sa_idx in nfs:
+                if mlog_pre_probs[sa_idx] < mlog_abs_probs[sa_idx]:
+                    mlog_prob += mlog_pre_probs[sa_idx]
+                    mp.append(sa_idx)
+                else:
+                    mlog_prob += mlog_abs_probs[sa_idx]
+            else:  # less likely classification is used in this sample
+                if mlog_pre_probs[sa_idx] < mlog_abs_probs[sa_idx]:
+                    mlog_prob += mlog_abs_probs[sa_idx]
+                else:
+                    mlog_prob += mlog_pre_probs[sa_idx]
+                    mp.append(sa_idx)
+
+        if frozenset(mp) not in explored_mps:
+            heapq.heappush(heap, (mlog_prob, frozenset(mp), nfs))
+            explored_mps.add(frozenset(mp))
+            # logger.debug('Pushed {}: {:.3f}'.format(mp, mlog_prob))
+
+    return ml_p, ml_mp, not_flipped_sas
 
 
 def _subsets(mp):

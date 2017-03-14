@@ -4,7 +4,11 @@ import math
 from collections import defaultdict, Counter
 from random import sample
 import numpy as np
+from scipy.misc import logsumexp
 import cplex as cp
+import heapq
+from itertools import islice
+from phylogeny.solution import Solution
 
 """Find maximal subset of compatible mutation patterns weighted by reliability scores via CPLEX ILP solver"""
 __author__ = 'Johannes REITER'
@@ -15,14 +19,17 @@ __date__ = 'April, 2014'
 logger = logging.getLogger('treeomics')
 
 
-def solve_conflicting_phylogeny(cf_graph, time_limit=None):
+def solve_conflicting_phylogeny(cf_graph, no_muts, pool_size, time_limit=None):
     """
     Translates given conflict graph into a integer linear program and
     solves the ILP for the minimum number of mutation patterns (set of identical mutation patterns)
     which need to be ignored
     :param cf_graph: Conflict graph: nodes correspond to mutation patterns and edges to their conflicts
+    :param no_muts: Number of processed mutations
+    :param pool_size: number of best solutions explored by ILP solver to estimate confidence
     :param time_limit: time limit for MILP solver in seconds
-    :return set of conflicting mutation patterns, set of compatible mutation patterns
+    :return list of top solutions, dictionary with calculated node likelihoods based on likelihood of
+            each solution in the solution pool
     """
 
     logger.info('Build linear program (cplex) for finding the minimal number of conflicting mutations.')
@@ -34,24 +41,37 @@ def solve_conflicting_phylogeny(cf_graph, time_limit=None):
     logger.debug('Objective function: ' + ', '.join(
         '{}: {:.1e}'.format(var_idx, weight) for var_idx, weight in enumerate(objective_function, 1)))
 
+    # look at the fourth highest reliability score value to get an impression of the magnitude of these values
+    ex_rs = heapq.nlargest(min(5, cf_graph.order()), objective_function)[-1]
+    # scale all values to avoid numerical issues with CPLEX
+    Solution.SCALING_FACTOR = 1e20 / ex_rs
+    scaled_obj_func = [Solution.SCALING_FACTOR * x for x in objective_function]
+
     # column types
     ctypes = ['B' for _ in range(len(objective_function))]
 
     # add column names to the ILP
     cnames = []
+    ilp_col_mps = []
     for col_idx, node in enumerate(cf_graph.nodes_iter(), 0):
         cnames.append(str(node))
+        ilp_col_mps.append(node)
 
     lp = cp.Cplex()
 
     # set objective function which is the minimum number of positions with a sequencing error
     lp.objective.set_sense(lp.objective.sense.minimize)
+    # see more information at:
+    # http://www.ibm.com/support/knowledgecenter/en/SS9UKU_12.4.0/com.ibm.cplex.zos.help/Parameters/topics/SolnPoolGap.html?view=embed
+    # lp.parameters.mip.tolerances.absmipgap.set(1e-15)
+    # lp.parameters.mip.tolerances.mipgap.set(1e-15)
+    # lp.parameters.simplex.tolerances.optimality.set(1e-09)
 
     # set time limit for MILP solver
     if time_limit is not None:
         lp.parameters.timelimit.set(time_limit)
 
-    lp.variables.add(obj=objective_function, types=ctypes, names=cnames)
+    lp.variables.add(obj=scaled_obj_func, types=ctypes, names=cnames)
 
     # add evolutionary constraints
     constraints = []    # LHS (left hand side) of the rows in the ILP
@@ -70,45 +90,173 @@ def solve_conflicting_phylogeny(cf_graph, time_limit=None):
 
     logger.debug('Added {} constraints.'.format(len(constraints)))
 
-    # solve the Integer Linear Program (ILP)
-    lp.solve()
-    sol = lp.solution       # obtain solution
+    # ################ explore the solution space by keeping a pool of the best solutions ###############
+    # more information at:
+    # https://www.ibm.com/support/knowledgecenter/SS9UKU_12.5.0/com.ibm.cplex.zos.help/Parameters/topics/PopulateLim.html
+    # and populate.py an example within the CPLEX installation
+    if pool_size > 1:
+        lp.parameters.mip.limits.populate.set(pool_size)
+        # strategy for replacing a solution in the solution pool when the solution pool has reached its capacity
+        lp.parameters.mip.pool.replace.set(1)       # 1...replace the solution which has the worst objective
 
+        # Controls the trade-off between the number of solutions generated for the solution pool and
+        # the amount of time or memory consumed.
+        lp.parameters.mip.pool.intensity.set(4)     # 4...very aggressive: enumerate all practical solutions
+        # lp.parameters.mip.pool.capacity.set(pool_size)
+
+        # set the solution pool relative gap parameter to obtain solutions
+        # of objective value within 10% of the optimal
+        # lp.parameters.mip.pool.relgap.set(5)
+        try:
+            lp.populate_solution_pool()         # solve the Integer Linear Program (ILP)
+        except cp.exceptions.CplexSolverError as e:
+            logger.error("Exception raised during populate")
+            raise e
+    else:
+        lp.solve()
+
+    # assess obtained solutions
+    solutions, weighted_node_lh = assess_solutions(
+        lp.solution, objective_function, cf_graph, ilp_col_mps, no_muts, pool_size)
+
+    return solutions, weighted_node_lh
+
+
+def assess_solutions(sol, objective_function, cf_graph, ilp_col_mps, no_muts, pool_size):
+    """
+    Assess solution pool and infer the compatible and incompatible mutation patterns as well as their support
+    :param sol: solutions obtained by the ILP solver
+    :param objective_function: objective function provided to the ILP solver
+    :param cf_graph: conflict graph
+    :param ilp_col_mps: list with mapping from column ids to nodes (mutation patterns)
+    :param no_muts: Number of processed mutations
+    :param pool_size: number of best solutions explored by ILP solver to estimate confidence
+    :return list of top solutions, dictionary with calculated node likelihoods based on likelihood of
+            each solution in the solution pool
+    """
+
+    no_sols = sol.pool.get_num()
+    logger.debug("The solution pool contains {} solutions.".format(no_sols))
     solve_stat = sol.get_status()
+
     # column solution values
     solution_values = sol.get_values()
+
     # proportional to incompatible mutations (depending on the weight definition)
-    objective_value = sol.get_objective_value()
+    obj_value = sol.get_objective_value()
 
-    logger.info('Minimum vertex cover is of weight (objective value) {:.4f} (original weight: {:4f}).'.format(
-        objective_value, sum(val for val in objective_function)))
+    opt_sol = Solution(1, objective_function, obj_value, solution_values, cf_graph, no_muts)
 
+    # get likelihood of optimal solution
+    opt_lh = math.exp(opt_sol.llh)
+    logger.debug('Likelihood of optimal solution: {:.2e}'.format(opt_lh))
+
+    logger.debug('Minimum vertex cover is of weight (objective value) {:.3e} (original weight: {:3e}).'.format(
+        opt_sol.get_unscaled_obj_value(), sum(val for val in objective_function)))
     logger.info('Solution status: {}'.format(sol.status[solve_stat]))
-
     logger.debug('Column solution values: ' +
                  ', '.join('{}: {}'.format(var_idx, status) for var_idx, status in enumerate(solution_values, 1)))
 
-    # translate solution of the ILP back to the phylogeny problem
-    # removing the minimum vertex cover (conflicting mutation patterns) gives the maximum compatible set of mps
-    compatible_nodes = set()
-    incompatible_nodes = set()
-    conflicting_mutations_weight = 0
+    # meanobjval = lp.solution.pool.get_mean_objective_value() / scaling_factor
+    # logger.debug("The average objective value of the solutions is {:.3e}".format(meanobjval))
 
-    for col_idx, (node, data) in enumerate(cf_graph.nodes_iter(data=True)):
+    total_obj_value = sum(sol.pool.get_objective_value(i) for i in range(no_sols)) / Solution.SCALING_FACTOR
+    min_obj_value = min(sol.pool.get_objective_value(i) for i in range(no_sols)) / Solution.SCALING_FACTOR
+    max_obj_value = max(sol.pool.get_objective_value(i) for i in range(no_sols)) / Solution.SCALING_FACTOR
+    logger.debug('Best solution: {:.2e}; worst solution in pool: {:.2e}; sum of all solutions: {:.2e}'.format(
+        min_obj_value, max_obj_value, total_obj_value))
 
-        if round(sol.get_values(str(node)), 5) == 0:
-            compatible_nodes.add(node)
-        else:
-            incompatible_nodes.add(node)
-            conflicting_mutations_weight += data['weight']
+    # print the objective value of each solution and its difference to the incumbent
+    # names = lp.solution.pool.get_names()
+    # print("Solution     Objective      Number of variables    log weight   weight   Likelihood")
+    # print("             value          that differ compared")
+    # print("                            to the incumbent")
 
-    assert round(conflicting_mutations_weight, 4) == round(objective_value, 4), \
-        "As long as weights are given by the number of mutations: {} == {}".format(conflicting_mutations_weight,
-                                                                                   objective_value)
-    logger.debug('Compatible mutation patterns after the conflicting mps have been removed: {}'.format(
-        compatible_nodes))
+    # list of the top ranked solutions
+    solutions = list()
+    # log likelihoods of all solutions in the pool
+    llhs = list()
 
-    return incompatible_nodes, compatible_nodes
+    if pool_size > 1:
+        # record the chosen patterns in the solution space (pool)
+        node_frequencies = Counter()
+        # weighted and summed likelihood of each node across the explored solution pool
+        weighted_node_lh = defaultdict(float)
+        weighted_node_llh = defaultdict(list)
+        # weighted_node_counts = defaultdict(float)
+        # total_log_sol_weight = 0.0
+
+        rank = 1
+        for i in sorted(range(no_sols), key=lambda k: sol.pool.get_objective_value(k)):
+
+            if rank == 1:
+                solution = opt_sol
+
+            else:
+                if all(prev_vals == cur_vals for prev_vals, cur_vals in zip(solution_values, sol.pool.get_values(i))):
+                    continue    # same solution exists twice in solution pool
+
+                # list of almost binary variables of a mutation pattern is present or absent in the solution
+                solution_values = sol.pool.get_values(i)
+
+                # get objective function value of the i'th solution
+                obj_value = sol.pool.get_objective_value(i)
+
+                solution = Solution(rank, objective_function, obj_value, solution_values, cf_graph, no_muts)
+
+            llhs.append(solution.llh)
+
+            if rank < 6:
+                solutions.append(solution)
+
+            # calculate a solution weight depending on the best and the worst values
+            # log_sol_weight = 1.0 - ((objval_i - min_obj_value) / (max_obj_value - min_obj_value))
+            # sol_weight = 1.0 - ((math.exp(-objval_i) - math.exp(-min_obj_value)) /
+            #                     (math.exp(-max_obj_value) - math.exp(-min_obj_value)))
+            # total_log_sol_weight += log_sol_weight
+
+            for ilp_col_idx, val in enumerate(solution_values):
+                if round(val, 5) == 0:  # mutation pattern was selected
+                    node_frequencies[ilp_col_mps[ilp_col_idx]] += 1
+                    weighted_node_lh[ilp_col_mps[ilp_col_idx]] += math.exp(solution.llh)
+                    weighted_node_llh[ilp_col_mps[ilp_col_idx]].append(solution.llh)
+                    # weighted_node_counts[ilp_col_mps[ilp_col_idx]] += log_sol_weight
+
+                    # compute the number of variables that differ in solution i and in the incumbent
+                    # no_differences = 0
+                    # for j in range(len(objective_function)):
+                    #     if round(solution_values[j] - solution_values[j], 6) > 0:
+                    #         no_differences += 1
+
+                    # print every solution
+                    # print("{:>5s}   {:13g}       {:>3} / {:>3} {:>22.2%} {:>9.2%} {:>10.2e}".format(
+                    #     names[i], objval_i, no_differences, len(objective_function), log_sol_weight, sol_weight, lh))
+
+            rank += 1
+
+        for node in node_frequencies.keys():
+            # weighted_node_counts[node] /= total_log_sol_weight
+            node_frequencies[node] /= len(llhs)
+            # weighted_node_lh[node] *= sum(math.exp(llh) for llh in llhs)
+
+            # sum likelihoods of solutions where node was present
+            llh_sum_pres_sols = logsumexp(weighted_node_llh[node])
+            # sum likelihood of all solutions
+            llh_sum_all_sols = logsumexp(llhs)
+            # likelihood of node across all evaluated solutions
+            weighted_node_lh[node] = math.exp(llh_sum_pres_sols - llh_sum_all_sols)
+
+        logger.debug('Mutation patterns sorted by their weighted likelihood:')
+        for node, weighted_lh in islice(sorted(weighted_node_lh.items(), key=lambda k: -k[1]), 0, 50):
+            logger.debug('Weighted lh {:.2%} (freq: {:.2%}): {}'.format(
+                weighted_lh, node_frequencies[node], ', '.join(str(n) for n in node)))
+            # logger.debug('opt lh {:.3e}; total lh {:.3e}'.format(opt_lh, sum(lhs)))
+
+    else:   # only one solution was inferred
+        solutions.append(opt_sol)
+        weighted_node_lh = None
+
+    return solutions, weighted_node_lh
 
 
 def bootstrapping_solving(cf_graph, mp_weights, idx_to_mp, no_samples):
@@ -169,7 +317,9 @@ def bootstrapping_solving(cf_graph, mp_weights, idx_to_mp, no_samples):
             for col_idx, log_ml in mp_weights[used_mut].items():
                 # add the (negative log probability) part of the reliability score of this mutation in this pattern
                 # note we are in log space
-                objective_function[ilp_cols[idx_to_mp[col_idx]]] -= math.log(-math.expm1(log_ml))
+                if idx_to_mp[col_idx] in ilp_cols.keys():
+                    objective_function[ilp_cols[idx_to_mp[col_idx]]] -= math.log(-math.expm1(log_ml))
+                # else: for parsimony-uninformative mutation patterns nothing needs to be done
 
         # logger.debug('Update objective function: ' + ', '.join(
         #     '{}: {:.3f}'.format(var_idx, weight) for var_idx, weight in enumerate(objective_function, 1)))
@@ -189,8 +339,8 @@ def bootstrapping_solving(cf_graph, mp_weights, idx_to_mp, no_samples):
         sol = lp.solution       # obtain solution
         # solve_stat = sol.get_status()
         # logger.debug('Solution status: {}'.format(sol.status[solve_stat]))
-
-        # proportional to incompatible mutations (depending on the weight definition)
+        #
+        # # proportional to incompatible mutations (depending on the weight definition)
         # objective_value = sol.get_objective_value()
         # logger.debug('Minimum vertex cover is of weight (objective value) {:.4f} (original weight: {:4f}).'
         #               .format(objective_value, sum(val for val in objective_function)))
@@ -207,8 +357,6 @@ def bootstrapping_solving(cf_graph, mp_weights, idx_to_mp, no_samples):
 
         if no_samples >= 100 and rep > 0 and rep % (no_samples/100) == 0:
             logger.debug('{:.0%} of bootstrapping completed.'.format(1.0*rep/no_samples))
-
-    logger.debug('Finished bootstrapping.')
 
     return node_frequencies
 

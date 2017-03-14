@@ -18,6 +18,131 @@ __date__ = 'July 11, 2015'
 logger = logging.getLogger('treeomics')
 
 
+def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepath=None, subclone_detection=False,
+                       loh_frequency=0.0, drivers=set(), max_no_mps=None, time_limit=None, plots=True,
+                       pool_size=0, no_bootstrap_samples=0):
+    """
+    Create an evolutionary tree based on the maximum likelihood mutation patterns of each variant
+    :param patient: data structure around the patient
+    :param tree_filepath: tree is written to the given file
+    :param mm_filepath: path to mutation matrix output file
+    :param mp_filepath: path to mutation pattern output file
+    :param subclone_detection: is subclone detection enabled?
+    :param loh_frequency: probability that a SNV along a lineage is lost due loss of heterozygosity
+    :param drivers: set of putative driver gene names highlighted on each edge
+    :param max_no_mps: only the given maximal number of most likely (by joint likelihood) mutation patterns
+            is explored per variant; limits the solution space
+    :param time_limit: time limit for MILP solver in seconds
+    :param plots: generate pdf from tex file
+    :param pool_size: number of best solutions explored by ILP solver to estimate confidence
+    :param no_bootstrap_samples: number of samples with replacement for the bootstrapping
+    :return: evolutionary tree as graph
+    """
+
+    mlh_pg = MaxLHPhylogeny(patient, patient.mps, loh_frequency=loh_frequency)
+
+    mlh_tree = mlh_pg.infer_max_lh_tree(subclone_detection=subclone_detection, max_no_mps=max_no_mps,
+                                        pool_size=pool_size, time_limit=time_limit,
+                                        no_bootstrap_samples=no_bootstrap_samples)
+
+    if mlh_tree is not None:
+
+        _create_tree_plots(mlh_pg.solutions[0], mlh_pg, mlh_tree, plots,
+                           tree_filepath+'_1', drivers)
+
+        # if more solutions were inferred, plot their trees as well
+        for sol in mlh_pg.solutions[1:]:
+            sol.assign_variants(mlh_pg, max_no_mps)
+            sol.find_artifacts(mlh_pg)
+            sol.infer_mutation_patterns(mlh_pg)
+            # construct a phylogenetic tree from the maximum likelihood mutation patterns
+            tree = mlh_pg.infer_evolutionary_tree(sol.shared_mlh_mps, sol.mlh_founders, sol.mlh_unique_mutations,
+                                                  confidence=None if mlh_pg.weighted_node_lh is None else
+                                                  mlh_pg.weighted_node_lh)
+            _create_tree_plots(sol, mlh_pg, tree, plots, tree_filepath + '_{}'.format(sol.rank), drivers)
+
+        # create mutation matrix for benchmarking
+        if mm_filepath is not None:
+            write_mutation_matrix(mlh_pg, mm_filepath)
+
+        if mp_filepath is not None:
+            write_mutation_patterns(mlh_pg, mp_filepath)
+
+    else:
+        logger.warning('Conflicts could not be resolved. No evolutionary tree has been created.')
+
+    return mlh_pg
+
+
+def _create_tree_plots(solution, mlh_pg, mlh_tree, plots, tree_filepath, drivers):
+
+    # ignore mutations which are not in any sample which passed the filtering
+    present_mutations = mlh_pg.patient.present_mutations
+
+    no_fps = sum(len(fps) for mut_idx, fps in solution.false_positives.items())
+    no_fns = sum(len(fns) for mut_idx, fns in solution.false_negatives.items())
+    classification_info = ('Putative false-positives {}, put. false-negatives {}, put. false neg.-unknowns {}. '
+                           .format(no_fps, no_fns, sum(
+                            len(fns) for mut_idx, fns in solution.false_negative_unknowns.items())))
+
+    if solution.conflicting_mutations is not None:
+        compatibility_info = ('{} ({:.1%})'.format(
+            len(solution.conflicting_mutations), float(len(solution.conflicting_mutations)) /
+            (len(solution.max_lh_mutations) + len(solution.conflicting_mutations))) +
+            ' variants were evolutionarily incompatible due to the limited search space.')
+    else:
+        compatibility_info = ''
+
+    logger.info(classification_info)
+    caption = ('Phylogenetic tree illustrating the evolutionary history of the cancer. ' +
+               'The derivation of an evolutionarily-compatible maximum likelihood tree identified ' +
+               '{} putative false-positives or false-negatives (out of {}; {:.1%}). '.format(
+                   no_fps + no_fns, len(mlh_pg.patient.sample_names) * len(present_mutations),
+                   float(no_fps + no_fns) / (len(mlh_pg.patient.sample_names) * len(present_mutations))) +
+               classification_info + compatibility_info)
+    # calculate median of number of persistent and present mutations inferred
+    # in the evolutionary trajectory
+    if len(solution.variants.values()) > 0:
+        median_no_muts = np.median([len(muts) for muts in solution.variants.values()])
+    else:
+        median_no_muts = float('nan')
+
+    if plots and tree_filepath is not None:
+        try:
+            # create ETE tree
+            from plots.ete_tree import create_tree
+            mlh_pg.tree_plot = create_tree(mlh_tree, tikz.TREE_ROOT, tree_filepath, mlh_pg.patient, mlh_pg,
+                                           drivers=drivers)
+            logger.info('Generated ete tree as PNG: {}'.format(mlh_pg.tree_plot))
+
+        except ImportError as ie:
+            logger.warn('ImportError! ete3 is not installed! {}'.format(ie))
+
+        # create Latex/TIkZ tree
+        tikz_tree = tikz.create_figure_file(
+            mlh_tree, tikz.TREE_ROOT, tree_filepath + '_full.tex', mlh_pg.patient, mlh_pg, caption, drivers=drivers,
+            germline_distance=10.0 * max(1.0, len(solution.mlh_founders) / median_no_muts), standalone=True)
+        # add information about the ignored mutations and the position of the acquired mutations
+        latex.add_branch_mut_info(tree_filepath, mlh_pg, mlh_tree)
+
+        # add information about the resolved mutation positions
+        # which are likely sequencing errors
+        latex.add_artifact_info(tree_filepath, mlh_pg)
+
+        tikz_path, tikz_file = os.path.split(tikz_tree)
+        logger.debug('Tikzpath: {} {}'.format(tikz_path, tikz_file))
+        pdflatex_cmd = 'pdflatex {}'.format(tikz_file)
+        fnull = open(os.devnull, 'w')
+        return_code = call(pdflatex_cmd, shell=True, cwd=tikz_path, stdout=fnull)
+
+        if return_code == 0:
+            pdf_tree = tikz_tree.replace('.tex', '.pdf')
+            logger.info('Successfully called pdflatex to create pdf of the evolutionary tree at {}'.format(
+                pdf_tree))
+        else:
+            logger.error('PDF of the evolutionary tree was not created. Is Latex/tikz installed?')
+
+
 def infer_max_compatible_tree(filepath, patient, drivers=set(), time_limit=None):
     """
     Create an evolutionary tree where most conflicting mutations have been ignored
@@ -45,7 +170,7 @@ def infer_max_compatible_tree(filepath, patient, drivers=set(), time_limit=None)
 
     # create tikz figure
     tikz.create_figure_file(simple_tree, tikz.TREE_ROOT, filepath,
-                            patient, caption, drivers=drivers, standalone=True)
+                            patient, phylogeny, caption, drivers=drivers, standalone=True)
     # add information about the ignored mutations and the position of the acquired mutations
     latex.add_branch_mut_info(filepath, phylogeny, simple_tree)
 
@@ -70,93 +195,3 @@ def infer_max_compatible_tree(filepath, patient, drivers=set(), time_limit=None)
         #         len(phylogeny.compatible_mutations))
 
     return phylogeny
-
-
-def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepath=None, subclone_detection=False,
-                       drivers=set(), max_no_mps=None, time_limit=None, plots=True, no_bootstrap_samples=0):
-    """
-    Create an evolutionary tree based on the maximum likelihood mutation patterns of each variant
-    :param patient: data structure around the patient
-    :param tree_filepath: tree is written to the given file
-    :param mm_filepath: path to mutation matrix output file
-    :param mp_filepath: path to mutation pattern output file
-    :param subclone_detection: is subclone detection enabled?
-    :param drivers: set of putative driver gene names highlighted on each edge
-    :param max_no_mps: only the given maximal number of most likely (by joint likelihood) mutation patterns
-            is explored per variant; limits the solution space
-    :param time_limit: time limit for MILP solver in seconds
-    :param plots: generate pdf from tex file
-    :param no_bootstrap_samples: number of samples with replacement for the bootstrapping
-    :return: evolutionary tree as graph
-    """
-
-    mlh_pg = MaxLHPhylogeny(patient, patient.mps)
-
-    mlh_tree = mlh_pg.infer_max_lh_tree(subclone_detection=subclone_detection, max_no_mps=max_no_mps,
-                                        time_limit=time_limit, no_bootstrap_samples=no_bootstrap_samples)
-
-    if mlh_tree is not None:
-
-        # ignore mutations which are not in any sample which passed the filtering
-        present_mutations = patient.present_mutations
-
-        no_fps = sum(len(fps) for mut_idx, fps in mlh_pg.false_positives.items())
-        no_fns = sum(len(fns) for mut_idx, fns in mlh_pg.false_negatives.items())
-        classification_info = ('Putative false-positives {}, put. false-negatives {}, put. false neg.-unknowns {}. '
-                               .format(no_fps, no_fns,
-                                       sum(len(fns) for mut_idx, fns in mlh_pg.false_negative_unknowns.items())))
-        if mlh_pg.conflicting_mutations is not None:
-            compatibility_info = ('{} ({:.1%})'.format(
-                len(mlh_pg.conflicting_mutations), float(len(mlh_pg.conflicting_mutations)) /
-                (len(mlh_pg.max_lh_mutations) + len(mlh_pg.conflicting_mutations))) +
-                ' variants were evolutionarily incompatible due to the limited search space.')
-        else:
-            compatibility_info = ''
-        logger.info(classification_info)
-
-        caption = ('Phylogenetic tree illustrating the clonal evolution of cancer. ' +
-                   'The derivation of an evolutionarily-compatible maximum likelihood tree identified ' +
-                   '{} putative false-positives or false-negatives (out of {}; {:.1%}). '.format(
-                    no_fps+no_fns, len(patient.sample_names) * len(present_mutations),
-                    float(no_fps+no_fns) / (len(patient.sample_names) * len(present_mutations))) +
-                   classification_info + compatibility_info)
-
-        # calculate median of number of persistent and present mutations inferred
-        # in the evolutionary trajectory
-        median_no_muts = np.median([len(muts) for muts in mlh_pg.patient.variants.values()])
-
-        if plots and tree_filepath is not None:
-            tikz_tree = tikz.create_figure_file(
-                mlh_tree, tikz.TREE_ROOT, tree_filepath, patient, caption, drivers=drivers,
-                germline_distance=10.0*max(1.0, len(mlh_pg.mlh_founders)/median_no_muts), standalone=True)
-            # add information about the ignored mutations and the position of the acquired mutations
-            latex.add_branch_mut_info(tree_filepath, mlh_pg, mlh_tree)
-
-            # add information about the resolved mutation positions
-            # which are likely sequencing errors
-            latex.add_artifact_info(tree_filepath, mlh_pg)
-
-            tikz_path, tikz_file = os.path.split(tikz_tree)
-            logger.debug('Tikzpath: {} {}'.format(tikz_path, tikz_file))
-            pdflatex_cmd = 'pdflatex {}'.format(tikz_file)
-            fnull = open(os.devnull, 'w')
-            return_code = call(pdflatex_cmd, shell=True, cwd=tikz_path, stdout=fnull)
-
-            if return_code == 0:
-                pdf_tree = tikz_tree.replace('.tex', '.pdf')
-                logger.info('Successfully called pdflatex to create pdf of the evolutionary tree at {}'.format(
-                    pdf_tree))
-            else:
-                logger.error('PDF of the evolutionary tree was not created. Is Latex/tikz installed?')
-
-        # create mutation matrix for benchmarking
-        if mm_filepath is not None:
-            write_mutation_matrix(mlh_pg, mm_filepath)
-
-        if mp_filepath is not None:
-            write_mutation_patterns(mlh_pg, mp_filepath)
-
-    else:
-        logger.warn('Conflicts could not be resolved. No evolutionary tree has been created.')
-
-    return mlh_pg

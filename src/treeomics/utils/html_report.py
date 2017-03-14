@@ -1,7 +1,5 @@
 #!/usr/bin/python
 """Helper functions to generate report in HTML"""
-__author__ = 'Johannes REITER'
-__date__ = 'March 6, 2015'
 
 import logging
 import os
@@ -9,7 +7,13 @@ import numpy as np
 import datetime
 import math
 from utils.int_settings import VERSION
+import utils.int_settings as def_sets
+from utils.driver import Driver
 import settings
+
+
+__author__ = 'Johannes REITER'
+__date__ = 'March 6, 2015'
 
 
 # get logger for application
@@ -75,11 +79,14 @@ class HTMLReport(object):
         self._ind -= 1      # indentation level decreases by 1
         self.file.write(self._inds[self._ind]+'</div>\n')
 
-    def add_sequencing_information(self, patient, mut_table_path=None):
+    def add_sequencing_information(self, patient, mut_table_path=None, likely_drivers=None,
+                                   unlikely_driver_mut_effects=None):
         """
         Adds basic information about the provided sequencing data and if provided add a mutation table plot
         :param patient: instance of class patient
         :param mut_table_path: path to the generated mutation table plot
+        :param likely_drivers: dictionary with gene names of likely drivers and the mutation effect
+        :param unlikely_driver_mut_effects: mutation effects of variants in drivers, likely without effect
         """
 
         self.file.write(self._inds[self._ind]+'<h4>Input data</h4>\n')
@@ -163,12 +170,41 @@ class HTMLReport(object):
         #                  / len(patient.sample_names))))
 
         self.file.write(self._inds[self._ind]+"Founders (variants present in all samples): {} ({:.1%}) </br>\n".format(
-            len(patient.founders), float(len(patient.founders))/len(patient.present_mutations)))
-        self.file.write(self._inds[self._ind]
-                        + 'Mean number of unique (private) variants per sample: {:.1f} ({:.1%}) </br>\n'
-                        .format(float(len(patient.shared_muts[1])) / len(patient.sample_names),
-                                (float(len(patient.shared_muts[1])) / len(patient.sample_names)) /
-                        (sum(len(muts) for sa_idx, muts in patient.samples.items()) / len(patient.sample_names))))
+            len(patient.founders), float(len(patient.founders))/len(patient.present_mutations) if
+            len(patient.present_mutations) > 0 else float('nan')))
+        self.file.write(
+            self._inds[self._ind] + 'Mean number of unique (private) variants per sample: {:.1f} ({:.1%}) </br>\n'
+            .format(float(len(patient.shared_muts[1])) / len(patient.sample_names),
+                    (float(len(patient.shared_muts[1])) / len(patient.sample_names)) /
+                    (sum(len(muts) for sa_idx, muts in patient.samples.items()) / len(patient.sample_names))))
+
+        def _clamp(x):
+            return int(max(0, min(x, 255)))
+
+        def _driver_tag(gene_name, properties):
+            if properties is None or properties[0] == 'unknown':
+                return gene_name
+
+            r, g, b, _ = Driver.colors()[len(properties[1])]   # number of supporting sources
+            c = 'color:#{0:02x}{1:02x}{2:02x};'.format(_clamp(r*255), _clamp(g*255), _clamp(b*255))
+            tag = '<font style="{}">{}</font>'.format(c, gene_name)
+            if properties[2]:   # is driver in CGC list
+                tag = '<strong>'+tag+'</strong>'
+
+            return tag
+
+        # add basic information about driver gene mutations
+        if likely_drivers is not None:
+            self.file.write(
+                self._inds[self._ind] + 'Total number of likely driver gene mutations: {} ({}; '.format(
+                    len(likely_drivers),
+                    ', '.join(_driver_tag(d, e) for d, e in sorted(likely_drivers.items(), key=lambda k: k[0]))) +
+                'more red colored gene names correspond to better supported driver genes. '
+                'Bold names are also present in the Cancer Gene Census list)</br>\n')
+
+        if unlikely_driver_mut_effects is not None and sum(unlikely_driver_mut_effects.values()) > 0:
+            self.file.write(self._inds[self._ind] + 'Other mutations in likely driver genes: {}</br>\n'.format(
+                ', '.join('{} ({})'.format(d, e) for d, e in unlikely_driver_mut_effects.items())))
 
         self._ind -= 1      # indentation level decreases by 1
         self.file.write(self._inds[self._ind]+'</p>\n')
@@ -190,9 +226,12 @@ class HTMLReport(object):
                 + '{} samples of patient {}.</b>\n'.format(len(patient.sample_names), patient.name))
             self.file.write(self._inds[self._ind]+'Blue rectangles correspond to present variants, '
                             + 'red to absent variants, and white to unknown mutation status. '
-                              'Brighter colors denote higher probability. \n')
+                              'Brighter colors denote higher probability. Reddish colored gene names correspond to '
+                              'likely cancer drivers with increasing support. '
+                              'Bold names are also present in the Cancer Gene Census list. \n')
             # self.file.write(
-            #     self._inds[self._ind]+'In total {} distinct variants were classified as present in at least one sample'
+            #     self._inds[self._ind] +
+            #     'In total {} distinct variants were classified as present in at least one sample'
             #         .format(len(patient.present_mutations)) + ', {} ({:.1%}) of those were founders, \n'.format(
             #         len(patient.founders), float(len(patient.founders))/len(patient.present_mutations))
             #     + 'and {} mutations were unique to single samples.'.format(len(patient.shared_muts[1])))
@@ -222,9 +261,13 @@ class HTMLReport(object):
                         + 'style="text-align: center;width:98%;max-width:800px;font-size:9pt">\n')
         self._ind += 1      # indentation level increases by 1
 
+        jscs = [patient.bi_sim_coeff[sa1_idx][sa2_idx] for sa1_idx in range(patient.n) for sa2_idx in range(sa1_idx)]
+
         # add table caption
-        self.file.write(self._inds[self._ind]
-                        + '<caption>Jaccard similarity coefficient between all pairs of samples.</caption>\n')
+        self.file.write(
+            self._inds[self._ind] + '<caption>Probabilistic Jaccard similarity coefficient between all pairs of ' +
+            'samples (median: {:.2f}; mean: {:.2f}; classification threshold: {:.0%}).</caption>\n'.format(
+                np.median(jscs), np.mean(jscs), def_sets.CLA_CONFID_TH))
 
         col_names = ['Sample'] + patient.sample_names
         header = ''.join('<th class="text-center">{}</th>'.format(col_name.replace('_', ' ')) for col_name in col_names)
@@ -236,8 +279,8 @@ class HTMLReport(object):
             row = list()
             row.append(sample_name.replace('_', ' '))
 
-            for sa2_idx in range(len(patient.sample_names)):
-                row.append('{:.2f}'.format(patient.sim_coff[sa1_idx][sa2_idx]))
+            for sa2_idx in range(sa1_idx+1):
+                row.append('{:.2f}'.format(patient.bi_sim_coeff[sa1_idx][sa2_idx]))
 
             # write row to file
             self.file.write(self._inds[self._ind]+'<tr>'+''.join('<td>{}</td>'.format(c) for c in row)+'</tr>\n')
@@ -252,9 +295,13 @@ class HTMLReport(object):
                         + 'style="text-align: center;width:98%;max-width:800px;font-size:9pt">\n')
         self._ind += 1      # indentation level increases by 1
 
+        gds = [patient.bi_gen_dis[sa1_idx][sa2_idx] for sa1_idx in range(patient.n) for sa2_idx in range(sa1_idx)]
+
         # add table caption
-        self.file.write(self._inds[self._ind]
-                        + '<caption>Genetic distance between all pairs of samples.</caption>\n')
+        self.file.write(
+            self._inds[self._ind] + '<caption>Genetic distance between all pairs of samples ' +
+            '(median: {:.0f}; mean: {:.1f}; classification threshold: {:.0%}).</caption>\n'.format(
+                np.median(gds), np.mean(gds), def_sets.CLA_CONFID_TH))
 
         col_names = ['Sample'] + patient.sample_names
         header = ''.join('<th class="text-center">{}</th>'.format(col_name.replace('_', ' ')) for col_name in col_names)
@@ -266,8 +313,8 @@ class HTMLReport(object):
             row = list()
             row.append(sample_name.replace('_', ' '))
 
-            for sa2_idx in range(len(patient.sample_names)):
-                row.append('{}'.format(patient.gen_dis[sa1_idx][sa2_idx]))
+            for sa2_idx in range(sa1_idx+1):
+                row.append('{}'.format(patient.bi_gen_dis[sa1_idx][sa2_idx]))
 
             # write row to file
             self.file.write(self._inds[self._ind]+'<tr>'+''.join('<td>{}</td>'.format(c) for c in row)+'</tr>\n')
@@ -281,11 +328,61 @@ class HTMLReport(object):
         self.file.flush()
         os.fsync(self.file.fileno())
 
-    def add_conflict_graph(self, patient, mp_graph_name):
+    def add_tree_plot(self, patient, phylogeny):
+        """
+        Add create ete3 tree of the inferred phylogeny to the HTML report
+        :param patient: instance of class patient
+        :param phylogeny: data structure around the inferred phylogenetic tree
+        """
+
+        self.file.write(self._inds[self._ind]+'<h4>Inferred cancer phylogeny</h4>\n')
+
+        self.file.write(self._inds[self._ind]+'<div align="center">\n')
+        self.file.write(self._inds[self._ind]+'<div style="width:98%;max-width:700px">\n')
+        self._ind += 1      # indentation level increases by 1
+
+        self.file.write(self._inds[self._ind]+'<figure>\n')
+        self._ind += 1      # indentation level increases by 1
+        self.file.write(self._inds[self._ind]+'<img class="img-responsive" src="'
+                        + os.path.basename(phylogeny.tree_plot) + '" alt="Evolutionary tree" width="750"/>'+'\n')
+        self.file.write(self._inds[self._ind]+'<div align="left">\n')
+        self.file.write(self._inds[self._ind]+'<figcaption>\n')
+
+        self.file.write(
+            self._inds[self._ind]+'<b>Phylogenetic tree illustrating the evolutionary history of '
+                                  'the cancer in {}.</b>\n'.format(patient.name))
+        self.file.write(
+            self._inds[self._ind] + 'Numbers on top of each branch indicate the number of acquired variants '
+                                    '(including likely driver gene mutations reported separately in orange).\n')
+        self.file.write(
+            self._inds[self._ind] + 'Numbers on bottom of each branch indicate the estimated support values.\n')
+
+        if logger.isEnabledFor(logging.DEBUG):
+            self.file.write(
+                self._inds[self._ind] + 'Frequencies in brackets denote the median VAF of the mutations on a branch.\n')
+
+        if phylogeny.max_no_mps is not None:
+            self.file.write(self._inds[self._ind] +
+                            'Only the {} most likely mutation patterns were considered for each variant.'.format(
+                            phylogeny.max_no_mps))
+
+        self.file.write(self._inds[self._ind]+'</figcaption>\n')
+        self.file.write(self._inds[self._ind]+'</div>\n')
+        self._ind -= 1      # indentation level decreases by 1
+        self.file.write(self._inds[self._ind]+'</figure>\n')
+
+        self._ind -= 1      # indentation level decreases by 1
+        self.file.write(self._inds[self._ind]+'</div>\n')
+        self.file.write(self._inds[self._ind]+'</div>\n')
+
+        self.file.write(self._inds[self._ind]+'</br>\n\n')
+
+    def add_conflict_graph(self, patient, mp_graph_name, phylogeny=None):
         """
         Add evolutionary conflict plot graph to the HTML report
         :param patient: instance of class patient
         :param mp_graph_name: path to the evolutionary conflict graph plot file
+        :param phylogeny: data structure around the inferred phylogenetic tree
         """
 
         self.file.write(self._inds[self._ind]+'<h4>Evolutionary conflict graph</h4>\n')
@@ -311,10 +408,14 @@ class HTMLReport(object):
                         + ', '.join(sa_name.replace('_', ' ') for sa_name in patient.sample_names)
                         + '. Marks on these lines denote present variants. \n')
         self.file.write(
-            self._inds[self._ind]+'Labels denote the MP reliability scores. '
-            + 'Only nodes with the highest reliability score are depicted. '
-            + 'Blue colored nodes (MPs) are evolutionarily compatible '
-            + 'and red colored nodes are evolutionarily incompatible indicated by edges among the nodes.\n')
+            self._inds[self._ind]+'Labels denote the MP reliability scores. ' +
+            'Only nodes with the highest reliability score are depicted. ' +
+            'Blue colored nodes (MPs) are evolutionarily compatible ' +
+            'and red colored nodes are evolutionarily incompatible indicated by edges among the nodes.' +
+            (' Minimum reliability score value to be considered as a potential subclone: {:.3f}.'.format(
+             phylogeny.min_score) if phylogeny is not None else '') +
+            (' Only the {} most likely mutation patterns were considered for each variant.'.format(
+                phylogeny.max_no_mps) if phylogeny is not None and phylogeny.max_no_mps is not None else '') + '\n')
 
         self.file.write(self._inds[self._ind]+'</figcaption>\n')
         self.file.write(self._inds[self._ind]+'</div>\n')
@@ -424,19 +525,20 @@ class HTMLReport(object):
         self.file.write(self._inds[self._ind]+'<h4>Data artifacts</h4>\n')
 
         pat = phylogeny.patient
+        opt_sol = phylogeny.solutions[0]    # optimal solution
 
         # add information about putative sequencing errors
-        no_fps = sum(len(fps) for mut_idx, fps in phylogeny.false_positives.items())
-        no_fns = sum(len(fns) for mut_idx, fns in phylogeny.false_negatives.items())
+        no_fps = sum(len(fps) for mut_idx, fps in opt_sol.false_positives.items())
+        no_fns = sum(len(fns) for mut_idx, fns in opt_sol.false_negatives.items())
         no_putative_artifacts = no_fps+no_fns
 
         # any evolutionarily incompatible variants due to limited search space
-        if phylogeny.conflicting_mutations is not None and len(phylogeny.conflicting_mutations) > 0:
+        if opt_sol.conflicting_mutations is not None and len(opt_sol.conflicting_mutations) > 0:
             self.file.write(self._inds[self._ind]+'<h5>Unclassified artifacts due to limited solution space:</h5>\n')
             self.file.write(self._inds[self._ind]+'<ul>\n')
             self._ind += 1      # indentation level increases by 1
 
-            for mut_idx in sorted(phylogeny.conflicting_mutations,
+            for mut_idx in sorted(opt_sol.conflicting_mutations,
                                   key=lambda x: pat.gene_names[x].lower() if pat.gene_names is not None
                                   else pat.mut_keys[x]):
                 self.file.write(
@@ -448,18 +550,18 @@ class HTMLReport(object):
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
                             pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]) for sa_idx in
                             sorted(range(len(pat.sample_names)), key=lambda x: pat.sample_names[x]))))
-                            # if math.exp(pat.log_p01[mut_idx][sa_idx][1]) > 0.5)))
+                # if math.exp(pat.log_p01[mut_idx][sa_idx][1]) > 0.5)))
 
             self._ind -= 1      # indentation level decreases by 1
             self.file.write(self._inds[self._ind]+'</ul></br>\n')
 
         # any putative false-positives (sequencing errors)?
-        if len(phylogeny.false_positives.keys()) > 0:
+        if len(opt_sol.false_positives.keys()) > 0:
             self.file.write(self._inds[self._ind]+'<h5>Putative false-positives:</h5>\n')
             self.file.write(self._inds[self._ind]+'<ul>\n')
             self._ind += 1      # indentation level increases by 1
 
-            for mut_idx, samples in sorted(phylogeny.false_positives.items(),
+            for mut_idx, samples in sorted(opt_sol.false_positives.items(),
                                            key=lambda x: pat.gene_names[x[0]].lower() if pat.gene_names is not None
                                            else pat.mut_keys[x[0]]):
                 self.file.write(
@@ -477,12 +579,12 @@ class HTMLReport(object):
             self.file.write(self._inds[self._ind]+'</ul></br>\n')
 
         # any information about putative lost variants?
-        if len(phylogeny.false_negatives.keys()) > 0:
+        if len(opt_sol.false_negatives.keys()) > 0:
             self.file.write(self._inds[self._ind]+'<h5>Putative lost variants:</h5>\n')
             self.file.write(self._inds[self._ind]+'<ul>\n')
             self._ind += 1      # indentation level increases by 1
 
-            for mut_idx, samples in sorted(phylogeny.false_negatives.items(),
+            for mut_idx, samples in sorted(opt_sol.false_negatives.items(),
                                            key=lambda x: pat.gene_names[x[0]].lower() if pat.gene_names is not None
                                            else pat.mut_keys[x[0]]):
                 self.file.write(
@@ -493,15 +595,14 @@ class HTMLReport(object):
                             pat.sample_names[sa_idx].replace('_', ' '),
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]],
                             pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]) for sa_idx
-                            in sorted(samples, key=lambda x: pat.sample_names[x])
-                            if sa_idx not in pat.mutations[mut_idx] and pat.data[mut_idx][sa_idx] >= 0)))
+                            in sorted(samples, key=lambda x: pat.sample_names[x]))))
 
             self._ind -= 1      # indentation level decreases by 1
             self.file.write(self._inds[self._ind]+'</ul>\n')
 
         if artifacts_plot_filepath is not None:
             present_mutations = pat.present_mutations
-            if len(phylogeny.false_positives.keys()) + len(phylogeny.false_negatives.keys()) > 0:
+            if len(opt_sol.false_positives.keys()) + len(opt_sol.false_negatives.keys()) > 0:
                 self.file.write(self._inds[self._ind]+'<div align="center">\n')
                 self.file.write(self._inds[self._ind]+'<div style="width:98%;max-width:700px">\n')
                 self._ind += 1      # indentation level increases by 1
@@ -523,7 +624,7 @@ class HTMLReport(object):
                 self.file.write(
                     self._inds[self._ind] +
                     'Additionally there were {} putative false-negatives due to insufficient '.format(
-                        sum(len(fns) for mut_idx, fns in phylogeny.false_negative_unknowns.items()))
+                        sum(len(fns) for mut_idx, fns in opt_sol.false_negative_unknowns.items()))
                     + 'coverage (unknowns; data not shown). \n')
 
                 self.file.write(self._inds[self._ind]
@@ -556,22 +657,27 @@ class HTMLReport(object):
                 self.file.write(
                     self._inds[self._ind] +
                     'There were {} putative false-negatives due to insufficient '.format(
-                        sum(len(fns) for mut_idx, fns in phylogeny.false_negative_unknowns.items()))
+                        sum(len(fns) for mut_idx, fns in opt_sol.false_negative_unknowns.items()))
                     + 'coverage (unknowns; data not shown). \n')
 
                 self._ind -= 1      # indentation level decreases by 1
                 self.file.write(self._inds[self._ind]+'</p>\n')
 
-    def end_report(self, e, c0, fpr, fdr, min_absent_cov, min_median_cov, min_median_maf):
+    def end_report(self, e, c0, max_absent_vaf, loh_frequency, fpr, fdr,
+                   min_absent_cov, min_median_cov, min_median_maf, max_no_mps=None):
         """
         Add used parameter values, HTML file footer, and close the file
         :param e: sequencing error rate for bayesian inference
         :param c0: prior mixture parameter of delta function and uniform distribution for bayesian inference
+        :param max_absent_vaf: maximal absent VAF before considering estimated purity
+        :param loh_frequency: probability that a SNV along a lineage is lost due loss of heterozygosity
         :param fpr: false-positive rate
         :param fdr: false-discovery rate
         :param min_absent_cov: Minimum coverage for a variant to be called absent
         :param min_median_cov: minimum median coverage of a sample to pass filtering
         :param min_median_maf: minimum median variant allele frequency of a sample to pass filtering
+        :param max_no_mps: maximal number of MPs per variant that are considered in the MILP; by default the full
+                           solution space is considered and hence 2^(#samples) of MPs are generated
         """
 
         if self.file is not None:
@@ -580,14 +686,17 @@ class HTMLReport(object):
             self.file.write(
                 self._inds[self._ind] + ' sequencing error rate e: {}, '.format(e)
                 + 'prior absent probability c0: {}, '.format(c0)
+                + 'max absent VAF: {}, '.format(max_absent_vaf)
+                + 'LOH frequency: {}, '.format(loh_frequency)
                 + 'false discovery rate: {}, '.format(fdr)
                 + 'false-positive rate: {}. '.format(fpr)
-                + ('Absent classification minimum coverage: {}. '.format(min_absent_cov) if min_absent_cov > 0 else '')
-                + ('Sample minimal median coverage: {}. '.format(min_median_cov) if min_median_cov > 0 else '')
-                + ('Sample minimal median VAF minimum {}. '.format(min_median_maf) if min_median_maf > 0 else '')
-                + ('Filter: minimum VAF per variant in at least one sample {}. '.format(settings.MIN_VAF)
+                + ('absent classification minimum coverage: {}. '.format(min_absent_cov) if min_absent_cov > 0 else '')
+                + ('sample minimal median coverage: {}. '.format(min_median_cov) if min_median_cov > 0 else '')
+                + ('sample minimal median VAF: {}. '.format(min_median_maf) if min_median_maf > 0 else '')
+                + ('explored mut patterns per variant: {}.'.format(max_no_mps) if max_no_mps is not None else '')
+                + ('filter: minimum VAF per variant in at least one sample {}. '.format(settings.MIN_VAF)
                     if (settings.MIN_VAF is not None and settings.MIN_VAF > 0) else '')
-                + ('Filter: minimum number of variant reads per variant in at least one sample {}. '.format(
+                + ('filter: minimum number of variant reads per variant in at least one sample {}. '.format(
                     settings.MIN_VAR_READS) if settings.MIN_VAR_READS is not None and settings.MIN_VAR_READS > 0
                    else ''))
 

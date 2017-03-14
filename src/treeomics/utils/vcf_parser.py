@@ -57,6 +57,7 @@ class VCFParser(object):
 
             # regex patterns for making column names in VCF files valid identifiers
             p_replace = re.compile(r'( |/)')
+            p_reseeded = re.compile(r'<')
             p_remove = re.compile(r'#')
 
             self.samples = dict()
@@ -65,8 +66,9 @@ class VCFParser(object):
                 if row[0].startswith('##'):
                     # skip the meta-information
                     continue
-                elif row[0].startswith('#'):                # process VCF header
-                    headers = [p_replace.sub('_', p_remove.sub('', e)) for e in row]
+
+                elif row[0].startswith('#CHROM'):                # process VCF header
+                    headers = [p_replace.sub('_', p_remove.sub('', p_reseeded.sub('Res', e))) for e in row]
 
                     logger.debug('Header: {}'.format(headers))
                     named_row = namedtuple('variant', headers)
@@ -81,8 +83,16 @@ class VCFParser(object):
                     else:
                         raise ValueError('No data is found in the provided VCF file: {}'.format(filename))
 
+                elif row[0].startswith('#'):                # comment
+                    # skip
+                    continue
+
                 else:                                       # process variants
                     var = named_row(*row)
+
+                    failed_filter = False
+                    gene_name = None
+                    var_type = None
 
                     for filter_name in var.FILTER.split(';'):
 
@@ -94,65 +104,79 @@ class VCFParser(object):
                                 or filter_name == 'HARD_TO_VALIDATE':     # Variant data did not pass general filtering
                             # logger.debug('Mutation at chr {} and pos {} did not pass the filtering.'
                             #               .format(r.CHROM, r.POS))
-                            break
+                            failed_filter = True
+
                         elif filter_name == 'mf1':               # variant did not pass MuTect filtering
-                            break
+                            failed_filter = True
                         elif filter_name == 'GATKStandardFilter':               # variant did not pass GATK filtering
-                            break
+                            failed_filter = True
                         else:
-                            logger.warn('Unrecognized filter value: {}'.format(filter_name))
-                            break
+                            logger.warning('Unrecognized filter value: {}'.format(filter_name))
+                            failed_filter = True
 
-                    else:
-                        # variant passed filter and is called for all provided samples
+                    # exclude structural variants for now
+                    # TODO: include structural variants
+                    for info in var.INFO.split(';'):
+                        if info == 'SVTYPE=DUP' or info == 'SVTYPE=DEL':
+                            failed_filter = True
+                        elif info.startswith('GN='):        # gene name
+                            gene_name = info[3:]
+                        elif info.startswith('ANN='):       # functional annotations
+                            var_type = info[4:]
+                    if failed_filter:
+                        # variant did not pass all filters
+                        continue
 
-                        named_format = namedtuple('sample', var.FORMAT.split(':'))
+                    # variant passed filter and is called for all provided samples
+                    named_format = namedtuple('sample', var.FORMAT.split(':'))
 
-                        # generate separate variant directories for each sample
-                        for sa_idx, sa in enumerate(var[9:], 9):
+                    # generate separate variant directories for each sample
+                    for sa_idx, sa in enumerate(var[9:], 9):
 
-                            # Standard cancer format: VCF files contains two samples named NORMAL and PRIMARY
-                            # if 'NORMAL' in headers and 'PRIMARY' in headers, NORMAL could be skipped
-                            # if headers[sa_idx] == 'NORMAL':
-                            #     continue
+                        # Standard cancer format: VCF files contains two samples named NORMAL and PRIMARY
+                        # if 'NORMAL' in headers and 'PRIMARY' in headers, NORMAL could be skipped
+                        # if headers[sa_idx] == 'NORMAL':
+                        #     continue
 
-                            try:
-                                sample = named_format(*(sa.split(':')))
+                        try:
+                            sample = named_format(*(sa.split(':')))
 
-                                variant = generate_variant(var, sample)
+                            variant = generate_variant(var, sample, gene_name=gene_name, var_type=var_type)
 
-                                # the reason for these are that multiple samples have been merged
-                                # in a single VCF file, but almost all point mutations occur only in one patient
-                                if filter_zero_maf and variant.BAF == 0:
-                                    # logger.warn('Excluded variant {} since its BAF is 0.'.format(str(variant)))
-                                    # self.variants[headers[sa_idx]][(variant.CHROM, variant.POS)] = variant
-                                    pass
-                                else:
-                                    # add variant to dictionary
-                                    # self.variants[headers[sa_idx]][(variant.CHROM, variant.POS)] = variant
-                                    self.samples[headers[sa_idx]].add_variant(variant)
+                            # the reason for these are that multiple samples have been merged
+                            # in a single VCF file, but almost all point mutations occur only in one patient
+                            if filter_zero_maf and variant.BAF == 0:
+                                # logger.warn('Excluded variant {} since its BAF is 0.'.format(str(variant)))
+                                # self.variants[headers[sa_idx]][(variant.CHROM, variant.POS)] = variant
+                                pass
+                            else:
+                                # add variant to dictionary
+                                # self.variants[headers[sa_idx]][(variant.CHROM, variant.POS)] = variant
+                                self.samples[headers[sa_idx]].add_variant(variant)
 
-                                # logger.debug(row)
+                            # logger.debug(row)
 
-                            except TypeError:
-                                if sa == './.':
-                                    logger.debug('No data ({}) for sample {} at chr {} and pos {}'
-                                                 .format(sa, headers[sa_idx], var.CHROM, var.POS))
-                                else:
-                                    logger.warn('Could not parse data {} for sample {} at chr {} and pos {}'
-                                                .format(sa, headers[sa_idx], var.CHROM, var.POS))
-                                    logger.info('Row {}'.format(row))
+                        except TypeError:
+                            if sa == './.':
+                                logger.debug('No data ({}) for sample {} at chr {} and pos {}'
+                                             .format(sa, headers[sa_idx], var.CHROM, var.POS))
+                            else:
+                                logger.warning('Could not parse data {} for sample {} at chr {} and pos {}'
+                                               .format(sa, headers[sa_idx], var.CHROM, var.POS))
+                                logger.info('Row {}'.format(row))
 
             for sample_name in headers[9:]:
                 logger.debug('{} variants were detected in sample {}.'.format(
                     len(self.samples[sample_name].variants), sample_name))
 
 
-def generate_variant(var, sample):
+def generate_variant(var, sample, gene_name=None, var_type=None):
     """
     Create variant object with all the relevant information
     :param var: holds the VCF required information (chrom, pos, id, etc.)
     :param sample: holds all the information provided in each sample column in the VCF file
+    :param gene_name: name of gene where variant occurred
+    :param var_type: functional type of mutation, eg. missense
     :return variant:
     """
     # set VCF provided general information about the variant
@@ -163,7 +187,9 @@ def generate_variant(var, sample):
                       var.ALT,      # comma separated list of alternate non-reference alleles
                       var.QUAL,     # phred-scaled quality score: -10log_10 p(no variant)
                       var.FILTER,   # site filtering information
-                      var.INFO      # semicolon separated list of additional annotations
+                      var.INFO,      # semicolon separated list of additional annotations
+                      gene_name=gene_name,  # name of gene where variant occured
+                      var_type=var_type     # functional type of mutation, e.g., missense
                       )
 
     # set read sequencing data
@@ -216,7 +242,7 @@ def read_vcf_files(directory_name, excluded_samples=None):
     if len(samples) > 0:
         return samples
     else:
-        logger.warn('No samples found in directory {}.'.format(directory_name))
+        logger.warning('No samples found in directory {}.'.format(directory_name))
         return samples
 
 
@@ -246,5 +272,5 @@ def read_vcf_file(vcf_file, excluded_samples=None):
     if len(samples) > 0:
         return samples
     else:
-        logger.warn('No samples found in VCF file {}.'.format(vcf_file))
+        logger.warning('No samples found in VCF file {}.'.format(vcf_file))
         return samples
