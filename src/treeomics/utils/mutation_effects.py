@@ -1,10 +1,10 @@
 """Prediction mutation effects by using VarCode"""
 import logging
-from varcode import Variant as VCVariant        # https://github.com/hammerlab/varcode
-from pyensembl import ensembl_grch37
-from varcode.effects import predict_variant_effect_on_transcript
-from varcode.effects.effect_classes import *
 from itertools import chain
+
+# from pyensembl import ensembl_grch37
+from varcode.effects import predict_variant_effect_on_transcript
+from varcode.effects.effect_classes import *        # https://github.com/hammerlab/varcode
 
 __author__ = 'Johannes REITER'
 __date__ = 'March 2, 2017'

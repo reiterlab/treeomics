@@ -5,7 +5,6 @@ import os
 import argparse
 from collections import Counter
 from utils.driver import get_drivers, can_be_driver
-from utils.mutation_effects import get_top_effect_name
 from patient import Patient
 import settings
 import utils.int_settings as def_sets
@@ -25,7 +24,7 @@ __date__ = 'March 31, 2014'
 
 # create logger for application
 logger = logging.getLogger('treeomics')
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
 fh = logging.FileHandler('treeomics.log')
 fh.setLevel(logging.DEBUG)
@@ -378,6 +377,7 @@ def main():
 
                 # is there a reference genome to predict the effect of the mutation?
                 if patient.ensembl_data is not None:
+                    from utils.mutation_effects import get_top_effect_name
                     mut_effect = get_top_effect_name(patient.vc_variants[mut_idx])
                     if not can_be_driver(mut_effect):
                         unlikely_driver_mut_effects[mut_effect] += 1

@@ -15,8 +15,13 @@ from utils.statistics import calculate_present_pvalue, find_significant_mutation
 from utils.vaf_data import calculate_p_values
 from utils.statistics import get_log_p0
 
-from varcode import Variant as VCVariant        # https://github.com/hammerlab/varcode
-from pyensembl import EnsemblRelease
+try:    # check if varcode and pyensembl is available (necessary for Windows)
+    from varcode import Variant as VCVariant  # https://github.com/hammerlab/varcode
+    from pyensembl import EnsemblRelease
+
+except ImportError:
+    # mutation effect prediction will not be performed since VarCode is not avilable
+    pass
 
 __author__ = 'jreiter'
 __date__ = 'April, 2014'
@@ -105,25 +110,35 @@ class Patient(object):
         # list of varcode variant class instances
         self.vc_variants = None
 
-        # release 77 uses human reference genome GRCh38/hg38
-        # release 75 uses human reference genome GRCh37/hg19
-        # release 54 uses human reference genome GRCh36/hg18
-        if reference_genome is None:
+        try:
+            from varcode import Variant as VCVariant  # https://github.com/hammerlab/varcode
+            from pyensembl import EnsemblRelease
+
+            # release 77 uses human reference genome GRCh38/hg38
+            # release 75 uses human reference genome GRCh37/hg19
+            # release 54 uses human reference genome GRCh36/hg18
+            if reference_genome is None:
+                self.ensembl_data = None
+            else:
+                logger.info('VarCode is used for mutation effect prediction.')
+
+            if reference_genome == 'grch36':
+                self.ensembl_data = EnsemblRelease(54)
+
+            elif reference_genome == 'grch37':
+                self.ensembl_data = EnsemblRelease(75)
+
+            elif reference_genome == 'grch38':
+                self.ensembl_data = EnsemblRelease(77)
+
+            else:
+                self.ensembl_data = None
+                logger.error('Provided reference genome {} is not supported. '.format(reference_genome)
+                             + 'Please use GRCh36 (hg18), GRCh37 (hg19), or GRCh38 (hg38).')
+
+        except ImportError as ie:
             self.ensembl_data = None
-
-        elif reference_genome == 'grch36':
-            self.ensembl_data = EnsemblRelease(54)
-
-        elif reference_genome == 'grch37':
-            self.ensembl_data = EnsemblRelease(75)
-
-        elif reference_genome == 'grch38':
-            self.ensembl_data = EnsemblRelease(77)
-
-        else:
-            self.ensembl_data = None
-            logger.error('Provided reference genome {} is not supported. '.format(reference_genome)
-                         + 'Please use GRCh36 (hg18), GRCh37 (hg19), or GRCh38 (hg38).')
+            logger.warning('ImportError! VarCode is not installed! No mutation effect prediction. {}'.format(ie))
 
         # mutations present in all samples
         self.founders = set()

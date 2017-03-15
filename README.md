@@ -22,6 +22,7 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
 * Treeomics 1.7.1 2017-02-23: Integrated python packages ```pyensembl``` and ```varcode``` to infer the gene names where variants occurred as well as their mutation effect.
 * Treeomics 1.7.2 2017-03-02: Improved visualization of predicted driver genes in HTML report and the mutation table.
 * Treeomics 1.7.3 2017-03-13: Visualize the 5 most likely evolutionary trees. Improve solution pool usage to better estimate confidence values.
+* Treeomics 1.7.4 2017-03-15: Make mutation effect prediction by VarCode optional to reduce dependencies for users.
 
 ### <a name="installation"> Installation
 1. Open a terminal and clone the repository from GitHub with ```git clone https://github.com/johannesreiter/treeomics.git```
