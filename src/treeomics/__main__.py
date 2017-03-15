@@ -24,7 +24,7 @@ __date__ = 'March 31, 2014'
 
 # create logger for application
 logger = logging.getLogger('treeomics')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 # create file handler which logs even debug messages
 fh = logging.FileHandler('treeomics.log')
 fh.setLevel(logging.DEBUG)
