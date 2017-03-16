@@ -371,13 +371,18 @@ def main():
     unlikely_driver_mut_effects = Counter()
     if patient.gene_names is not None or patient.ensembl_data is not None:
 
+        if patient.ensembl_data is not None:
+            # predict mutation effects if VarCode is installed
+            from utils.mutation_effects import get_top_effect_name
+        else:
+            get_top_effect_name = None
+
         for mut_idx, mut_pos in enumerate(patient.mut_positions):
 
             if patient.gene_names[mut_idx] in user_drivers.keys():
 
                 # is there a reference genome to predict the effect of the mutation?
                 if patient.ensembl_data is not None:
-                    from utils.mutation_effects import get_top_effect_name
                     mut_effect = get_top_effect_name(patient.vc_variants[mut_idx])
                     if not can_be_driver(mut_effect):
                         unlikely_driver_mut_effects[mut_effect] += 1

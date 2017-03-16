@@ -47,9 +47,6 @@ def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepat
 
     if mlh_tree is not None:
 
-        _create_tree_plots(mlh_pg.solutions[0], mlh_pg, mlh_tree, plots,
-                           tree_filepath+'_1', drivers)
-
         # if more solutions were inferred, plot their trees as well
         for sol in mlh_pg.solutions[1:]:
             sol.assign_variants(mlh_pg, max_no_mps)
@@ -60,6 +57,10 @@ def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepat
                                                   confidence=None if mlh_pg.weighted_node_lh is None else
                                                   mlh_pg.weighted_node_lh)
             _create_tree_plots(sol, mlh_pg, tree, plots, tree_filepath + '_{}'.format(sol.rank), drivers)
+
+        # create tree for most likely solution
+        _create_tree_plots(mlh_pg.solutions[0], mlh_pg, mlh_tree, plots,
+                           tree_filepath+'_1', drivers)
 
         # create mutation matrix for benchmarking
         if mm_filepath is not None:
