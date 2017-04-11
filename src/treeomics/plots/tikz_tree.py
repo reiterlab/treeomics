@@ -15,7 +15,7 @@ __author__ = 'jreiter'
 logger = logging.getLogger('treeomics')
 
 
-def create_figure_file(tree, tree_root_key, filename, patient, phylogeny, figure_caption, drivers=set(),
+def create_figure_file(tree, tree_root_key, filename, patient, phylogeny, figure_caption, driver_vars=None,
                        germline_distance=2.0, standalone=False):
     """
     Takes a networkx tree and creates a tikz source file such that a pdf can be generated with latex
@@ -25,7 +25,7 @@ def create_figure_file(tree, tree_root_key, filename, patient, phylogeny, figure
     :param patient: data structure around patient
     :param phylogeny:
     :param figure_caption: caption for tikz figure
-    :param drivers: optional set of known driver gene names highlighted on each edge
+    :param driver_vars: defaultdict with mutation IDs and instance of driver class to be highlighted on each edge
     :return path to the generated latex/tikz tree
     """
 
@@ -38,7 +38,7 @@ def create_figure_file(tree, tree_root_key, filename, patient, phylogeny, figure
 
             # generate tikz tree and write it to the opened file
             _write_tikz_tree(tree, tree_root_key, latex_file, 0, patient, phylogeny,
-                             gene_names=patient.gene_names, mut_keys=patient.mut_keys, drivers=drivers)
+                             gene_names=patient.gene_names, mut_keys=patient.mut_keys, drivers=driver_vars)
 
             # generate latex file footers
             latex_output.write_figure_footer(latex_file, figure_caption, standalone)
@@ -62,7 +62,7 @@ def create_figure_file(tree, tree_root_key, filename, patient, phylogeny, figure
 
 
 def _write_tikz_tree(tree, cur_node, latex_file, level, patient, pg,
-                     gene_names=None, mut_keys=None, drivers=set()):
+                     gene_names=None, mut_keys=None, drivers=None):
     """
     Run recursively through the tree and write the tree in tikz format to the opened file
     :param tree:
@@ -107,8 +107,8 @@ def _write_tikz_tree(tree, cur_node, latex_file, level, patient, pg,
                 continue
 
             # is any of the acquired mutations in a driver gene?
-            if gene_names is not None:
-                acquired_drivers = [gene_names[m] for m in tree[cur_node][child]['muts'] if gene_names[m] in drivers]
+            if gene_names is not None and drivers is not None:
+                acquired_drivers = [gene_names[m] for m in tree[cur_node][child]['muts'] if m in drivers]
             else:
                 acquired_drivers = list()
 
@@ -135,10 +135,10 @@ def _write_tikz_tree(tree, cur_node, latex_file, level, patient, pg,
                 latex_file.write(pre+'\t% Acquired mutations ({}): '.format(len(tree[cur_node][child]['muts'])) +
                                  ','.join(sorted((str(m) for m in tree[cur_node][child]['muts']), key=int))+'\n')
                 latex_file.write(pre + '\t% VAF of acquired mutations: mean {:.2%}; median {:.2%}'.format(
-                    np.mean([patient.vafs[m, pg.sc_sample_ids[sa_idx] if sa_idx in pg.sc_sample_ids else sa_idx]
-                             for m in tree[cur_node][child]['muts'] for sa_idx in child]),
-                    np.median([patient.vafs[m, pg.sc_sample_ids[sa_idx] if sa_idx in pg.sc_sample_ids else sa_idx]
-                               for m in tree[cur_node][child]['muts'] for sa_idx in child])) +
+                    np.nanmean([patient.vafs[m, pg.sc_sample_ids[sa_idx] if sa_idx in pg.sc_sample_ids else sa_idx]
+                               for m in tree[cur_node][child]['muts'] for sa_idx in child]),
+                    np.nanmedian([patient.vafs[m, pg.sc_sample_ids[sa_idx] if sa_idx in pg.sc_sample_ids else sa_idx]
+                                 for m in tree[cur_node][child]['muts'] for sa_idx in child])) +
                                  '\n')
 
             _write_tikz_tree(tree, child, latex_file, level+1, patient, pg, gene_names=gene_names,

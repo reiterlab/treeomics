@@ -19,7 +19,7 @@ logger = logging.getLogger('treeomics')
 
 
 def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepath=None, subclone_detection=False,
-                       loh_frequency=0.0, drivers=set(), max_no_mps=None, time_limit=None, plots=True,
+                       loh_frequency=0.0, driver_vars=set(), max_no_mps=None, time_limit=None, plots=True,
                        pool_size=0, no_bootstrap_samples=0):
     """
     Create an evolutionary tree based on the maximum likelihood mutation patterns of each variant
@@ -29,7 +29,7 @@ def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepat
     :param mp_filepath: path to mutation pattern output file
     :param subclone_detection: is subclone detection enabled?
     :param loh_frequency: probability that a SNV along a lineage is lost due loss of heterozygosity
-    :param drivers: set of putative driver gene names highlighted on each edge
+    :param driver_vars: defaultdict with mutation IDs and instance of driver class to be highlighted on edges
     :param max_no_mps: only the given maximal number of most likely (by joint likelihood) mutation patterns
             is explored per variant; limits the solution space
     :param time_limit: time limit for MILP solver in seconds
@@ -56,11 +56,11 @@ def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepat
             tree = mlh_pg.infer_evolutionary_tree(sol.shared_mlh_mps, sol.mlh_founders, sol.mlh_unique_mutations,
                                                   confidence=None if mlh_pg.weighted_node_lh is None else
                                                   mlh_pg.weighted_node_lh)
-            _create_tree_plots(sol, mlh_pg, tree, plots, tree_filepath + '_{}'.format(sol.rank), drivers)
+            _create_tree_plots(sol, mlh_pg, tree, plots, tree_filepath + '_{}'.format(sol.rank), driver_vars)
 
         # create tree for most likely solution
         _create_tree_plots(mlh_pg.solutions[0], mlh_pg, mlh_tree, plots,
-                           tree_filepath+'_1', drivers)
+                           tree_filepath + '_1', driver_vars)
 
         # create mutation matrix for benchmarking
         if mm_filepath is not None:
@@ -75,7 +75,17 @@ def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepat
     return mlh_pg
 
 
-def _create_tree_plots(solution, mlh_pg, mlh_tree, plots, tree_filepath, drivers):
+def _create_tree_plots(solution, mlh_pg, mlh_tree, plots, tree_filepath, driver_vars):
+    """
+    Produce evolutionary tree plots for the given solution
+    :param solution:
+    :param mlh_pg:
+    :param mlh_tree:
+    :param plots:
+    :param tree_filepath:
+    :param driver_vars: defaultdict with mutation IDs and instance of driver class
+    :return:
+    """
 
     # ignore mutations which are not in any sample which passed the filtering
     present_mutations = mlh_pg.patient.present_mutations
@@ -113,7 +123,7 @@ def _create_tree_plots(solution, mlh_pg, mlh_tree, plots, tree_filepath, drivers
             # create ETE tree
             from plots.ete_tree import create_tree
             mlh_pg.tree_plot = create_tree(mlh_tree, tikz.TREE_ROOT, tree_filepath, mlh_pg.patient, mlh_pg,
-                                           drivers=drivers)
+                                           drivers=driver_vars)
             logger.info('Generated ete tree as PNG: {}'.format(mlh_pg.tree_plot))
 
         except ImportError as ie:
@@ -121,7 +131,7 @@ def _create_tree_plots(solution, mlh_pg, mlh_tree, plots, tree_filepath, drivers
 
         # create Latex/TIkZ tree
         tikz_tree = tikz.create_figure_file(
-            mlh_tree, tikz.TREE_ROOT, tree_filepath + '_full.tex', mlh_pg.patient, mlh_pg, caption, drivers=drivers,
+            mlh_tree, tikz.TREE_ROOT, tree_filepath + '_full.tex', mlh_pg.patient, mlh_pg, caption, driver_vars=driver_vars,
             germline_distance=10.0 * max(1.0, len(solution.mlh_founders) / median_no_muts), standalone=True)
         # add information about the ignored mutations and the position of the acquired mutations
         latex.add_branch_mut_info(tree_filepath, mlh_pg, mlh_tree)
@@ -132,7 +142,7 @@ def _create_tree_plots(solution, mlh_pg, mlh_tree, plots, tree_filepath, drivers
 
         tikz_path, tikz_file = os.path.split(tikz_tree)
         logger.debug('Tikzpath: {} {}'.format(tikz_path, tikz_file))
-        pdflatex_cmd = 'pdflatex {}'.format(tikz_file)
+        pdflatex_cmd = 'buf_size=1000000 pdflatex {}'.format(tikz_file)
         fnull = open(os.devnull, 'w')
         return_code = call(pdflatex_cmd, shell=True, cwd=tikz_path, stdout=fnull)
 
@@ -171,7 +181,7 @@ def infer_max_compatible_tree(filepath, patient, drivers=set(), time_limit=None)
 
     # create tikz figure
     tikz.create_figure_file(simple_tree, tikz.TREE_ROOT, filepath,
-                            patient, phylogeny, caption, drivers=drivers, standalone=True)
+                            patient, phylogeny, caption, driver_vars=drivers, standalone=True)
     # add information about the ignored mutations and the position of the acquired mutations
     latex.add_branch_mut_info(filepath, phylogeny, simple_tree)
 

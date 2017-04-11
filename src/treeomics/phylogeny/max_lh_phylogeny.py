@@ -70,7 +70,7 @@ class MaxLHPhylogeny(Phylogeny):
         for sa_idx, sample_name in enumerate(patient.sample_names):
             # calculate posterior according to prior, estimated purity and data
             for k in range(5000):
-                _, p1 = get_log_p0(np.median(patient.sample_coverages[sample_name]), k, self.patient.bi_error_rate,
+                _, p1 = get_log_p0(np.nanmedian(patient.sample_coverages[sample_name]), k, self.patient.bi_error_rate,
                                    self.patient.bi_c0, cutoff_f=self.patient.get_cutoff_frequency(sample_name),
                                    pseudo_alpha=def_sets.PSEUDO_ALPHA, pseudo_beta=patient.betas[sample_name])
                 if p1 > pres_lp:
@@ -79,16 +79,16 @@ class MaxLHPhylogeny(Phylogeny):
 
             logger.debug('{}: Minimum number of mutant reads such that presence probability is greater than 50%: {}.'
                          .format(sample_name, k_mins[-1]))
-            called_ps.append(1.0 - binom.cdf(k_mins[-1]-1, int(np.median(patient.sample_coverages[sample_name])),
+            called_ps.append(1.0 - binom.cdf(k_mins[-1]-1, int(np.nanmedian(patient.sample_coverages[sample_name])),
                                              self.patient.bi_error_rate))
             logger.debug('Probability to observe an incorrectly called variant: {:.3%}'.format(called_ps[-1]))
 
             if sample_name in patient.estimated_purities:
-                missed_ps.append(binom.cdf(k_mins[-1]-1, int(np.median(patient.sample_coverages[sample_name])),
+                missed_ps.append(binom.cdf(k_mins[-1]-1, int(np.nanmedian(patient.sample_coverages[sample_name])),
                                            self.patient.estimated_purities[sample_name] / 2.0))
             else:
-                missed_ps.append(binom.cdf(k_mins[-1]-1, int(np.median(patient.sample_coverages[sample_name])),
-                                           np.median(self.patient.sample_mafs[sample_name])))
+                missed_ps.append(binom.cdf(k_mins[-1]-1, int(np.nanmedian(patient.sample_coverages[sample_name])),
+                                           np.nanmedian(self.patient.sample_mafs[sample_name])))
             logger.debug('Probability to miss a clonal variant: {:.1e}'.format(missed_ps[-1]))
 
             # probability that all calls are correct

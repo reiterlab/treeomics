@@ -7,6 +7,15 @@ import os
 from collections import namedtuple
 import seaborn as sns
 
+try:    # check if varcode and pyensembl is available (necessary for Windows)
+    from utils.mutation_effects import get_top_effect_name
+    VARCODE = True
+
+except ImportError:
+    # mutation effect prediction will not be performed since VarCode is not avilable
+    VARCODE = False
+    get_top_effect_name = None
+
 __author__ = 'Johannes REITER'
 __date__ = 'Feb 22, 2017'
 
@@ -20,12 +29,49 @@ class Driver:
     MaxSourceSupport = 0    # maximum number of sources supporting a driver
     Colors = None           # driver color depending on support
 
-    def __init__(self, gene_name, genomic_location=None, sources=None):
+    def __init__(self, gene_name, mutation_effect=None, cgc_driver=None, sources=None, variant=None, cgc_drivers=None):
+        """
+        Initialize driver
+        :param gene_name: name of gene
+        :param mutation_effect:
+        :param cgc_driver: Is the variant in the CGC?
+        :param sources: how was the gene identified as putative driver?
+        :param variant: instance of VarCode variant is only needed if variant should be checked for CGC
+        :param cgc_drivers: List of CGC
+        """
 
         self.gene_name = gene_name
-        self.genomic_location = genomic_location
         self._sources = None
         self.sources = set() if sources is None else sources
+        self.mutation_effect = mutation_effect
+        self.genomic_location = None
+
+        if cgc_driver:
+            self.cgc_driver = True
+
+        elif cgc_driver is None and cgc_drivers is not None:
+            if gene_name in cgc_drivers:
+                dri_pos = cgc_drivers[gene_name].genomic_location
+                self.genomic_location = dri_pos
+
+                if dri_pos is None or variant is None:
+                    # no positions provided => assume it's a driver
+                    self.cgc_driver = True
+
+                # check if variant is at the same chromosome and is within given region
+                elif (dri_pos[0] == variant.contig and
+                        (dri_pos[1] <= variant.start <= dri_pos[2] or dri_pos[1] <= int(variant.end) <= dri_pos[2])):
+
+                    # variant is among CGC region
+                    self.cgc_driver = True
+
+                else:
+                    self.cgc_driver = False
+            else:
+                self.cgc_driver = False
+
+        else:           # don't know if in CGC
+            self.cgc_driver = None
 
     @property
     def sources(self):
@@ -50,11 +96,70 @@ class Driver:
         return Driver.Colors
 
 
+def potential_driver(gene_name, user_drivers, variant=None, cgc_drivers=None):
+    """
+    Checks if gene name is in set among potential driver genes
+    Moreover, if VarCode is installed, it checks for non-synonymous mutations and variants that affect splicing
+    Last, if a dictionary with CGC is provided, it checks, if the gene name is in the list and if the position
+    is in the right place
+    :param gene_name: gene name where the variant occurred
+    :param user_drivers: set with potential driver genes defined by user
+    :param variant: instance VarCode variant
+    :param cgc_drivers: dictionary of Cancer Gene Census
+    :return: variant in a driver gene, potential mutation effect, in CGC, mutation effect
+    """
+
+    if gene_name in user_drivers:
+        driver_gene = True
+    else:
+        driver_gene = False
+
+    if driver_gene and variant is not None and VARCODE:
+        mut_effect = get_top_effect_name(variant)
+        put_driver = can_be_driver(mut_effect)
+
+        if not put_driver:
+            return driver_gene, put_driver, None, mut_effect
+
+    else:   # we can't predict the mutation effect and hence has to assume there is one
+        put_driver = driver_gene
+        mut_effect = None
+
+    if cgc_drivers is None:
+        return driver_gene, put_driver, None, mut_effect
+
+    # are there known positions for this driver gene?
+    if cgc_drivers is not None:
+        if gene_name in cgc_drivers:
+            dri_pos = cgc_drivers[gene_name].genomic_location
+
+            if dri_pos is None or variant is None:
+                # no positions provided => assume it's a driver
+                cgc_driver = True
+
+            # check if variant is at the same chromosome and is within given region
+            elif (dri_pos[0] == variant.contig and
+                    (dri_pos[1] <= variant.start <= dri_pos[2] or dri_pos[1] <= int(variant.end) <= dri_pos[2])):
+                # variant is among CGC region
+                cgc_driver = True
+
+            else:
+                cgc_driver = False
+
+            return driver_gene, put_driver, cgc_driver, mut_effect
+
+        else:   # gene name is not CGC
+            return driver_gene, put_driver, False, mut_effect
+
+    else:       # no CGC provided, hence, we don't know if the variant is in the CGC
+        return driver_gene, put_driver, None, mut_effect
+
+
 def can_be_driver(effect_name):
     """
     Can this variant effect the expression of a gene?
     :param effect_name: varcode variant top priority effect, see https://github.com/hammerlab/varcode
-    :return: True or False
+    :return: True for non-synonymous mutations and variants that affect splicing
     """
 
     # AlternateStartCodon: Replace annotated start codon with alternative start codon (e.g. "ATG>CAG")
@@ -93,7 +198,7 @@ def can_be_driver(effect_name):
     # IncompleteTranscript:	Can't determine effect since transcript annotation is incomplete
     # (often missing either the start or stop codon)
     elif effect_name == 'IncompleteTranscript':
-        return True
+        return False
 
     # Insertion: Coding mutation which causes insertion of amino acid(s)
     elif effect_name == 'Insertion':

@@ -4,13 +4,15 @@ import sys
 import os
 import argparse
 from collections import Counter
-from utils.driver import get_drivers, can_be_driver
+import csv
+from utils.driver import get_drivers, potential_driver, Driver
 from patient import Patient
 import settings
 import utils.int_settings as def_sets
 import tree_inference as ti
 from utils.html_report import HTMLReport
 from utils.analysis import analyze_data
+from utils.data_tables import read_table
 import plots.plots_utils as plts
 import plots.mp_graph as mp_graph
 import plots.circos as circos
@@ -113,8 +115,8 @@ def get_output_fn_template(name, total_no_samples, subclone_detection=False, fpr
     """
 
     pattern = ('{}_{}{}'.format(name, total_no_samples, '_SC' if subclone_detection else '') +
-               ('_st={}'.format(min_sa_coverage) if min_sa_coverage > 0 else '') +
-               ('_mf={}'.format(min_sa_vaf) if min_sa_vaf > 0 else '') +
+               ('_st={}'.format(min_sa_coverage) if min_sa_coverage is not None and min_sa_coverage > 0 else '') +
+               ('_mf={}'.format(min_sa_vaf) if min_sa_vaf is not None and min_sa_vaf > 0 else '') +
                ('_fpr={:.1e}_fdr={:.2f}'.format(fpr, fdr) if fpr is not None or fdr is not None else '') +
                ('_at={}'.format(min_absent_coverage) if min_absent_coverage is not None else '') +
                ('_vaf={}'.format(settings.MIN_VAF) if settings.MIN_VAF is not None and settings.MIN_VAF > 0 else '') +
@@ -124,7 +126,7 @@ def get_output_fn_template(name, total_no_samples, subclone_detection=False, fpr
                ('_c0={}'.format(bi_c0) if bi_c0 is not None else '') +
                ('_af={}'.format(max_absent_vaf) if max_absent_vaf is not None else '') +
                ('_mps={}'.format(max_no_mps) if max_no_mps is not None else '') +
-               ('_b={}'.format(no_boot) if no_boot is not None and no_boot > 0 else '') +
+               ('_b={}'.format(no_boot) if (no_boot is not None) and no_boot > 0 else '') +
                ('_s' if mode is not None and mode == 2 else ''))
 
     # replace points with commas because latex cannot handle points in file names (interprets it as file type)
@@ -133,16 +135,100 @@ def get_output_fn_template(name, total_no_samples, subclone_detection=False, fpr
     return pattern
 
 
+def characterize_drivers(patient, ref_genome, filepath=None):
+    """
+    Find putative driver mutations among the somatic variants and return a
+    set of genes with likely drivers, a dictionary with driver variants (and instances of Driver), and
+    a counter of unlikely driver mutation effects
+    :param patient: data structure around sequencing data of a subject
+    :param ref_genome:
+    :param filepath: prefix path to a possible output file summarizing the putative drivers, also serving as an
+                     input file to Ensembl VEP and CRAVAT
+    :return: set of driver genes, dict of driver variants, Counter of unlikely mutation effects
+    """
+    cgc_drivers, user_drivers = get_drivers(settings.CGC_PATH, settings.DRIVER_PATH, ref_genome)
+    # check if any of the variants are a putative driver
+    put_driver_vars = dict()
+    put_driver_genes = set()
+    unlikely_driver_mut_effects = Counter()
+    if patient.gene_names is not None or patient.ensembl_data is not None:
+
+        for mut_idx, mut_pos in enumerate(patient.mut_positions):
+
+            driver_gene, put_driver, cgc_driver, mut_effect = potential_driver(
+                patient.gene_names[mut_idx], user_drivers.keys(),
+                variant=(patient.vc_variants[mut_idx] if patient.vc_variants is not None else None),
+                cgc_drivers=cgc_drivers)
+
+            if driver_gene and not put_driver:
+                unlikely_driver_mut_effects[mut_effect] += 1
+                logger.info('Excluded {} variant found in putative driver {}{}.'.format(
+                    mut_effect, patient.gene_names[mut_idx],
+                    ' (chr {}, pos {})'.format(mut_pos[0], mut_pos[1]) if mut_pos is not None else ''))
+                continue
+
+            if put_driver:
+                put_driver_genes.add(patient.gene_names[mut_idx])
+                driver = Driver(patient.gene_names[mut_idx], mutation_effect=mut_effect, cgc_driver=cgc_driver,
+                                sources=user_drivers[patient.gene_names[mut_idx]].sources)
+
+                put_driver_vars[mut_idx] = driver
+
+                if cgc_driver is not None and not cgc_driver:
+                    if patient.gene_names[mut_idx] in cgc_drivers.keys():
+                        logger.info('{} variant found in putative driver {} but outside of reported CGC region{}.'
+                                    .format(mut_effect, patient.gene_names[mut_idx], ' (chr {}, pos {})'.format(
+                                            mut_pos[0], mut_pos[1]) if mut_pos is not None else ''))
+                    else:
+                        logger.info('{} variant found in putative driver {}, not in CGC{}.'
+                                    .format(mut_effect, patient.gene_names[mut_idx], ' (chr {}, pos {})'.format(
+                                            mut_pos[0], mut_pos[1]) if mut_pos is not None else ''))
+                else:
+                    logger.info('{}ariant found in putative driver {}{}.'.format(
+                        mut_effect + ' v' if mut_effect is not None else 'V', patient.gene_names[mut_idx],
+                        ' (chr {}, pos {})'.format(mut_pos[0], mut_pos[1]) if mut_pos is not None else ''))
+
+    if filepath is not None and patient.ensembl_data is not None:
+        with open(filepath+'_vep.tsv', 'w') as vep_file, open(filepath+'_cravat.tsv', 'w') as cravat_file:
+            logger.debug('Write {} putative driver variants to file: {}'.format(len(put_driver_vars), filepath))
+            tsv_vep = csv.writer(vep_file, delimiter='\t')
+            tsv_cravat = csv.writer(cravat_file, delimiter='\t')
+            # csv_writer.writerow(['Chromosome', 'StartPosition', 'EndPosition', 'RefAllele', 'AltAllele'])
+            tsv_cravat.writerow(['# UID', 'Chr.', 'Position', 'Strand', 'Ref. base', 'Alt. base',
+                                 'Sample ID (optional)'])
+            for mut_idx in sorted(put_driver_vars.keys(), key=lambda k: (patient.mut_positions[k][0],
+                                                                         patient.mut_positions[k][1])):
+                var = patient.vc_variants[mut_idx]
+                d = put_driver_vars[mut_idx]
+                if cgc_drivers is not None:
+                    cgc_status = (', not in CGC' if d.gene_name not in cgc_drivers.keys() else
+                                  (', in CGC' if d.cgc_driver is None or d.cgc_driver
+                                   else ', in CGC but outside of reported region'))
+                else:
+                    cgc_status = ''
+                tsv_vep.writerow([var.contig, var.start, var.end - (1 if var.ref == '' else 0),
+                                  '{}/{}'.format('-' if var.ref == '' else var.ref,
+                                                 '-' if var.alt == '' else var.alt),
+                                  '# {}, predicted effect: {}{}'.format(d.gene_name, d.mutation_effect, cgc_status)])
+                tsv_cravat.writerow([mut_idx, 'chr{}'.format(var.contig), var.start, '+',
+                                     '-' if var.ref == '' else var.ref, '-' if var.alt == '' else var.alt,
+                                     patient.name])
+
+            logger.info('Wrote {} putative driver variants to file: {}'.format(len(put_driver_vars), filepath))
+
+    return put_driver_genes, put_driver_vars, unlikely_driver_mut_effects
+
+
 def usage():
     """
     Give the user feedback on how to call the tool
     Terminates the tool afterwards
     """
-    logger.warn("Usage: python treeomics.zip -r <mut-reads table> -s <coverage table> | -v vcf_file | "
-                "-d vcf_file_directory  [-n <normal sample name>] [-e <sequencing error rate] "
-                "[-z <prior absent probability>] [-c <minimum sample median coverage>] [] \n")
-    logger.warn("Example: python treeomics.zip -r input/Makohon2015/Pam03_mutant_reads.txt "
-                "-s input/Makohon2015/Pam03_phredcoverage.txt ")
+    logger.warning("Usage: python treeomics.zip -r <mut-reads table> -s <coverage table> | -v vcf_file | "
+                   "-d vcf_file_directory  [-n <normal sample name>] [-e <sequencing error rate] "
+                   "[-z <prior absent probability>] [-c <minimum sample median coverage>] [] \n")
+    logger.warning("Example: python treeomics.zip -r input/Makohon2017/Pam03_mutant_reads.txt "
+                   "-s input/Makohon2017/Pam03_phredcoverage.txt ")
     sys.exit(2)
 
 
@@ -160,7 +246,8 @@ def main():
     group.add_argument("-v", "--vcf_file", help="path to the VCF file", type=str)
     group.add_argument("-d", "--directory", help="directory with multiple VCF files", type=str)
 
-    parser.add_argument("-n", "--normal", help="name of normal sample (excluded from analysis)", type=str, default=None)
+    parser.add_argument("-n", "--normal", help="names of normal samples (excluded from analysis)", type=str, nargs='*',
+                        default=None)
 
     parser.add_argument("-r", "--mut_reads", help="path table with the number of reads with a mutation", type=str)
     parser.add_argument("-s", "--coverage", help="path to table with read coverage at the mutated positions", type=str)
@@ -186,6 +273,12 @@ def main():
     parser.add_argument("-g", "--ref_genome",
                         help="to which reference genome was the sequencing data aligned",
                         type=str, default=settings.REF_GENOME)
+
+    parser.add_argument('--wes_filtering', action='store_true', help="Remove intronic and intergenic variants?")
+
+    parser.add_argument('--common_vars_file', type=str, default=settings.COMMON_VARS_FILE,
+                        help='path to CSV file with common variants present in normal samples '
+                             'and hence excl as artifacts')
 
     # DEPRECATED FROM VERSION 1.7.0 ONWARD
     parser.add_argument("-p", "--false_positive_rate",
@@ -250,10 +343,13 @@ def main():
     # plots_paper = False
 
     if args.normal:
-        normal_sample_name = args.normal
-        logger.info('Exclude normal sample with name: {}'.format(normal_sample_name))
+        normal_sample_name = args.normal[0]
+        excluded_samples = set(args.normal[1:]) if len(args.normal) > 1 else set()
+        logger.info('Exclude normal sample with name: ' + ', '.join(sa for sa in args.normal))
+
     else:
         normal_sample_name = None
+        excluded_samples = set()
 
     if args.min_median_coverage > 0:
         logger.info('Minimum sample median coverage (otherwise discarded): {}'.format(
@@ -302,6 +398,21 @@ def main():
         logger.error('Subclone and partial solution space search are not supported to be performed at the same time! ')
         usage()
 
+    if args.wes_filtering:
+        logger.info('All intronic or intergenic variants will be excluded (WES filtering).')
+
+    if args.common_vars_file:
+        if os.path.isfile(args.common_vars_file):
+            common_vars = read_table(args.common_vars_file, ['Chromosome', 'Position', 'RefAllele', 'AltAllele'],
+                                     ['__', '__', '>', ''], ['AlleleFrequency', 'Gene_Symbol'])
+            logger.info('Read common variants file with {:.2e} variants that are excluded as artifacts.'.format(
+                len(common_vars)))
+        else:
+            logger.error('Given path to common variants file {} could not be found!'.format(args.common_vars_file))
+            common_vars = None
+    else:
+        common_vars = None
+
     # ##########################################################################################################
     # ############################################### LOAD DATA ################################################
     # ##########################################################################################################
@@ -317,7 +428,8 @@ def main():
                           pat_name=patient_name, min_absent_cov=min_absent_cov, reference_genome=ref_genome)
         read_no_samples = patient.process_raw_data(
             fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf, var_table=args.mut_reads,
-            cov_table=args.coverage, normal_sample=normal_sample_name)
+            cov_table=args.coverage, normal_sample=normal_sample_name, excluded_columns=excluded_samples,
+            wes_filtering=args.wes_filtering, artifacts=common_vars)
 
     elif args.csv_file:
 
@@ -329,7 +441,7 @@ def main():
                           pat_name=patient_name, min_absent_cov=min_absent_cov, reference_genome=ref_genome)
         read_no_samples = patient.process_raw_data(
             fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf, csv_file=args.csv_file,
-            normal_sample=normal_sample_name)
+            normal_sample=normal_sample_name, excluded_columns=excluded_samples)
 
     elif args.vcf_file:      # take path to the input VCF file
         vcf_file = args.vcf_file
@@ -342,9 +454,10 @@ def main():
             patient_name = patient_name[:patient_name.find('_')]
         patient = Patient(error_rate=args.error_rate, c0=args.prob_zero, max_absent_vaf=args.max_absent_vaf,
                           pat_name=patient_name, reference_genome=ref_genome)
-        read_no_samples = patient.read_vcf_file(vcf_file, fpr, fdr, min_sa_cov=args.min_median_coverage,
-                                                min_sa_maf=args.min_median_vaf, min_absent_cov=args.min_absent_coverage,
-                                                normal_sample_name=normal_sample_name)
+        read_no_samples = patient.read_vcf_file(
+            vcf_file, fpr, fdr, min_sa_cov=args.min_median_coverage, min_sa_maf=args.min_median_vaf,
+            min_absent_cov=args.min_absent_coverage, normal_sample_name=normal_sample_name,
+            excluded_samples=excluded_samples, wes_filtering=args.wes_filtering, artifacts=common_vars)
 
     elif args.directory:      # take path to the directory with all VCF files
         vcf_directory = args.directory
@@ -358,60 +471,22 @@ def main():
             vcf_directory[:-1] if vcf_directory.endswith('/') else vcf_directory)
         patient = Patient(error_rate=args.error_rate, c0=args.prob_zero, max_absent_vaf=args.max_absent_vaf,
                           pat_name=patient_name, reference_genome=ref_genome)
-        read_no_samples = patient.read_vcf_directory(vcf_directory, args.min_median_coverage, args.min_median_vaf,
-                                                     fpr, fdr, min_absent_cov, normal_sample_name)
+        read_no_samples = patient.read_vcf_directory(
+            vcf_directory, args.min_median_coverage, args.min_median_vaf, fpr, fdr, min_absent_cov,
+            normal_sample_name=normal_sample_name, excluded_samples=excluded_samples,
+            wes_filtering=args.wes_filtering, artifacts=common_vars)
 
     else:
         raise RuntimeError('No input files were provided!')
 
-    cgc_drivers, user_drivers = get_drivers(settings.CGC_PATH, settings.DRIVER_PATH, ref_genome)
-
-    # check if any of the variants are a putative driver
-    likely_drivers = dict()
-    unlikely_driver_mut_effects = Counter()
-    if patient.gene_names is not None or patient.ensembl_data is not None:
-
-        if patient.ensembl_data is not None:
-            # predict mutation effects if VarCode is installed
-            from utils.mutation_effects import get_top_effect_name
-        else:
-            get_top_effect_name = None
-
-        for mut_idx, mut_pos in enumerate(patient.mut_positions):
-
-            if patient.gene_names[mut_idx] in user_drivers.keys():
-
-                # is there a reference genome to predict the effect of the mutation?
-                if patient.ensembl_data is not None:
-                    mut_effect = get_top_effect_name(patient.vc_variants[mut_idx])
-                    if not can_be_driver(mut_effect):
-                        unlikely_driver_mut_effects[mut_effect] += 1
-                        logger.info('{} variant found in likely driver {}.'.format(
-                            mut_effect, patient.gene_names[mut_idx]))
-                        continue
-                else:
-                    mut_effect = None
-
-                # are there known positions for this driver gene?
-                if cgc_drivers is not None and patient.gene_names[mut_idx] in cgc_drivers:
-                    dri_pos = cgc_drivers[patient.gene_names[mut_idx]].genomic_location
-                else:
-                    dri_pos = None
-
-                if dri_pos is None:
-                    # no positions provided => assume it's a driver
-                    likely_drivers[patient.gene_names[mut_idx]] = \
-                        (mut_effect, user_drivers[patient.gene_names[mut_idx]].sources, False)
-
-                # check if variant is at the same chromosome and is within given region
-                elif (dri_pos[0] == mut_pos[0] and
-                      (dri_pos[1] <= int(mut_pos[1]) <= dri_pos[2] or dri_pos[1] <= int(mut_pos[2]) <= dri_pos[2])):
-                    # variant is among CGC region
-                    likely_drivers[patient.gene_names[mut_idx]] = \
-                        (mut_effect, user_drivers[patient.gene_names[mut_idx]].sources, True)
-
     output_directory = init_output(patient_name=patient_name,
                                    output_dir=args.output if args.output is not settings.OUTPUT_FOLDER else None)
+
+    # find and characterize all possible driver gene mutations
+    put_driver_genes, put_driver_vars, unlikely_driver_mut_effects = characterize_drivers(
+        patient, ref_genome, filepath=os.path.join(
+            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_putativedrivers')
+
     # create output filename pattern
     fn_pattern = get_output_fn_template(
         patient.name, read_no_samples, mode=args.mode, min_sa_coverage=args.min_median_coverage,
@@ -419,11 +494,14 @@ def main():
         max_absent_vaf=patient.max_absent_vaf)
 
     # do basic analysis on provided input data
-    analyze_data(patient, post_table_filepath=os.path.join(output_directory,
-                 get_output_fn_template(patient.name, read_no_samples, min_sa_coverage=args.min_median_coverage,
-                                        min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate,
-                                        bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf) +
-                                        '_posterior.txt'))
+    # create output file path for present posterior probabilities of the variants
+    post_filepath = os.path.join(output_directory, get_output_fn_template(
+        patient.name, read_no_samples, min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf,
+        bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf) + '_posterior.txt')
+    # output file path to write all variants in a format acceptable to Ensembl VEP
+    vep_filepath = os.path.join(
+            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_variants_vep.tsv'
+    analyze_data(patient, post_table_filepath=post_filepath, vep_filepath=vep_filepath)
 
     if plots_report:   # deactivate plot generation for debugging and benchmarking
 
@@ -443,7 +521,7 @@ def main():
 
             plts.bayesian_hinton(patient.log_p01, output_directory, mut_table_name,
                                  row_labels=patient.sample_names, column_labels=col_labels,
-                                 displayed_mutations=patient.present_mutations, drivers=likely_drivers)
+                                 displayed_mutations=patient.present_mutations, put_driver_vars=put_driver_vars)
         else:
             logger.warning('Too many reported variants for a detailed mutation table plot: {}'.format(len(col_labels)))
             mut_table_name = None
@@ -475,7 +553,8 @@ def main():
     html_report.start_report()
     html_report.add_sequencing_information(
         patient, mut_table_path=mut_table_name+'.png' if mut_table_name is not None else None,
-        likely_drivers=likely_drivers, unlikely_driver_mut_effects=unlikely_driver_mut_effects)
+        put_driver_vars=put_driver_vars, unlikely_driver_mut_effects=unlikely_driver_mut_effects,
+        put_driver_genes=put_driver_genes)
 
     html_report.add_similarity_information(patient)
 
@@ -507,7 +586,7 @@ def main():
                 mm_filepath=os.path.join(output_directory, fn_matrix+'_treeomics_mm.csv'),
                 mp_filepath=os.path.join(output_directory, fn_matrix+'_treeomics_mps.tsv'),
                 subclone_detection=args.subclone_detection, loh_frequency=settings.LOH_FREQUENCY,
-                drivers=likely_drivers.keys(), pool_size=args.pool_size, no_bootstrap_samples=args.boot,
+                driver_vars=put_driver_vars, pool_size=args.pool_size, no_bootstrap_samples=args.boot,
                 max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=plots_report)
 
             # previously used for benchmarking
@@ -532,7 +611,7 @@ def main():
                 if args.subclone_detection:
                     pg = ti.create_max_lh_tree(
                         patient, tree_filepath=None, mm_filepath=None, mp_filepath=None, subclone_detection=False,
-                        loh_frequency=settings.LOH_FREQUENCY, drivers=likely_drivers.keys(), pool_size=args.pool_size,
+                        loh_frequency=settings.LOH_FREQUENCY, driver_vars=put_driver_vars, pool_size=args.pool_size,
                         no_bootstrap_samples=0, max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=False)
                 else:
                     pg = phylogeny
@@ -566,7 +645,7 @@ def main():
         elif args.mode == 2:
 
             phylogeny = ti.infer_max_compatible_tree(os.path.join(output_directory, fn_pattern+'_btree.tex'),
-                                                     patient, drivers=likely_drivers.keys())
+                                                     patient, drivers=put_driver_genes)
 
             if plots_report:
                 # create mutation pattern overview plot

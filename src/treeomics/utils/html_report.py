@@ -6,6 +6,7 @@ import os
 import numpy as np
 import datetime
 import math
+from collections import Counter
 from utils.int_settings import VERSION
 import utils.int_settings as def_sets
 from utils.driver import Driver
@@ -79,13 +80,14 @@ class HTMLReport(object):
         self._ind -= 1      # indentation level decreases by 1
         self.file.write(self._inds[self._ind]+'</div>\n')
 
-    def add_sequencing_information(self, patient, mut_table_path=None, likely_drivers=None,
+    def add_sequencing_information(self, patient, mut_table_path=None, put_driver_vars=None, put_driver_genes=None,
                                    unlikely_driver_mut_effects=None):
         """
         Adds basic information about the provided sequencing data and if provided add a mutation table plot
         :param patient: instance of class patient
         :param mut_table_path: path to the generated mutation table plot
-        :param likely_drivers: dictionary with gene names of likely drivers and the mutation effect
+        :param put_driver_vars: defaultdict with mutation IDs and and instance of driver class
+        :param put_driver_genes: set of genes where putative driver gene mutations where identified
         :param unlikely_driver_mut_effects: mutation effects of variants in drivers, likely without effect
         """
 
@@ -100,20 +102,21 @@ class HTMLReport(object):
         header = ''.join('<th class="text-center">{}</th>'.format(col_name) for col_name in col_names)
         self.file.write(self._inds[self._ind]+header+'\n')
 
-        pres_lp = math.log(0.5)  # log probability of 50%
         # build up output data sequentially
         for sa_idx, sample_name in enumerate(patient.sample_names):
 
             row = list()
             row.append(sample_name.replace('_', ' '))
 
-            row.append('{:.1f} ({:.1f})'.format(np.median(patient.sample_coverages[sample_name]),
-                                                np.mean(patient.sample_coverages[sample_name])))
+            # median coverage
+            row.append('{:.1f} ({:.1f})'.format(np.nanmedian(patient.sample_coverages[sample_name]),
+                                                np.nanmean(patient.sample_coverages[sample_name])))
             # if patient.sample_dis_phred_coverages is not None:
             #     row.append(np.median(patient.sample_dis_phred_coverages[sample_name]))
             # else:
             #     row.append('n/a')
 
+            # Meadian and mean Variant Allele Frequency (VAF)
             row.append('{:.1%} ({:.1%})'.format(np.median(patient.sample_mafs[sample_name]),
                                                 np.mean(patient.sample_mafs[sample_name])))
 
@@ -125,8 +128,10 @@ class HTMLReport(object):
 
             # Bayesian inference model classification
             # present if probability to be present is greater than 50%
-            row.append(sum(1 for ps in patient.log_p01.values() if ps[sa_idx][1] > pres_lp))
-            row.append(sum(1 for ps in patient.log_p01.values() if ps[sa_idx][1] <= pres_lp))
+            # row.append(sum(1 for ps in patient.log_p01.values() if ps[sa_idx][1] > pres_lp))
+            # row.append(sum(1 for ps in patient.log_p01.values() if ps[sa_idx][1] <= pres_lp))
+            row.append(patient.no_present_vars[sa_idx])
+            row.append(patient.no_absent_vars[sa_idx])
 
             # # Previous conventional classification
             # row.append(patient.positives[sample_name])
@@ -161,6 +166,23 @@ class HTMLReport(object):
         self._ind += 1      # indentation level increases by 1
         self.file.write(self._inds[self._ind]+'Total number of passed somatic variants: {} </br>\n'.format(
             len(patient.mutations)))
+
+        if patient.variant_stats is not None:
+            if patient.variant_stats[-5] > 0:
+                self.file.write(self._inds[self._ind]+'Variants removed due to common variants filter: {} </br>\n'
+                                .format(patient.variant_stats[-5]))
+            if patient.variant_stats[-2] + patient.variant_stats[-3] + patient.variant_stats[-4] > 0:
+                self.file.write(
+                    self._inds[self._ind]+'Removed intronic/intergenic variants due to WES filter: {} </br>\n'.format(
+                        patient.variant_stats[-2] + patient.variant_stats[-3] + patient.variant_stats[-4]))
+            if patient.variant_stats[-1] > 0:
+                self.file.write(
+                    self._inds[self._ind]+'Variants removed due to never reaching significant level: {} </br>\n'.format(
+                        patient.variant_stats[-1]))
+            if patient.variant_stats[-6] > 0:
+                self.file.write(self._inds[self._ind]+'Variants removed due to detection in normal sample: {} </br>\n'
+                                .format(patient.variant_stats[-6]))
+
         self.file.write(self._inds[self._ind]+'Variants classified as present in at least one of the samples '
                                               'that passed the filtering: {} </br>\n'.format(
                                               len(patient.present_mutations)))
@@ -181,24 +203,42 @@ class HTMLReport(object):
         def _clamp(x):
             return int(max(0, min(x, 255)))
 
-        def _driver_tag(gene_name, properties):
-            if properties is None or properties[0] == 'unknown':
+        def _driver_tag(gene_name, driver, suffix=None):
+            if driver is None or driver.mutation_effect == 'unknown':
                 return gene_name
 
-            r, g, b, _ = Driver.colors()[len(properties[1])]   # number of supporting sources
+            r, g, b, _ = Driver.colors()[len(driver.sources)]   # number of supporting sources
             c = 'color:#{0:02x}{1:02x}{2:02x};'.format(_clamp(r*255), _clamp(g*255), _clamp(b*255))
-            tag = '<font style="{}">{}</font>'.format(c, gene_name)
-            if properties[2]:   # is driver in CGC list
+            tag = '<font style="{}">{}{}</font>'.format(c, gene_name, '' if suffix is None else suffix)
+            if driver.cgc_driver:   # is driver in CGC list
                 tag = '<strong>'+tag+'</strong>'
 
             return tag
 
         # add basic information about driver gene mutations
-        if likely_drivers is not None:
+        if put_driver_vars is not None:
+            dr_gene_cnts = Counter([d.gene_name + ('_CGC' if d.cgc_driver else '') for d in put_driver_vars.values()
+                                    if d.gene_name is not None])
+            driver_strs = []
+            added_drivers = set()
+            for mut_idx, dr in put_driver_vars.items():
+                if dr.cgc_driver:
+                    if (dr.gene_name + '_CGC') in added_drivers:
+                        continue
+                elif dr.gene_name in added_drivers:
+                    continue
+
+                driver_strs.append(_driver_tag(
+                    patient.gene_names[mut_idx], dr,
+                    suffix=None if dr_gene_cnts[patient.gene_names[mut_idx] + ('_CGC' if dr.cgc_driver else '')] == 1
+                    else '({})'.format(dr_gene_cnts[patient.gene_names[mut_idx] + ('_CGC' if dr.cgc_driver else '')])))
+
+                added_drivers.add(dr.gene_name + ('_CGC' if dr.cgc_driver else ''))
+
             self.file.write(
-                self._inds[self._ind] + 'Total number of likely driver gene mutations: {} ({}; '.format(
-                    len(likely_drivers),
-                    ', '.join(_driver_tag(d, e) for d, e in sorted(likely_drivers.items(), key=lambda k: k[0]))) +
+                self._inds[self._ind] + 'Total number of likely driver gene mutations: {} in {} genes ({}; '.format(
+                    len(put_driver_vars), len(put_driver_genes),
+                    ', '.join(d for d in sorted(driver_strs))) +
                 'more red colored gene names correspond to better supported driver genes. '
                 'Bold names are also present in the Cancer Gene Census list)</br>\n')
 

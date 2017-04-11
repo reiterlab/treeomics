@@ -4,6 +4,7 @@ import logging
 from ete3 import Tree, TreeStyle, NodeStyle, faces, AttrFace, TextFace, CircleFace
 import networkx as nx
 import numpy as np
+import math
 from collections import Counter
 from itertools import islice
 from phylogeny.phylogeny_utils import TREE_ROOT
@@ -21,7 +22,7 @@ logger = logging.getLogger('treeomics')
 MAX_DR_NAS = 6
 
 
-def create_tree(tree, tree_root_key, filepath, patient, phylogeny, drivers=set()):
+def create_tree(tree, tree_root_key, filepath, patient, phylogeny, drivers=None):
     """
     Takes a networkx tree and creates an ete3 tree and creates a PDF, SVG or PNG according to the given filename at
     the given path
@@ -30,7 +31,7 @@ def create_tree(tree, tree_root_key, filepath, patient, phylogeny, drivers=set()
     :param filepath: path to output file (excluding file extension)
     :param patient: data structure around patient
     :param phylogeny: inferred cancer phylogeny
-    :param drivers: optional set of known driver gene names highlighted on each edge
+    :param drivers: defaultdict with mutation IDs and instance of driver class to be highlighted on edges
     :return path to the generated ete3 PNG file
     """
 
@@ -45,18 +46,44 @@ def create_tree(tree, tree_root_key, filepath, patient, phylogeny, drivers=set()
     ts.show_leaf_name = False
     ts.show_branch_length = False
     ts.show_branch_support = False
+    ts.show_scale = False
     ts.extra_branch_line_color = 'Black'
     # ts.complete_branch_lines_when_necessary = False
 
+    # Find the maximal number of variants present in a single sample to determine the optimal ETE3 scale level
+    max_muts = max(no_pres_vars for no_pres_vars in patient.no_present_vars.values())
+
+    def round_to_1(x):
+        """
+        Round to one significant digit
+        :param x:
+        :return:
+        """
+        return round(x, -int(math.floor(math.log10(abs(x)))))
+
     # XX pixels per branch length unit
-    if len(patient.mut_keys) < 100:
-        ts.scale = 10
-    elif len(patient.mut_keys) < 500:
-        ts.scale = 5
-    elif len(patient.mut_keys) < 2000:
-        ts.scale = 1
-    else:
-        ts.scale = 0.1
+    # if max_muts > 20000:
+    #     ts.scale = 0.02
+    # elif max_muts > 10000:
+    #     ts.scale = 0.05
+    # elif max_muts > 5000:
+    #     ts.scale = 0.1
+    # elif max_muts > 2000:
+    #     ts.scale = 0.2
+    # elif max_muts > 1000:
+    #     ts.scale = 0.5
+    # elif max_muts > 500:
+    #     ts.scale = 1
+    # elif max_muts > 200:
+    #     ts.scale = 2
+    # elif max_muts > 100:
+    #     ts.scale = 5
+    # elif max_muts > 50:
+    #     ts.scale = 5
+    # else:
+    #     ts.scale = 10
+
+    ts.scale = round_to_1(600 / max_muts)
 
     ts.branch_vertical_margin = 15  # XX pixels between adjacent branches
 
@@ -70,7 +97,7 @@ def create_tree(tree, tree_root_key, filepath, patient, phylogeny, drivers=set()
 
 
 def _generate_ete_tree(tree, cur_node, ete_cur_node, level, patient, pg,
-                       gene_names=None, drivers=set()):
+                       gene_names=None, drivers=None):
     """
     Run recursively through the tree and write the tree in tikz format to the opened file
     :param tree: inferred cancer phylogeny encoded as networkx tree
@@ -80,7 +107,7 @@ def _generate_ete_tree(tree, cur_node, ete_cur_node, level, patient, pg,
     :param patient: data structure around the input data
     :param pg: instance of the phylogeny
     :param gene_names: list with the gene names associated with the given list of mutations
-    :param drivers: names of genes associated with a likely selective advantage
+    :param drivers: defaultdict with mutation IDs and instance of driver class to be highlighted on edges
     :return:
     """
 
@@ -111,31 +138,30 @@ def _generate_ete_tree(tree, cur_node, ete_cur_node, level, patient, pg,
             new_n.add_features(confidence=str_conf)
 
             # is any of the acquired mutations in a driver gene?
-            if gene_names is not None:
+            if gene_names is not None and drivers is not None:
                 driver_mut_cnt = Counter()
                 for m in tree[cur_node][child]['muts']:
-                    if gene_names[m] in drivers:
+                    if m in drivers:
                         driver_mut_cnt[gene_names[m]] += 1
+
+                no_shown = sum(i for _, i in islice(sorted(driver_mut_cnt.items(), key=lambda k: k[0]), 0, MAX_DR_NAS))
                 formatted_drs = (
                     (','.join('{}({})'.format(d, i) if i > 1 else d for d, i in
                               islice(sorted(driver_mut_cnt.items(), key=lambda k: k[0]), 0, MAX_DR_NAS)))
-                    + (',...+{}'.format(sum(driver_mut_cnt.values())-MAX_DR_NAS)
+                    + (',...+{}'.format(sum(driver_mut_cnt.values()) - no_shown)
                        if sum(driver_mut_cnt.values()) > MAX_DR_NAS else '')
                     if sum(driver_mut_cnt.values()) > 0 else '')
                 new_n.add_features(drivers=formatted_drs)
 
-                # acquired_drivers = [gene_names[m] for m in tree[cur_node][child]['muts'] if gene_names[m] in drivers]
-                # formatted_drs = ((','.join(d for d in sorted(islice(acquired_drivers, 0, MAX_DR_NAS)))) +
-                #                  (',...+{})'.format(len(acquired_drivers)-MAX_DR_NAS)
-                #                   if len(acquired_drivers) > MAX_DR_NAS else '') if len(acquired_drivers) > 0 else '')
-                # new_n.add_features(drivers=formatted_drs+'  ')
-
             new_n.add_features(total_muts=len(tree[cur_node][child]['muts']))
-            mean_vaf = np.nanmean([patient.vafs[m, pg.sc_sample_ids[sa_idx] if sa_idx in pg.sc_sample_ids
-                                   else sa_idx] for m in tree[cur_node][child]['muts'] for sa_idx in child])
+            # add mean VAF of mutations acquired on this branch to the illustration
+            branch_vafs = [patient.vafs[m, pg.sc_sample_ids[sa_idx] if sa_idx in pg.sc_sample_ids
+                           else sa_idx] for m in tree[cur_node][child]['muts'] for sa_idx in child]
+            mean_vaf = np.mean(branch_vafs) if len(branch_vafs) > 0 else 0.0
             new_n.add_features(mean_vaf=mean_vaf)
-            median_vaf = np.nanmedian([patient.vafs[m, pg.sc_sample_ids[sa_idx] if sa_idx in pg.sc_sample_ids
-                                       else sa_idx] for m in tree[cur_node][child]['muts'] for sa_idx in child])
+
+            # add median VAF of mutations acquired on this branch to the illustration
+            median_vaf = np.nanmedian(branch_vafs) if len(branch_vafs) > 0 else 0.0
             new_n.add_features(median_vaf=median_vaf)
 
             _generate_ete_tree(tree, child, new_n, level + 1, patient, pg, gene_names=gene_names,

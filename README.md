@@ -23,31 +23,31 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
 * Treeomics 1.7.2 2017-03-02: Improved visualization of predicted driver genes in HTML report and the mutation table.
 * Treeomics 1.7.3 2017-03-13: Visualize the 5 most likely evolutionary trees. Improve solution pool usage to better estimate confidence values.
 * Treeomics 1.7.4 2017-03-15: Make mutation effect prediction by VarCode optional to reduce dependencies for users.
+* Treeomics 1.7.5 2017-04-11: Improved putative driver gene analysis and HTML report. Allow multiple normal samples. Implemented optional filter of common normal variants.
 
 ### <a name="installation"> Installation
 1. Open a terminal and clone the repository from GitHub with ```git clone https://github.com/johannesreiter/treeomics.git```
 2. Install required packages:
-  - Install Python 3.4 ([https://www.python.org/downloads](https://www.python.org/downloads))
+  - Install Python 3.4 ([https://www.python.org/downloads](https://www.python.org/downloads); CPLEX explicitly requires Python 3.4)
   - Install NumPy ([http://www.numpy.org](http://www.numpy.org)), 
     SciPy ([http://www.numpy.org](http://www.numpy.org))
   - Install networkx ([https://networkx.github.io/](https://networkx.github.io/))
   - Install matplotlib ([http://matplotlib.org](http://matplotlib.org/))
   - Install pandas ([http://pandas.pydata.org/](http://pandas.pydata.org/))
   - Install seaborn ([https://stanford.edu/~mwaskom/software/seaborn/](https://stanford.edu/~mwaskom/software/seaborn/))
-  - Install pyensembl ([https://github.com/hammerlab/pyensembl](https://github.com/hammerlab/pyensembl))
-  - Install varcode ([https://github.com/hammerlab/varcode](https://github.com/hammerlab/varcode))
   - Install the IBM ILOG CPLEX Optimization Studio ([http://www-01.ibm.com/support/docview.wss?uid=swg21444285](http://www-01.ibm.com/support/docview.wss?uid=swg21444285))
     and then setup the Python API ([http://www-01.ibm.com/support/knowledgecenter/SSSA5P_12.2.0/ilog.odms.cplex.help/Content/Optimization/Documentation/CPLEX/_pubskel/CPLEX20.html](http://www-01.ibm.com/support/knowledgecenter/SSSA5P_12.2.0/ilog.odms.cplex.help/Content/Optimization/Documentation/CPLEX/_pubskel/CPLEX20.html));
     An IBM Academic License to freely download CPLEX can be obtained here: [http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative](http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative)
   - If you want evolutionary conflict graphs automatically generated, install circos ((with ```circos``` in your ```PATH``` environment variable; [http://circos.ca/software/installation](http://circos.ca/software/installation))
   - For automatically generating evolutionary tree plots, install LaTeX/TikZ (with ```pdflatex``` in your ```PATH``` environment variable; 
-    [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html)) and/or ETE3 [https://github.com/etetoolkit/ete](https://github.com/etetoolkit/ete)
+    [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html)) and/or ETE3 [https://github.com/etetoolkit/ete](https://github.com/etetoolkit/ete) (installing ETE3 can be tricky; we recommend using Anaconda [https://www.continuum.io](https://www.continuum.io)
+  - For annotating only non-synonymous variants in driver genes, install pyensembl ([https://github.com/hammerlab/pyensembl](https://github.com/hammerlab/pyensembl)) and varcode ([https://github.com/hammerlab/varcode](https://github.com/hammerlab/varcode))
     
 ### <a name="getting"> Getting started with Treeomics
 1. Input files: The input to ```__main__.py``` is either
   - two tab-delimited text files -- one for variant read data and one for coverage data. Please see the files ```input/Makohon2017/Pam03_mutant_reads.txt``` and ```input/Makohon2017/Pam03_phredcoverage.txt``` included in this repository for examples.
   - VCF-files of all samples
-2. Go into the new folder with ```cd treeomics\src```
+2. Go into the new folder with ```cd treeomics/src```
 3. Type the following command to run the simulation: ```python treeomics -r <mut-reads table> -s <coverage table> -O``` 
 where ```<mut-reads table>``` is the path to a tab-separated-value file with the number of 
 reads reporting a variant (row) in each sample (column) and ```<coverage table>``` is the path to a tab-separated-value 
@@ -75,11 +75,17 @@ $ python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d
 - *-y <min absent coverage>:* Minimum coverage for a powered absent variant  (only relevant for artifact comparison)
 - *-t <time limit>:* Maximum running time for CPLEX to solve the MILP (in seconds, default ```None```). If not ```None```, the obtained solution is no longer guaranteed to be optimal
 - *-l <max no MPS>:* Maximum number of considered mutation patterns per variant (default ```None```). If not ```None```, the obtained solution is no longer guaranteed to be optimal
+- ```--wes_filtering``` Removes intronic and intergenic variants in WES data; default ```False```)
+- ```--common_vars_file``` Path to file with common variants in normal samples and therefore removed from analysis (default ```None```)
 - ```--no_plots``` Disables generation of plots (useful for benchmarking; default ```True```)
 
-Default parameter values as well as output directory can be changed in ```treeomics\src\settings.py```.
+Default parameter values as well as output directory can be changed in ```treeomics/src/treeomics/settings.py```.
 Moreover, the ```settings.py``` provides more options an annotation of driver genes and configuration of plot output names. 
 All plots, analysis and logging files, and the HTML report will be in this output directory.
+
+##### Optional input:
+- *Driver gene annotation:* Treeomics highlights any non-synonymous or splice-site variants (if VarCode is available, otherwise all) in putative driver genes given in a CSV-file under ```DRIVER_PATH``` in ```treeomics/src/treeomics/settings.py```. As default list, the union of reported driver genes by 20/20+, TUSON, and MutsigCV from Tokheim et al. (PNAS, 2016) is used (see ```treeomics/src/input/Tokheim_drivers_union.csv```). Any CSV-file can be used as long as there is column named 'Gene_Symbol'. Variants in these provided genes will be highlighted in the HTML report as well as in the inferred phylogeny.
+- *Cancer Gene Census (CGC) annotation:* Variants that have been identified as likely drivers in the provided genes (under ```DRIVER_PATH```) will be check if they occurred in the reported region in the given CSV-file (default ```treeomics/src/input/cancer_gene_census_grch37_v80.csv```; CGC version 80, reference genome hg19).
 
 ### <a name="examples"> Examples
 Example 1:

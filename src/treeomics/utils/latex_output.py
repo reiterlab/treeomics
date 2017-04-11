@@ -221,10 +221,12 @@ def add_artifact_info(file_path, phylogeny):
                           pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]])
                           if pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]] > 0 else 0.0
                           for mut_idx, samples in opt_sol.false_positives.items() for sa_idx in samples]
-                latex_file.write('False-positives: coverage: mean {}, median {}; vars: mean {}, median {}\n'.format(
-                    np.mean(fp_cov), np.median(fp_cov), np.mean(fp_var), np.median(fp_var)))
-                latex_file.write('False-positives: VAF: mean {:.2%}, median {:.2%}\n\n'.format(
-                    np.mean(fp_vaf), np.median(fp_vaf)))
+                if len(fp_var) > 0 and len(fp_cov) > 0:
+                    latex_file.write('False-positives: coverage: mean {}, median {}; vars: mean {}, median {}\n'.format(
+                        np.nanmean(fp_cov), np.nanmedian(fp_cov), np.nanmean(fp_var), np.nanmedian(fp_var)))
+                if len(fp_vaf) > 0:
+                    latex_file.write('False-positives: VAF: mean {:.2%}, median {:.2%}\n\n'.format(
+                        np.nanmean(fp_vaf), np.nanmedian(fp_vaf)))
 
                 # print putative false negatives
                 for mut_idx, samples in sorted(opt_sol.false_negatives.items(),
@@ -238,8 +240,9 @@ def add_artifact_info(file_path, phylogeny):
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
                 pfn_cov = [pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]
                            for mut_idx, samples in opt_sol.false_negatives.items() for sa_idx in samples]
-                latex_file.write('Powered false-negatives: Coverage: mean {}, median {}\n\n'.format(
-                    np.mean(pfn_cov), np.median(pfn_cov)))
+                if len(pfn_cov) > 0:
+                    latex_file.write('Powered false-negatives: Coverage: mean {}, median {}\n\n'.format(
+                        np.nanmean(pfn_cov), np.nanmedian(pfn_cov)))
 
                 # print putative false negatives with too low coverage (unknowns)
                 for mut_idx, samples in sorted(opt_sol.false_negative_unknowns.items(),
@@ -253,8 +256,9 @@ def add_artifact_info(file_path, phylogeny):
                             pat.mut_reads[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]))
                 upfn_cov = [pat.coverage[pat.mut_keys[mut_idx]][pat.sample_names[sa_idx]]
                             for mut_idx, samples in opt_sol.false_negative_unknowns.items() for sa_idx in samples]
-                latex_file.write('Under-powered false-negatives: Coverage: mean {}, median {}\n\n'.format(
-                    np.mean(upfn_cov), np.median(upfn_cov)))
+                if len(upfn_cov) > 0:
+                    latex_file.write('Under-powered false-negatives: Coverage: mean {}, median {}\n\n'.format(
+                        np.nanmean(upfn_cov), np.nanmedian(upfn_cov)))
 
             else:
                 if opt_sol.conflicting_mutations is not None and len(opt_sol.conflicting_mutations) > 0:

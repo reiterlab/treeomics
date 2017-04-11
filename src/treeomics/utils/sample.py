@@ -2,6 +2,7 @@
 """Data structure around sequencing sample"""
 import logging
 import heapq
+import math
 
 __author__ = 'Johannes REITER'
 
@@ -70,7 +71,7 @@ class Variant(object):
         :param ad: list of allele counts for reference and alternates
         """
 
-        self.AD = [int(ad) for ad in ad.split(',')]
+        self.AD = [int(ad) if int(ad) >= 0 else float('nan') for ad in ad.split(',')]
 
     def set_total_depth(self, dp):
         """
@@ -78,7 +79,7 @@ class Variant(object):
         :param dp: total reads in the tumor sample at this position
         """
 
-        self.DP = int(dp)
+        self.DP = float('nan') if math.isnan(dp) or int(dp) < 0 else int(dp)
 
     def set_baf(self, fa):
         """

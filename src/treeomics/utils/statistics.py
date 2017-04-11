@@ -5,6 +5,7 @@ from scipy.stats import binom
 from scipy.misc import logsumexp
 from scipy.special import betainc
 from scipy.special import gammaln
+import numbers
 import utils.int_settings as def_sets
 
 
@@ -97,8 +98,14 @@ def get_log_p0(n, k, e, c0, pseudo_alpha=None, pseudo_beta=None, cutoff_f=None):
     # cutoff frequency
     if cutoff_f is None:
         cutoff_f = 0.05
-        logger.warn('Cutoff absent frequency was not set in the Bayesian inference model! Assumed {:1e}.'.format(
+        logger.warning('Cutoff absent frequency was not set in the Bayesian inference model! Assumed {:1e}.'.format(
             cutoff_f))
+
+    if not isinstance(n, numbers.Real) or not isinstance(k, numbers.Real):
+        raise(RuntimeError('Sequencing read counts need to be numbers: n={}, k={}!'.format(n, k)))
+
+    if math.isnan(n) or math.isnan(k):
+        logger.warning('Sequencing read counts should be numbers: n={}, k={}!'.format(n, k))
 
     if e > cutoff_f:
         raise RuntimeError('Error rate e={} can not be higher than the calculated cutoff absent frequency {}'.format(

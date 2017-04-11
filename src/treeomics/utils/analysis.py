@@ -8,7 +8,7 @@ from collections import defaultdict
 from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
 import numpy as np
 from utils.similarity_analysis import calculate_genetic_similarity, calculate_bi_genetic_similarity
-from utils.data_tables import write_posterior_table
+from utils.data_tables import write_posterior_table, write_vep_input
 from phylogeny.simple_phylogeny import SimplePhylogeny
 from phylogeny.max_lh_phylogeny import MaxLHPhylogeny
 
@@ -19,12 +19,13 @@ __author__ = 'Johannes REITER'
 logger = logging.getLogger('treeomics')
 
 
-def analyze_data(patient, post_table_filepath=None):
+def analyze_data(patient, post_table_filepath=None, vep_filepath=None):
     """
     Process data and write posterior table
     Possibility of apply various filters
     :param patient: data structure around sequencing data of a subject
     :param post_table_filepath: file path for generating a table with posterior probabilities
+    :param vep_filepath: output file path to write all variants in a format acceptable to Ensembl VEP
     """
 
     # Possibility to implement filters!!!
@@ -56,6 +57,9 @@ def analyze_data(patient, post_table_filepath=None):
         #            patient.gene_names[mut_idx],
         #            (','.join(patient.sample_names[sa_idx] for sa_idx in patient.mutations[mut_idx]))))
 
+    if patient.vc_variants is not None:
+        write_vep_input(vep_filepath, patient)
+
     determine_sharing_status(patient)
 
     # keep list of mutations present in some of the used samples
@@ -70,6 +74,9 @@ def analyze_data(patient, post_table_filepath=None):
         write_posterior_table(
             post_table_filepath, patient.sample_names, patient.estimated_purities, patient.sample_mafs,
             patient.mut_positions, patient.gene_names, patient.log_p01, patient.betas)
+
+    # calculate mutation numbers per sample based on the Bayesian inference model
+    patient.calculate_no_present_vars()
 
 
 def determine_sharing_status(patient):
@@ -201,11 +208,11 @@ def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None,
         # provide some analysis about the raw sequencing data
         for sample_name in patient.sample_names:
             analysis_file.write('# Median phred coverage in sample {}: {} (mean: {:.2f})\n'.format(
-                sample_name, np.median(patient.sample_coverages[sample_name]),
+                sample_name, np.nanmedian(patient.sample_coverages[sample_name]),
                 np.mean(patient.sample_coverages[sample_name])))
 
             analysis_file.write('# Median MAF in sample {}: {:.2%}\n'.format(
-                                sample_name, np.median(patient.sample_mafs[sample_name])))
+                                sample_name, np.nanmedian(patient.sample_mafs[sample_name])))
 
         # median and mean coverage
         coverages = []
@@ -216,7 +223,7 @@ def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None,
                     coverages.append(patient.coverage[mut_key][sample_name])
 
         analysis_file.write('# Median coverage in the used samples of patient {}: {} (mean: {:.2f})\n'.format(
-            patient.name, np.median(coverages), np.mean(coverages)))
+            patient.name, np.nanmedian(coverages), np.mean(coverages)))
 
         analysis_file.write('# The average number of mutations per sample in patient {} is {}.\n'.format(patient.name,
                             (float(sum(len(muts) for sa_idx, muts in patient.samples.items()))
@@ -324,13 +331,13 @@ def create_data_analysis_file(patient, analysis_filepath):
             row = list()
             row.append(sample_name)
 
-            row.append(np.median(patient.sample_coverages[sample_name]))
+            row.append(np.nanmedian(patient.sample_coverages[sample_name]))
             if sample_name in patient.estimated_purities:
                 row.append('{:.5f}'.format(patient.estimated_purities[sample_name]))
             else:
                 row.append('-')
 
-            row.append('{:.3f}'.format(np.median(patient.sample_mafs[sample_name])))
+            row.append('{:.3f}'.format(np.nanmedian(patient.sample_mafs[sample_name])))
 
             # Bayesian inference model
             # present if probability to be present is greater than 50%

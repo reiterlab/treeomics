@@ -33,7 +33,7 @@ sns.set_style("whitegrid", {'grid.color': '0.8', "axes.edgecolor": "0.0"})
 
 
 def bayesian_hinton(log_p01, output_directory, filename, row_labels=None, column_labels=None,
-                    displayed_mutations=None, drivers=None):
+                    displayed_mutations=None, put_driver_vars=None):
     """
     Draw bayesian Hinton diagram for visualizing uncertainty in mutation data of multiple samples.
     :param log_p01: mutation data decoded as log probability that a variant is (absent, present) in each sample
@@ -42,7 +42,8 @@ def bayesian_hinton(log_p01, output_directory, filename, row_labels=None, column
     :param row_labels: sample names
     :param column_labels: names of genes where the variant occurred
     :param displayed_mutations: depict only the given list of mutations in the table
-    :param drivers: highlight mutations associated with cancer
+    :param put_driver_vars: defaultdict with mutation IDs and tuples of (mutation effect, sources, CGC driver)
+                            to highlight mutations associated with cancer
     """
 
     # create colorbar and return scalar map
@@ -169,13 +170,13 @@ def bayesian_hinton(log_p01, output_directory, filename, row_labels=None, column
         for x_pos, mut_idx in enumerate(sorted(displayed_mutations,
                                                key=lambda k: (-priorities[k], column_labels[k]))):
 
-            ax.text(x_pos * width+(width/2)+0.2, label_y_pos+(height+y_spacing) * (len(log_p01[mut_idx])),
+            ax.text(x_pos * width + (width/2) + 0.2, label_y_pos + (height+y_spacing) * (len(log_p01[mut_idx])),
                     _format_gene_name(column_labels[mut_idx], max_length=12),
                     rotation='vertical', horizontalalignment='center', verticalalignment='bottom', fontsize=8,
-                    color=(Driver.colors()[len(drivers[column_labels[mut_idx]][1])]
-                           if drivers is not None and column_labels[mut_idx] in drivers else 'black'),
-                    weight=('bold' if drivers is not None and column_labels[mut_idx] in drivers and
-                            drivers[column_labels[mut_idx]][2] else 'normal'))
+                    color=(Driver.colors()[len(put_driver_vars[mut_idx].sources)]
+                           if put_driver_vars is not None and mut_idx in put_driver_vars else 'black'),  # sources?
+                    weight=('bold' if put_driver_vars is not None and mut_idx in put_driver_vars and
+                            put_driver_vars[mut_idx].cgc_driver else 'normal'))     # is in CGC
 
     ax.autoscale_view()
     plt.savefig(os.path.join(output_directory, filename+'.pdf'), dpi=150, bbox_inches='tight', transparent=True)
@@ -557,6 +558,7 @@ def coverage_plot(filename, patient, max_cov=None):
     Create violin plot to visualize the coverage distribution in each sample
     :param filename: path to the output file of the created figure
     :param patient: instance of class patient
+    :param max_cov: maximum illustrated coverage
     """
 
     # Set up the matplotlib figure

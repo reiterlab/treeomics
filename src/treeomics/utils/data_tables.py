@@ -29,6 +29,7 @@ def read_mutation_table(filename, normal_sample=None, excluded_columns=set(), ex
     :param normal_sample: name of normal sample; if provided, subsequent filtering on these data is performed
     :param filename: path to TSV file
     :param excluded_columns: samples (column names) which should not be returned
+    :param exclude_chr_arm: remove chromosome arm information from the key if parameter is set
     :return: dictionary of the data per variant and sample, dictionary of the gene names per variant
     """
 
@@ -232,20 +233,21 @@ def read_csv_file(filename, normal_sample=None, excluded_columns=set()):
         return coverage, mut_reads, gene_names, norm_coverage, norm_mut_reads
 
 
-def read_table(filename, variant_key_column_names, variant_key_pattern, data_column_names):
+def read_table(filename, variant_key_column_names, variant_key_pattern, data_column_names, delimiter=',', sample=False):
     """
     Reads TSV file with possibly multiple id columns and possibly multiple data columns
     :param filename: path to TSV file
     :param variant_key_column_names: list of ordered columns which form the key in the return dictionary
     :param variant_key_pattern: python format string describing how the dictionary key is created
     :param data_column_names: samples (column names) which should be returned
+    :param delimiter: delimiter between entries (default: ','), others include tab or space
+    :param sample: is there sample specific information?
     :return: dictionary of the data per variant and sample, dictionary of the gene names per variant
     """
 
     with open(filename) as data_file:
 
-        logger.debug('Reading data file {}'.format(filename))
-        f_tsv = csv.reader(data_file, delimiter='\t')
+        f_tsv = csv.reader(data_file, delimiter=delimiter)
 
         # regex patterns for making column names in TSV files valid identifiers
         p_replace = re.compile(r'(/)')
@@ -254,7 +256,7 @@ def read_table(filename, variant_key_column_names, variant_key_pattern, data_col
         # process data table header
         row = next(f_tsv)
         headers = [p_replace.sub('_', p_remove.sub('', e)) for e in row]
-        print('Read file {} with header: {}'.format(filename, headers))
+        logger.debug('Read file {} with header: {}'.format(filename, headers))
 
         key_columns = []
         data_columns = []
@@ -274,9 +276,14 @@ def read_table(filename, variant_key_column_names, variant_key_pattern, data_col
                 sample_column = column_idx
                 break
         else:
-            raise ValueError('Sample column is not found in the provided file: {}'.format(filename))
+            sample_column = None
+            if sample:
+                raise ValueError('Sample column is not found in the provided file: {}'.format(filename))
 
-        data = defaultdict(dict)
+        if sample:
+            data = defaultdict(dict)
+        else:
+            data = dict()
 
         for row in f_tsv:
             if row[0].startswith('#') or not len(row[0]):
@@ -288,9 +295,12 @@ def read_table(filename, variant_key_column_names, variant_key_pattern, data_col
                 for key_idx, pat in zip_longest(key_columns, variant_key_pattern, fillvalue=''):
                     key += row[key_idx] + pat
 
-                data[key][row[sample_column]] = [row[data_idx] for data_idx in data_columns]
+                if sample:
+                    data[key][row[sample_column]] = [row[data_idx] for data_idx in data_columns]
+                else:
+                    data[key] = [row[data_idx] for data_idx in data_columns]
 
-        print("Completed reading {} entries from file {}. ".format(len(data), filename))
+        logger.debug("Completed reading {} entries from file {}. ".format(len(data), filename))
 
         return data
 
@@ -377,3 +387,26 @@ def write_mutation_patterns(phylogeny, filepath):
 
             mp_writer.writerow(sorted([phylogeny.patient.sample_names[sa_idx] if phylogeny.patient.sc_names is None
                                        else phylogeny.patient.sc_names[sa_idx] for sa_idx in mp]))
+
+
+def write_vep_input(filepath, patient):
+    """
+    Write all variants to a TSV file that is acceptable to Ensembl VEP to investigate mutation effects
+    :param filepath: path to output file
+    :param patient: data structure around sequencing data of a subject
+    :return:
+    """
+
+    with open(filepath, 'w') as file:
+        logger.debug('Write {} variants to VEP input file: {}'.format(len(patient.vc_variants), filepath))
+        csv_writer = csv.writer(file, delimiter='\t')
+        # csv_writer.writerow(['Chromosome', 'StartPosition', 'EndPosition', 'RefAllele', 'AltAllele'])
+        for mut_idx in sorted(range(len(patient.vc_variants)), key=lambda k: (patient.mut_positions[k][0],
+                                                                              patient.mut_positions[k][1])):
+            var = patient.vc_variants[mut_idx]
+            csv_writer.writerow([var.contig, var.start, var.end - (1 if var.ref == '' else 0),
+                                 '{}/{}'.format('-' if var.ref == '' else var.ref,
+                                                '-' if var.alt == '' else var.alt),
+                                 '# {}'.format(patient.gene_names[mut_idx])])
+
+        logger.info('Wrote {} variants to VEP input file: {}'.format(len(patient.vc_variants), filepath))

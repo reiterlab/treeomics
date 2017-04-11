@@ -64,6 +64,12 @@ DRIVER_PATH = '../input/Tokheim_drivers_union.csv'
 # only necessary to predict the mutation type (silent, intronic, etc)
 REF_GENOME = 'grch37'
 
+# path to CSV file with variants common in ExAC or other panel of normals
+# These variants are likely sequencing artifacts and therefore excluded by Treeomics
+# ExAC_FILE = '../input/ExAC/ExAC_sites_0_0001.csv'
+COMMON_VARS_FILE = '../input/ExAC/ExAC_sites_0_001.csv'
+# COMMON_VARS_FILE = None
+
 # ########################## OUTPUT CONFIGURATIONS #################################
 OUTPUT_FOLDER = 'output'    # path to output folder for all files
 

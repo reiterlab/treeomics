@@ -75,8 +75,7 @@ class Solution:
             "As long as weights are given by the number of mutations: {} == {}".format(
                 conflicting_mutations_weight, self.obj_val / Solution.SCALING_FACTOR)
 
-        logger.debug('Compatible mutation patterns after the conflicting mps have been removed: {}'.format(
-            self.compatible_nodes))
+        logger.debug('Identified compatible mutation patterns: {}'.format(self.compatible_nodes))
 
     def _calculate_sol_log_likelihood(self, sol_values, obj_func_vals, no_muts):
         """
