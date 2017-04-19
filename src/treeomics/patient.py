@@ -867,8 +867,8 @@ class Patient(object):
         """
 
         # process identical variants
-        mut_key = '{}_{}_{}>{}'.format(tmp_vars[0][0].CHROM, tmp_vars[0][0].POS,
-                                       tmp_vars[0][0].REF, tmp_vars[0][0].ALT[0])
+        mut_key = '{}__{}__{}>{}'.format(tmp_vars[0][0].CHROM, tmp_vars[0][0].POS,
+                                         tmp_vars[0][0].REF, tmp_vars[0][0].ALT[0])
 
         self.gene_names.append(tmp_vars[0][0].GENE_NAME if tmp_vars[0][0].GENE_NAME is not None else 'unknown')
 
@@ -885,6 +885,7 @@ class Patient(object):
                     logger.debug('Excluded intronic variant in {} ({}).'.format(self.gene_names[-1], mut_key))
                     # exclude this variant
                     del self.gene_names[-1]
+                    del tmp_vars[:]
                     return -2
 
                 # remove intergenic variants
@@ -892,6 +893,7 @@ class Patient(object):
                     logger.debug('Excluded intergenic variant in {} ({}).'.format(self.gene_names[-1], mut_key))
                     # exclude this variant
                     del self.gene_names[-1]
+                    del tmp_vars[:]
                     return -3
 
                 # remove variants with incomplete transcript annotation (likely introns)
@@ -900,6 +902,7 @@ class Patient(object):
                         self.gene_names[-1], mut_key))
                     # exclude this variant
                     del self.gene_names[-1]
+                    del tmp_vars[:]
                     return -4
 
             if mut_key in artifacts.keys():
@@ -907,6 +910,7 @@ class Patient(object):
                              .format(mut_key, artifacts[mut_key][1]))
                 # exclude this variant
                 del self.gene_names[-1]
+                del tmp_vars[:]
                 return -5
 
             self.vc_variants.append(variant)
