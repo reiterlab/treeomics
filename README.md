@@ -32,7 +32,7 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
   - Install NumPy ([http://www.numpy.org](http://www.numpy.org)), 
     SciPy ([http://www.numpy.org](http://www.numpy.org))
   - Install networkx ([https://networkx.github.io/](https://networkx.github.io/))
-  - Install matplotlib ([http://matplotlib.org](http://matplotlib.org/))
+  - Install matplotlib 1.4 or 1.5 (matplotlib 2 can cause various problems with the layout; [http://matplotlib.org](http://matplotlib.org/))
   - Install pandas ([http://pandas.pydata.org/](http://pandas.pydata.org/))
   - Install seaborn ([https://stanford.edu/~mwaskom/software/seaborn/](https://stanford.edu/~mwaskom/software/seaborn/))
   - Install the IBM ILOG CPLEX Optimization Studio ([http://www-01.ibm.com/support/docview.wss?uid=swg21444285](http://www-01.ibm.com/support/docview.wss?uid=swg21444285))
@@ -63,7 +63,7 @@ $ python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d
 - *-a <max absent VAF>:* Maximum VAF for an absent variant *f<sub>absent</sub>* before considering the estimated purity (default 5%)
 - *-z <prior absent probability>:* Prior probability for a variant being absent *c<sub>0</sub> (default 0.5).
 - *-o <output directory>:* Provide different output directory (default src/output)
-- *-n <normal sample name>:* If a normal sample is provided, variants significantly present in the normal are removed
+- *-n <normal sample names>:* If a normal sample is provided, variants significantly present in the normal are removed. Additional normal samples (or other samples that should be ignored) can be provided via a space-separated enumeration. E.g. ```-n FIRSTNORMALSAMPLE SECONDNORMALSAMPLE ```
 - ```--pool_size``` *<Pool size of ILP solver>:* Number of best solutions explored by ILP solver to assess the support of the inferred branches (default 1000)
 - *-b <No bootstrapping samples>:* Number of bootstrapping samples (default 0)
 - *-u:* Enables subclone detection (default ```False```)
@@ -78,6 +78,7 @@ $ python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d
 - ```--wes_filtering``` Removes intronic and intergenic variants in WES data; default ```False```)
 - ```--common_vars_file``` Path to file with common variants in normal samples and therefore removed from analysis (default ```None```)
 - ```--no_plots``` Disables generation of plots (useful for benchmarking; default ```True```)
+- ```--benchmarking``` Generates mutation matrix and mutation pattern files that can be used for automatic benchmarking of silico data (default ```False```)
 
 Default parameter values as well as output directory can be changed in ```treeomics/src/treeomics/settings.py```.
 Moreover, the ```settings.py``` provides more options an annotation of driver genes and configuration of plot output names. 

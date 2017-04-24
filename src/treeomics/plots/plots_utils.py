@@ -72,7 +72,7 @@ def bayesian_hinton(log_p01, output_directory, filename, row_labels=None, column
     y_length = len(log_p01[0]) * (height+y_spacing) - y_spacing + (label_y_pos + 20 if column_labels is not None else 0)
 
     # create new figure
-    plt.figure(figsize=(x_length / 20.0, y_length / 20.0), dpi=150)
+    fig = plt.figure(figsize=(x_length / 20.0, y_length / 20.0), dpi=150)  # , frameon=False
 
     ax = plt.axes([0, 1, 1, 1])
 
@@ -179,8 +179,14 @@ def bayesian_hinton(log_p01, output_directory, filename, row_labels=None, column
                             put_driver_vars[mut_idx].cgc_driver else 'normal'))     # is in CGC
 
     ax.autoscale_view()
-    plt.savefig(os.path.join(output_directory, filename+'.pdf'), dpi=150, bbox_inches='tight', transparent=True)
-    plt.savefig(os.path.join(output_directory, filename+'.png'), dpi=150, bbox_inches='tight', transparent=True)
+    # fig.tight_layout()
+    ax.set_axis_off()
+    fig.add_axes(ax)
+
+    plt.savefig(os.path.join(output_directory, filename+'.pdf'), dpi=150,
+                bbox_inches='tight', transparent=True)
+    plt.savefig(os.path.join(output_directory, filename+'.png'), dpi=150,
+                bbox_inches='tight', transparent=True)
 
     logger.info('Generated bayesian mutation table plot: {}'.format(filename+'.pdf'))
 

@@ -298,6 +298,8 @@ def main():
     plots_parser.add_argument('--no_plots', dest='plots', action='store_false', help="Is plot detection disabled?")
     parser.set_defaults(plots=True)
 
+    parser.add_argument('--benchmarking', action='store_true', help="Generate mutation matrix for benchmarking.")
+
     parser.add_argument('-b', '--boot', help='Number of bootstrapping samples', type=int,
                         default=settings.NO_BOOTSTRAP_SAMPLES)
     parser.add_argument('--pool_size', help='number of best solutions explored by ILP solver', type=int,
@@ -580,11 +582,19 @@ def main():
                 patient.name, read_no_samples, subclone_detection=args.subclone_detection,
                 min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf, max_no_mps=args.max_no_mps,
                 bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf, mode=args.mode)
+
+            # create mutation matrix and mutation patterns output file for automatic benchmarking
+            if args.benchmarking:
+                mm_filepath = os.path.join(output_directory, fn_matrix+'_treeomics_mm.csv')
+                mp_filepath = os.path.join(output_directory, fn_matrix+'_treeomics_mps.tsv')
+            else:
+                mm_filepath = None
+                mp_filepath = None
+
             # infer maximum likelihood tree
             phylogeny = ti.create_max_lh_tree(
                 patient, tree_filepath=os.path.join(output_directory, fn_tree+'_mlhtree'),
-                mm_filepath=os.path.join(output_directory, fn_matrix+'_treeomics_mm.csv'),
-                mp_filepath=os.path.join(output_directory, fn_matrix+'_treeomics_mps.tsv'),
+                mm_filepath=mm_filepath, mp_filepath=mp_filepath,
                 subclone_detection=args.subclone_detection, loh_frequency=settings.LOH_FREQUENCY,
                 driver_vars=put_driver_vars, pool_size=args.pool_size, no_bootstrap_samples=args.boot,
                 max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=plots_report)

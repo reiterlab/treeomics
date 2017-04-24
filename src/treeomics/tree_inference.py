@@ -3,6 +3,7 @@ import logging
 import os
 import numpy as np
 from subprocess import call
+import sys
 from phylogeny.simple_phylogeny import SimplePhylogeny
 from phylogeny.max_lh_phylogeny import MaxLHPhylogeny
 from utils.mutation_matrix import write_mutation_matrix
@@ -142,7 +143,16 @@ def _create_tree_plots(solution, mlh_pg, mlh_tree, plots, tree_filepath, driver_
 
         tikz_path, tikz_file = os.path.split(tikz_tree)
         logger.debug('Tikzpath: {} {}'.format(tikz_path, tikz_file))
-        pdflatex_cmd = 'buf_size=1000000 pdflatex {}'.format(tikz_file)
+        # increase buffer size on mac: 'buf_size=1000000 pdflatex {}'.format(tikz_file)
+        # increase buffer size on windows: 'pdflatex –-buf-size=1000000 {}'.format(tikz_file)
+        # check which operating system is used
+        if sys.platform == 'darwin':
+            pdflatex_cmd = 'buf_size=1000000 pdflatex {}'.format(tikz_file)
+        elif sys.platform == 'win32':
+            pdflatex_cmd = 'pdflatex –-buf-size=1000000 {}'.format(tikz_file)
+        else:
+            pdflatex_cmd = 'pdflatex {}'.format(tikz_file)
+
         fnull = open(os.devnull, 'w')
         return_code = call(pdflatex_cmd, shell=True, cwd=tikz_path, stdout=fnull)
 
