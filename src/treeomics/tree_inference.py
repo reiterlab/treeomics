@@ -21,7 +21,7 @@ logger = logging.getLogger('treeomics')
 
 def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepath=None, subclone_detection=False,
                        loh_frequency=0.0, driver_vars=set(), max_no_mps=None, time_limit=None, plots=True,
-                       pool_size=0, no_bootstrap_samples=0):
+                       pool_size=0, no_bootstrap_samples=0, variant_filepath=None):
     """
     Create an evolutionary tree based on the maximum likelihood mutation patterns of each variant
     :param patient: data structure around the patient
@@ -37,6 +37,7 @@ def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepat
     :param plots: generate pdf from tex file
     :param pool_size: number of best solutions explored by ILP solver to estimate confidence
     :param no_bootstrap_samples: number of samples with replacement for the bootstrapping
+    :param variant_filepath: path to output file with information about variants and where they were acquired
     :return: evolutionary tree as graph
     """
 
@@ -57,11 +58,14 @@ def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepat
             tree = mlh_pg.infer_evolutionary_tree(sol.shared_mlh_mps, sol.mlh_founders, sol.mlh_unique_mutations,
                                                   confidence=None if mlh_pg.weighted_node_lh is None else
                                                   mlh_pg.weighted_node_lh)
-            _create_tree_plots(sol, mlh_pg, tree, plots, tree_filepath + '_{}'.format(sol.rank), driver_vars)
+
+            if tree_filepath is not None:
+                _create_tree_plots(sol, mlh_pg, tree, plots, tree_filepath + '_{}'.format(sol.rank), driver_vars)
 
         # create tree for most likely solution
-        _create_tree_plots(mlh_pg.solutions[0], mlh_pg, mlh_tree, plots,
-                           tree_filepath + '_1', driver_vars)
+        if tree_filepath is not None:
+            _create_tree_plots(mlh_pg.solutions[0], mlh_pg, mlh_tree, plots,
+                               tree_filepath + '_1', driver_vars, variant_filepath=variant_filepath)
 
         # create mutation matrix for benchmarking
         if mm_filepath is not None:
@@ -76,7 +80,7 @@ def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepat
     return mlh_pg
 
 
-def _create_tree_plots(solution, mlh_pg, mlh_tree, plots, tree_filepath, driver_vars):
+def _create_tree_plots(solution, mlh_pg, mlh_tree, plots, tree_filepath, driver_vars, variant_filepath=None):
     """
     Produce evolutionary tree plots for the given solution
     :param solution:
@@ -85,7 +89,7 @@ def _create_tree_plots(solution, mlh_pg, mlh_tree, plots, tree_filepath, driver_
     :param plots:
     :param tree_filepath:
     :param driver_vars: defaultdict with mutation IDs and instance of driver class
-    :return:
+    :param variant_filepath:
     """
 
     # ignore mutations which are not in any sample which passed the filtering
@@ -132,8 +136,9 @@ def _create_tree_plots(solution, mlh_pg, mlh_tree, plots, tree_filepath, driver_
 
         # create Latex/TIkZ tree
         tikz_tree = tikz.create_figure_file(
-            mlh_tree, tikz.TREE_ROOT, tree_filepath + '_full.tex', mlh_pg.patient, mlh_pg, caption, driver_vars=driver_vars,
-            germline_distance=10.0 * max(1.0, len(solution.mlh_founders) / median_no_muts), standalone=True)
+            mlh_tree, tikz.TREE_ROOT, tree_filepath + '_full.tex', mlh_pg.patient, mlh_pg, caption,
+            driver_vars=driver_vars, germline_distance=10.0 * max(1.0, len(solution.mlh_founders) / median_no_muts),
+            standalone=True, variant_filepath=variant_filepath)
         # add information about the ignored mutations and the position of the acquired mutations
         latex.add_branch_mut_info(tree_filepath, mlh_pg, mlh_tree)
 
@@ -144,12 +149,12 @@ def _create_tree_plots(solution, mlh_pg, mlh_tree, plots, tree_filepath, driver_
         tikz_path, tikz_file = os.path.split(tikz_tree)
         logger.debug('Tikzpath: {} {}'.format(tikz_path, tikz_file))
         # increase buffer size on mac: 'buf_size=1000000 pdflatex {}'.format(tikz_file)
-        # increase buffer size on windows: 'pdflatex –-buf-size=1000000 {}'.format(tikz_file)
+        # increase buffer size on windows: 'pdflatex --buf-size=1000000 {}'.format(tikz_file)
         # check which operating system is used
         if sys.platform == 'darwin':
             pdflatex_cmd = 'buf_size=1000000 pdflatex {}'.format(tikz_file)
         elif sys.platform == 'win32':
-            pdflatex_cmd = 'pdflatex –-buf-size=1000000 {}'.format(tikz_file)
+            pdflatex_cmd = 'pdflatex --buf-size=1000000 {}'.format(tikz_file)
         else:
             pdflatex_cmd = 'pdflatex {}'.format(tikz_file)
 

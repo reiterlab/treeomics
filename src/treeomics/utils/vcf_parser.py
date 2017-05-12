@@ -1,7 +1,4 @@
 """Parsing and processing of VCF files"""
-__author__ = 'Johannes REITER'
-__date__ = 'July 21, 2014'
-
 import logging
 import csv
 import re
@@ -9,6 +6,9 @@ import os
 from collections import namedtuple
 from utils.sample import Sample
 from utils.sample import Variant
+
+__author__ = 'Johannes REITER'
+__date__ = 'July 21, 2014'
 
 # create logger for application
 logger = logging.getLogger('vcf-parser')

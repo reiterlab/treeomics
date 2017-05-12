@@ -242,13 +242,17 @@ def ete_layout(node):
 
         # for colors see: http://etetoolkit.org/docs/latest/reference/reference_treeview.html#color-names
         leaf_face = AttrFace("name", fsize=14, fgcolor="Black", text_prefix=' ', text_suffix=' ')
-        if node.name.startswith('PT'):          # primary tumor sample
+        if node.name.startswith('PT') or node.name.startswith('Primary'):          # primary tumor sample
             leaf_face.fgcolor = 'SteelBlue'
         elif node.name.startswith('LiM'):       # liver met
             leaf_face.fgcolor = 'DarkOliveGreen'
         elif node.name.startswith('LuM'):       # lung met
             leaf_face.fgcolor = 'SaddleBrown'
         elif node.name.startswith('NoM'):       # lymph node met
+            leaf_face.fgcolor = 'DarkViolet'
+        elif node.name.startswith('PeM'):       # peritoneal met
+            leaf_face.fgcolor = 'Purple'
+        elif node.name.startswith('Met') or node.name.startswith('M'):       # some metastasis
             leaf_face.fgcolor = 'Magenta'
         elif node.name.startswith('BrM'):       # brain met
             leaf_face.fgcolor = 'Crimson'

@@ -56,7 +56,7 @@ def read_mutation_table(filename, normal_sample=None, excluded_columns=set(), ex
         sample_names = []
 
         for row in f_tsv:
-            if row[0].startswith('#') or not len(row[0]):
+            if len(row) == 0 or row[0].startswith('#'):
                 # skip comments
                 continue
             elif row[0].startswith('Chr') or row[0].startswith('Gene'):                # process data table header
@@ -269,8 +269,8 @@ def read_table(filename, variant_key_column_names, variant_key_pattern, data_col
                         data_columns.append(column_idx)
                     break
             else:
-                raise ValueError('Column {} is not found in the provided file: {}'.format(
-                    name, filename))
+                raise ValueError('Column {} is not found in the provided file {} with header {}.'.format(
+                    name, filename, headers))
         for column_idx, column_name in enumerate(headers):
             if column_name == 'Sample':
                 sample_column = column_idx
@@ -391,22 +391,64 @@ def write_mutation_patterns(phylogeny, filepath):
 
 def write_vep_input(filepath, patient):
     """
-    Write all variants to a TSV file that is acceptable to Ensembl VEP to investigate mutation effects
+    Write substitution variants to a TSV file that is acceptable to Ensembl VEP to investigate mutation effects
     :param filepath: path to output file
     :param patient: data structure around sequencing data of a subject
-    :return:
     """
 
-    with open(filepath, 'w') as file:
-        logger.debug('Write {} variants to VEP input file: {}'.format(len(patient.vc_variants), filepath))
-        csv_writer = csv.writer(file, delimiter='\t')
-        # csv_writer.writerow(['Chromosome', 'StartPosition', 'EndPosition', 'RefAllele', 'AltAllele'])
-        for mut_idx in sorted(range(len(patient.vc_variants)), key=lambda k: (patient.mut_positions[k][0],
-                                                                              patient.mut_positions[k][1])):
-            var = patient.vc_variants[mut_idx]
-            csv_writer.writerow([var.contig, var.start, var.end - (1 if var.ref == '' else 0),
-                                 '{}/{}'.format('-' if var.ref == '' else var.ref,
-                                                '-' if var.alt == '' else var.alt),
-                                 '# {}'.format(patient.gene_names[mut_idx])])
+    if patient.ensembl_data is not None:
+        from utils.driver import is_functional
 
-        logger.info('Wrote {} variants to VEP input file: {}'.format(len(patient.vc_variants), filepath))
+        with open(filepath, 'w') as file:
+            logger.debug('Write substitution variants to VEP input file: {}'.format(filepath))
+            tsv_writer = csv.writer(file, delimiter='\t')
+            subs_cnt = 0
+            # tsv_writer.writerow(['Chromosome', 'StartPosition', 'EndPosition', 'RefAllele', 'AltAllele'])
+            for mut_idx in sorted(range(len(patient.vc_variants)), key=lambda k: (patient.mut_positions[k][0],
+                                                                                  patient.mut_positions[k][1])):
+                var = patient.vc_variants[mut_idx]
+                # if patient.mut_types[mut_idx] == 'Substitution':
+                if is_functional(patient.mut_types[mut_idx]):
+                    tsv_writer.writerow([var.contig, var.start, var.end - (1 if var.ref == '' else 0),
+                                         '{}/{}'.format('-' if var.ref == '' else var.ref,
+                                                        '-' if var.alt == '' else var.alt),
+                                         '# {}'.format(patient.gene_names[mut_idx])])
+                    subs_cnt += 1
+
+            logger.info('Wrote {} substitution variants to VEP input file: {}'.format(subs_cnt, filepath))
+
+    else:
+        logger.warning('Unable to generate file with all substitution mutations for VEP. '
+                       'Check availability of VarCode!')
+
+
+def write_cravat_input(filepath, patient):
+    """
+    Write substitution variants to a TSV file that is acceptable to CRAVAT/CHASM to investigate mutation effects
+    :param filepath: path to output file
+    :param patient: data structure around sequencing data of a subject
+    """
+
+    if patient.ensembl_data is not None:
+        from utils.driver import is_functional
+
+        with open(filepath, 'w') as file:
+            logger.debug('Write substitution variants to CRAVAT/CHASM input file: {}'.format(filepath))
+            tsv_writer = csv.writer(file, delimiter='\t')
+            subs_cnt = 0
+            # tsv_writer.writerow(['Chromosome', 'StartPosition', 'EndPosition', 'RefAllele', 'AltAllele'])
+            for mut_idx in sorted(range(len(patient.vc_variants)), key=lambda k: (patient.mut_positions[k][0],
+                                                                                  patient.mut_positions[k][1])):
+                var = patient.vc_variants[mut_idx]
+                # if patient.mut_types[mut_idx] == 'Substitution':
+                if is_functional(patient.mut_types[mut_idx]):
+                    tsv_writer.writerow([mut_idx, 'chr{}'.format(var.contig), var.start, '+',
+                                         '-' if var.ref == '' else var.ref, '-' if var.alt == '' else var.alt,
+                                         patient.name])
+                    subs_cnt += 1
+
+            logger.info('Wrote {} substitution variants to CRAVAT input file: {}'.format(subs_cnt, filepath))
+
+    else:
+        logger.warning('Unable to generate file with all substitution mutations for CRAVAT/CHASM. '
+                       'Check availability of VarCode!')

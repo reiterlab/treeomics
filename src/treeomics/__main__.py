@@ -500,10 +500,12 @@ def main():
     post_filepath = os.path.join(output_directory, get_output_fn_template(
         patient.name, read_no_samples, min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf,
         bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf) + '_posterior.txt')
-    # output file path to write all variants in a format acceptable to Ensembl VEP
+    # output file path to write all variants in a format acceptable to Ensembl VEP and CHASM/CRAVAT
     vep_filepath = os.path.join(
-            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_variants_vep.tsv'
-    analyze_data(patient, post_table_filepath=post_filepath, vep_filepath=vep_filepath)
+            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_func_variants_vep.tsv'
+    cravat_filepath = os.path.join(
+            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_func_variants_cravat.tsv'
+    analyze_data(patient, post_table_filepath=post_filepath, vep_filepath=vep_filepath, cravat_filepath=cravat_filepath)
 
     if plots_report:   # deactivate plot generation for debugging and benchmarking
 
@@ -597,7 +599,8 @@ def main():
                 mm_filepath=mm_filepath, mp_filepath=mp_filepath,
                 subclone_detection=args.subclone_detection, loh_frequency=settings.LOH_FREQUENCY,
                 driver_vars=put_driver_vars, pool_size=args.pool_size, no_bootstrap_samples=args.boot,
-                max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=plots_report)
+                max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=plots_report,
+                variant_filepath=os.path.join(output_directory, fn_tree+'_variants.csv'))
 
             # previously used for benchmarking
             # if plots_paper:     # generate Java Script D3 trees

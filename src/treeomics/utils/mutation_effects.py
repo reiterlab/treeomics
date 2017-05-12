@@ -1,6 +1,8 @@
 """Prediction mutation effects by using VarCode"""
 import logging
 from itertools import chain
+import sys
+import traceback
 
 # from pyensembl import ensembl_grch37
 from varcode.effects import predict_variant_effect_on_transcript
@@ -30,6 +32,38 @@ class EffectTypes:
         return EffectTypes.types
 
 
+def get_top_effect_name(variant):
+    """
+    Return the name of the most likely effect of this mutation
+    :param variant: varcode variant, see https://github.com/hammerlab/varcode
+    :return: effect name
+    """
+
+    try:
+        return type(variant.effects().top_priority_effect()).__name__
+        # return get_variant_effect_longest_transcript(variant)
+
+    except BaseException as e:
+        logger.error('Error: {}'.format(str(e)))
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            traceback.print_tb(sys.exc_info()[2])
+        logger.warning('Mutation effect for variant {} could not be inferred.'.format(variant.short_description))
+        return 'unknown'
+
+
+def is_top_substitution(variant):
+    """
+    Returns True if the top predicted effect name of the variant is a substitution, e.g. Missense
+    :param variant: varcode variant, see https://github.com/hammerlab/varcode
+    :return: True or False
+    """
+
+    if get_top_effect_name(variant) == 'Substitution':
+        return True
+    else:
+        return False
+
+
 def get_variant_effect_longest_transcript(variant):
     """
     Predict variant effect based on longest transcript and return string
@@ -45,22 +79,6 @@ def get_variant_effect_longest_transcript(variant):
             ve = predict_variant_effect_on_transcript(variant, ltc).__class__.__name__
 
         return ve
-
-    except:
-        logger.warning('Mutation effect for variant {} could not be inferred.'.format(variant.short_description))
-        return 'unknown'
-
-
-def get_top_effect_name(variant):
-    """
-    Return the name of the most likely effect of this mutation
-    :param variant: varcode variant, see https://github.com/hammerlab/varcode
-    :return: effect name
-    """
-
-    try:
-        return type(variant.effects().top_priority_effect()).__name__
-        # return get_variant_effect_longest_transcript(variant)
 
     except:
         logger.warning('Mutation effect for variant {} could not be inferred.'.format(variant.short_description))

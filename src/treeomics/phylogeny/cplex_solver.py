@@ -90,6 +90,10 @@ def solve_conflicting_phylogeny(cf_graph, no_muts, pool_size, time_limit=None):
 
     logger.debug('Added {} constraints.'.format(len(constraints)))
 
+    # # 3... Node file on disk and compressed
+    # lp.parameters.mip.strategy.file.set(3)
+    # lp.parameters.workmem.set(2048)
+
     # ################ explore the solution space by keeping a pool of the best solutions ###############
     # more information at:
     # https://www.ibm.com/support/knowledgecenter/SS9UKU_12.5.0/com.ibm.cplex.zos.help/Parameters/topics/PopulateLim.html

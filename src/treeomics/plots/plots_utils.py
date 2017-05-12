@@ -72,7 +72,7 @@ def bayesian_hinton(log_p01, output_directory, filename, row_labels=None, column
     y_length = len(log_p01[0]) * (height+y_spacing) - y_spacing + (label_y_pos + 20 if column_labels is not None else 0)
 
     # create new figure
-    fig = plt.figure(figsize=(x_length / 20.0, y_length / 20.0), dpi=150)  # , frameon=False
+    fig = plt.figure(figsize=(x_length / 20.0, y_length / 20.0), dpi=150)   # , frameon=False
 
     ax = plt.axes([0, 1, 1, 1])
 

@@ -176,7 +176,7 @@ class MaxLHPhylogeny(Phylogeny):
             # find parsimony-informative evolutionarily incompatible mps with high likelihood
             if subclone_detection:
 
-                self.sc_sample_ids, found_subclones = self.find_subclones()
+                self.sc_sample_ids, found_subclones = self.find_subclones(opt_sol)
                 if not found_subclones:
                     # not enough evidence for additional new subclones
                     break
@@ -312,9 +312,14 @@ class MaxLHPhylogeny(Phylogeny):
 
         return comp_node_frequencies
 
-    def find_subclones(self):
+    def find_subclones(self, optimal_solution):
+        """
 
-        updated_nodes, self.sc_sample_ids = self.find_subclonal_mps()
+        :param optimal_solution:
+        :return:
+        """
+
+        updated_nodes, self.sc_sample_ids = self.find_subclonal_mps(optimal_solution)
 
         if len(updated_nodes) == 0:
             logger.info('There are no more incompatible mutation patterns with a reliability score '
@@ -323,17 +328,18 @@ class MaxLHPhylogeny(Phylogeny):
 
         return self.sc_sample_ids, True
 
-    def find_subclonal_mps(self):
+    def find_subclonal_mps(self, opt_sol):
         """
         Identify evolutionarily incompatible mutation patterns with a reliability score greater than min_score which
         where variants in some samples are subclonal
+        :param opt_sol: optimal solution
         :return updated_nodes:
         """
 
         updated_nodes = dict()
 
         # find incompatible mutation pattern with the highest reliability score
-        for mp in sorted(self.conflicting_nodes, key=lambda k: -self.node_scores[k]):
+        for mp in sorted(opt_sol.incompatible_nodes, key=lambda k: -self.node_scores[k]):
 
             if (self.node_scores[mp] < self.min_score or
                     len(self.patient.sc_names) > len(self.patient.sample_names) +
@@ -360,8 +366,8 @@ class MaxLHPhylogeny(Phylogeny):
             # step (a) in pseudo algorithm
             logger.debug('Highest ranked conflicting mutation pattern: {} and its neighbors'.format(mp))
             logger.debug('Its neighbors: {}'.format(self.cf_graph.neighbors(mp)))
-            logger.debug('Conflicting nodes: {}'.format(self.conflicting_nodes))
-            hcmp = max(set(self.cf_graph.neighbors(mp)).difference(self.conflicting_nodes),
+            logger.debug('Conflicting nodes: {}'.format(opt_sol.incompatible_nodes))
+            hcmp = max(set(self.cf_graph.neighbors(mp)).difference(opt_sol.incompatible_nodes),
                        key=lambda k: self.node_scores[k])
             logger.info('Highest ranked evolutionary incompatible mutation pattern of MP {} (w: {:.2e}): {} (w: {:.2e})'
                         .format(', '.join(self.patient.sc_names[sc] for sc in mp), self.cf_graph.node[mp]['weight'],
@@ -424,7 +430,7 @@ class MaxLHPhylogeny(Phylogeny):
                         ', '.join(self.patient.sc_names[sc] for sc in new_mp.difference(mp))))
 
             # step (d) continued: check compatibility with other conflicting clones
-            for related_mp in sorted(self.conflicting_nodes, key=lambda k: -self.cf_graph.node[k]['weight']):
+            for related_mp in sorted(opt_sol.incompatible_nodes, key=lambda k: -self.cf_graph.node[k]['weight']):
                 if related_mp == mp:
                     continue
 
@@ -456,7 +462,7 @@ class MaxLHPhylogeny(Phylogeny):
                 #             + 'would not make it compatible to {} (w: {:.1e})'.format(hcmp, self.node_scores[hcmp]))
 
             # step (e): add new subclone to all compatible supersets of mp
-            for anc in self.compatible_nodes:
+            for anc in opt_sol.compatible_nodes:
 
                 if anc.issuperset(mp) and anc != mp:
                     anc_sas = [sa for sa in anc]

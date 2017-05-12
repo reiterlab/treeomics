@@ -19,10 +19,11 @@ from utils.statistics import get_log_p0
 try:    # check if varcode and pyensembl is available (necessary for Windows)
     from varcode import Variant as VCVariant  # https://github.com/hammerlab/varcode
     from pyensembl import EnsemblRelease
+    from utils.mutation_effects import get_top_effect_name
 
 except ImportError:
-    # mutation effect prediction will not be performed since VarCode is not avilable
-    pass
+    # mutation effect prediction will not be performed since VarCode is not available
+    get_top_effect_name = None
 
 __author__ = 'jreiter'
 __date__ = 'April, 2014'
@@ -111,7 +112,7 @@ class Patient(object):
         # holds the gene names of the numbered mutations
         self.gene_names = None
         # holds the type/class of the numbered mutation, e.g. missense, nonsense, etc.
-        self.mut_types = []
+        self.mut_types = None
         # holds the data about the mutation: chromosome, start position, and end position
         self.mut_positions = []
         # dictionary with the name of the driver pathway if the mutation is a driver gene mutation
@@ -154,6 +155,8 @@ class Patient(object):
         self.founders = set()
         # mutations ordered via the numbered of shared samples
         self.shared_muts = defaultdict(set)
+        # sharing status according to Bayesian inference model (list indexed by mut IDs)
+        self.sharing_status = None
 
         # holds a dictionary with a frozenset of samples mapping to a set of mutations
         # present in exactly the same set
@@ -375,6 +378,7 @@ class Patient(object):
         self.gene_names = []
         if self.ensembl_data is not None:
             self.vc_variants = []
+            self.mut_types = []
 
         # posterior log probability if no data was reported
         non_log_p0 = math.log(def_sets.NO_DATA_P0)
@@ -394,6 +398,7 @@ class Patient(object):
             if self.ensembl_data is not None:
                 # varcode variants were previously generated to check for possible filtering
                 self.vc_variants.append(vc_vars[mut_key])
+                self.mut_types.append(get_top_effect_name(vc_vars[mut_key]))
 
             # add mutation name
             self.mut_keys.append(mut_key)
@@ -511,6 +516,7 @@ class Patient(object):
                             col_pathway = col_idx
                         elif entry == 'Function':
                             col_function = col_idx
+                            self.mut_types = []
 
                     # check if the columns with needed information were found
                     if col_function == -1:
@@ -604,7 +610,8 @@ class Patient(object):
         samples = read_vcf_files(vcf_directory, excluded_samples=excl_samples)
 
         processed_samples = self._process_samples(samples, min_sa_cov, min_sa_maf, false_positive_rate,
-                                                  false_discovery_rate, min_absent_cov, wes_filtering=wes_filtering)
+                                                  false_discovery_rate, min_absent_cov, wes_filtering=wes_filtering,
+                                                  artifacts=artifacts)
 
         return processed_samples
 
@@ -657,9 +664,6 @@ class Patient(object):
         :return: processed samples
         """
 
-        # gene names and mutation pathways are not available in VCF files
-        self.mut_types = None
-
         # raw sequencing data
         self.mut_reads = defaultdict(dict)
         self.coverage = defaultdict(dict)
@@ -676,7 +680,9 @@ class Patient(object):
 
         self.mut_keys = []
         self.gene_names = []
-        self.vc_variants = []
+        if self.ensembl_data is not None:
+            self.vc_variants = []
+            self.mut_types = []
 
         self.variant_stats = Counter()
 
@@ -914,6 +920,8 @@ class Patient(object):
                 return -5
 
             self.vc_variants.append(variant)
+            self.mut_types.append(get_top_effect_name(variant))
+
             # infer gene name if not given
             if self.gene_names[-1] == 'unknown':
                 # query missing data from Ensembl data
@@ -978,6 +986,7 @@ class Patient(object):
             del self.gene_names[-1]
             if self.ensembl_data is not None:
                 del self.vc_variants[-1]
+                del self.mut_types[-1]
 
             return -1
 

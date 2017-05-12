@@ -8,7 +8,7 @@ from collections import defaultdict
 from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
 import numpy as np
 from utils.similarity_analysis import calculate_genetic_similarity, calculate_bi_genetic_similarity
-from utils.data_tables import write_posterior_table, write_vep_input
+from utils.data_tables import write_posterior_table, write_vep_input, write_cravat_input
 from phylogeny.simple_phylogeny import SimplePhylogeny
 from phylogeny.max_lh_phylogeny import MaxLHPhylogeny
 
@@ -19,13 +19,14 @@ __author__ = 'Johannes REITER'
 logger = logging.getLogger('treeomics')
 
 
-def analyze_data(patient, post_table_filepath=None, vep_filepath=None):
+def analyze_data(patient, post_table_filepath=None, vep_filepath=None, cravat_filepath=None):
     """
     Process data and write posterior table
     Possibility of apply various filters
     :param patient: data structure around sequencing data of a subject
     :param post_table_filepath: file path for generating a table with posterior probabilities
-    :param vep_filepath: output file path to write all variants in a format acceptable to Ensembl VEP
+    :param vep_filepath: output file path to write all substitution variants in a format acceptable to Ensembl VEP
+    :param cravat_filepath: output file path to write all substitution variants in a format acceptable to CHASM/CRAVAT
     """
 
     # Possibility to implement filters!!!
@@ -59,8 +60,10 @@ def analyze_data(patient, post_table_filepath=None, vep_filepath=None):
 
     if patient.vc_variants is not None:
         write_vep_input(vep_filepath, patient)
+        write_cravat_input(cravat_filepath, patient)
 
-    determine_sharing_status(patient)
+    patient.sharing_status = determine_sharing_status(patient)
+    assert (len(patient.mut_keys) == len(patient.sharing_status)), 'Error inferring sharing status with BI model'
 
     # keep list of mutations present in some of the used samples
     patient.present_mutations = get_present_mutations(patient.log_p01)
@@ -86,12 +89,56 @@ def determine_sharing_status(patient):
     """
 
     pres_lp = math.log(0.5)  # log probability of 50%
+    sharing_status = list()
     for mut_idx, ps in patient.log_p01.items():
 
-        if all(p1 > pres_lp for _, p1 in ps):
+        sa_idxs = [sa_idx for sa_idx, (_, p1) in enumerate(ps) if p1 > pres_lp]
+
+        if len(sa_idxs) == len(patient.sample_names):
             patient.founders.add(mut_idx)
+            sharing_status.append('Trunk')
         else:
             patient.shared_muts[sum(1 for _, p1 in ps if p1 > pres_lp)].add(mut_idx)
+
+            if len(sa_idxs) > 1:      # shared
+                if (all(sa_idx in sa_idxs for sa_idx, sa_name in enumerate(patient.sample_names)
+                        if 'M' in sa_name and 'TM' not in sa_name)
+                        and any('M' in sa_name and 'TM' not in sa_name for sa_name in patient.sample_names)):
+                    sharing_status.append('UntrMetTrunk')
+
+                elif (all(sa_idx in sa_idxs for sa_idx, sa_name in enumerate(patient.sample_names) if 'M' in sa_name)
+                      and any('M' in sa_name for sa_name in patient.sample_names)):
+                    sharing_status.append('MetTrunk')
+
+                elif any('M' in patient.sample_names[sa_idx] and 'TM' not in patient.sample_names[sa_idx]
+                         for sa_idx in sa_idxs):
+                    sharing_status.append('UntrMetShared')
+
+                elif any('M' in patient.sample_names[sa_idx] for sa_idx in sa_idxs):
+                    sharing_status.append('MetShared')
+
+                elif (all(sa_idx in sa_idxs for sa_idx, sa_name in enumerate(patient.sample_names)
+                          if 'PT' in sa_name or 'Primary' in sa_name)
+                        and any('PT' in sa_name or 'Primary' in sa_name for sa_name in patient.sample_names)):
+                    sharing_status.append('PTTrunk')
+
+                else:
+                    sharing_status.append('Shared')
+
+            elif len(sa_idxs) == 1:                                               # private
+                sa_name = patient.sample_names[sa_idxs[0]]
+                if 'TM' in sa_name:
+                    sharing_status.append('TrMetPrivate')
+                elif 'M' in sa_name and 'TM' not in sa_name:
+                    sharing_status.append('UntrMetPrivate')
+                elif 'PT' in sa_name or 'Primary' in sa_name:
+                    sharing_status.append('PTPrivate')
+                else:
+                    sharing_status.append('Private')
+
+            else:
+                sharing_status.append('Absent')
+                # raise RuntimeError('Mutation {} is not assigned to any samples!'.format(patient.mut_keys[mut_idx]))
 
     logger.info("{:.1%} ({}/{}) of all distinct mutations are founders.".format(
         float(len(patient.founders)) / len(patient.mutations), len(patient.founders), len(patient.mutations)))
@@ -157,6 +204,8 @@ def determine_sharing_status(patient):
     #     logger.debug('Mutation pattern {} shares mutations: {} '.format(str(key), value))
 
     logger.info('Total number of distinct mutation patterns: {}'.format(len(patient.mps)))
+
+    return sharing_status
 
 
 def get_present_mutations(log_p01):

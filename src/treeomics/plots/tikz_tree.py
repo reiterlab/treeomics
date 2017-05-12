@@ -2,11 +2,14 @@
 """Function to generate a tree figure with latex and tikz"""
 import logging
 import copy
+import csv
+import math
 import networkx as nx
 import numpy as np
 from itertools import islice
 import utils.latex_output as latex_output
 from phylogeny.phylogeny_utils import TREE_ROOT
+from patient import get_variant_details
 import os
 
 __author__ = 'jreiter'
@@ -14,9 +17,12 @@ __author__ = 'jreiter'
 # get logger for application
 logger = logging.getLogger('treeomics')
 
+# maximal number of depicted driver gene names per branch
+MAX_DR_NAS = 6
+
 
 def create_figure_file(tree, tree_root_key, filename, patient, phylogeny, figure_caption, driver_vars=None,
-                       germline_distance=2.0, standalone=False):
+                       germline_distance=2.0, standalone=False, variant_filepath=None):
     """
     Takes a networkx tree and creates a tikz source file such that a pdf can be generated with latex
     :param tree:
@@ -26,6 +32,9 @@ def create_figure_file(tree, tree_root_key, filename, patient, phylogeny, figure
     :param phylogeny:
     :param figure_caption: caption for tikz figure
     :param driver_vars: defaultdict with mutation IDs and instance of driver class to be highlighted on each edge
+    :param germline_distance: distance from the germ line (root node) to the first branch in the tikz figure
+    :param standalone: Latex/tikz produces pdf only with the figure
+    :param variant_filepath: path to output file with information about variants and where they were acquired
     :return path to the generated latex/tikz tree
     """
 
@@ -36,9 +45,28 @@ def create_figure_file(tree, tree_root_key, filename, patient, phylogeny, figure
             latex_output.write_tikz_header(latex_file, germline_distance=germline_distance, standalone=standalone)
             latex_output.write_figure_header(latex_file, standalone)
 
+            if variant_filepath is not None:
+                var_file = open(variant_filepath, 'w')
+                logger.info('Write variant analysis file: {}'.format(variant_filepath))
+                var_writer = csv.writer(var_file)
+
+                # writer header of file with variants
+                header = ['Chromosome', 'StartPosition', 'EndPosition', 'RefAllele', 'AltAllele', 'GeneSymbol',
+                          'MutType', 'Driver', 'CGC_region', 'Phylogeny', 'BranchName']
+                header += ['p1_'+sample_name for sample_name in patient.sample_names]
+                header.append('BISharingStatus')
+
+                var_writer.writerow(header)
+            else:
+                var_writer = None
+                var_file = None
+
             # generate tikz tree and write it to the opened file
-            _write_tikz_tree(tree, tree_root_key, latex_file, 0, patient, phylogeny,
+            _write_tikz_tree(tree, tree_root_key, latex_file, 0, patient, phylogeny, variant_writer=var_writer,
                              gene_names=patient.gene_names, mut_keys=patient.mut_keys, drivers=driver_vars)
+
+            if var_file is not None:
+                var_file.close()
 
             # generate latex file footers
             latex_output.write_figure_footer(latex_file, figure_caption, standalone)
@@ -62,7 +90,7 @@ def create_figure_file(tree, tree_root_key, filename, patient, phylogeny, figure
 
 
 def _write_tikz_tree(tree, cur_node, latex_file, level, patient, pg,
-                     gene_names=None, mut_keys=None, drivers=None):
+                     gene_names=None, mut_keys=None, drivers=None, variant_writer=None):
     """
     Run recursively through the tree and write the tree in tikz format to the opened file
     :param tree:
@@ -74,11 +102,9 @@ def _write_tikz_tree(tree, cur_node, latex_file, level, patient, pg,
     :param gene_names:
     :param mut_keys:
     :param drivers:
+    :param variant_writer: CSV writer to store relevant information about a variant and its presence to a file
     :return:
     """
-
-    # maximal number of depicted driver gene names per branch
-    MAX_DR_NAS = 6
 
     tree.node[cur_node]['level'] = level
     # calculate indentation dependent on the level of the node
@@ -141,8 +167,12 @@ def _write_tikz_tree(tree, cur_node, latex_file, level, patient, pg,
                                  for m in tree[cur_node][child]['muts'] for sa_idx in child])) +
                                  '\n')
 
+                # write acquired variants to variant analysis file
+                if variant_writer is not None:
+                    _write_muts(variant_writer, pg, patient, tree[cur_node][child]['muts'], child, driver_vars=drivers)
+
             _write_tikz_tree(tree, child, latex_file, level+1, patient, pg, gene_names=gene_names,
-                             mut_keys=mut_keys, drivers=drivers)
+                             mut_keys=mut_keys, drivers=drivers, variant_writer=variant_writer)
 
         latex_file.write(pre+']\n')
 
@@ -321,3 +351,110 @@ def _generate_dendrogram_clusters(tree, clusters, node, level, no_samples, inclu
 
     else:                                       # leave node
         return node, 0, 1           # return id of sample, height 0, and number of samples 1
+
+
+def _write_muts(var_writer, pg, patient, muts, sample_ids, driver_vars=None):
+    """
+    Write variants that were acquired on the given branch to a CSV file
+    :param var_writer:  CSV writer
+    :param pg: phylogeny
+    :param patient: instance of class Patient
+    :param muts: list of integer ids of the mutations that were acquired on this branch
+    :param sample_ids: set of sample ids of this branch
+    :param driver_vars: dictionary with mut IDs as keys
+    """
+
+    # CSV file has the following columns
+    # 'Chromosome', 'StartPosition', 'EndPosition', 'RefAllele', 'AltAllele', 'GeneSymbol',
+    # 'MutType', 'Driver', 'CGC_region', 'Phylogeny', 'BranchName']
+
+    for mut_idx in muts:
+
+        row = list()
+        mut_key = patient.mut_keys[mut_idx]
+        chrom, start_pos, end_pos, ref, alt = get_variant_details(mut_key)
+        row.append(chrom)
+        row.append(start_pos)
+        row.append(end_pos)
+        row.append(ref)
+        row.append(alt)
+
+        if patient.gene_names is not None:
+            row.append(patient.gene_names[mut_idx])
+        else:
+            row.append('')
+
+        if patient.mut_types is not None:
+            row.append(patient.mut_types[mut_idx])
+        else:
+            row.append('')
+
+        if driver_vars is not None:
+            if mut_idx in driver_vars.keys():
+                row.append(str(True))
+                row.append(str(driver_vars[mut_idx].cgc_driver))
+            else:
+                row.append(str(False))
+                row.append('')
+        else:
+            row.append(str(False))
+            row.append('')
+
+        phylogeny_annotations = list()
+        # determine branch status
+        if len(sample_ids) == 1:
+            sa_name = patient.sample_names[list(sample_ids)[0]]
+            if 'TM' in sa_name:
+                phylogeny_annotations.append('TrMetPrivate')
+            elif 'M' in sa_name and 'TM' not in sa_name:
+                phylogeny_annotations.append('UntrMetPrivate')
+            elif 'PT' in sa_name or 'Primary' in sa_name:
+                phylogeny_annotations.append('PTPrivate')
+            else:
+                phylogeny_annotations.append('Private')
+
+        elif len(sample_ids) == 0:
+            phylogeny_annotations.append('Absent')
+            raise RuntimeError('Mutation {} is not assigned to any samples!'.format(mut_key))
+
+        else:
+            if all(sa_idx in sample_ids for sa_idx in range(len(patient.sample_names))):
+                phylogeny_annotations.append('Trunk')
+            else:
+                if (all(sa_idx in sample_ids for sa_idx, sa_name in enumerate(patient.sample_names)
+                        if 'M' in sa_name and 'TM' not in sa_name)
+                        and any('M' in sa_name and 'TM' not in sa_name for sa_name in patient.sample_names)):
+                    phylogeny_annotations.append('UntrMetTrunk')
+
+                elif (all(sa_idx in sample_ids for sa_idx, sa_name in enumerate(patient.sample_names) if 'M' in sa_name)
+                      and any('M' in sa_name for sa_name in patient.sample_names)):
+                    phylogeny_annotations.append('MetTrunk')
+
+                elif any('M' in patient.sample_names[sa_idx] and 'TM' not in patient.sample_names[sa_idx]
+                         for sa_idx in sample_ids):
+                    phylogeny_annotations.append('UntrMetShared')
+
+                elif any('M' in patient.sample_names[sa_idx] for sa_idx in sample_ids):
+                    phylogeny_annotations.append('MetShared')
+
+                if (all(sa_idx in sample_ids for sa_idx, sa_name in enumerate(patient.sample_names)
+                        if 'PT' in sa_name or 'Primary' in sa_name)
+                        and any('PT' in sa_name or 'Primary' in sa_name for sa_name in patient.sample_names)):
+                    phylogeny_annotations.append('PTTrunk')
+
+                if len(phylogeny_annotations) == 0:
+                    phylogeny_annotations.append('Shared')
+
+        row.append('|'.join(pa for pa in phylogeny_annotations))
+
+        branch_name = '__'.join(sorted(
+            patient.sample_names[pg.sc_sample_ids[sa_idx] if sa_idx in pg.sc_sample_ids else sa_idx]
+            for sa_idx in sample_ids))
+        row.append(branch_name)
+
+        row += ['{:.9g}'.format(math.exp(patient.log_p01[mut_idx][sa_idx][1])) for sa_idx in range(
+            len(patient.sample_names))]
+
+        row.append(patient.sharing_status[mut_idx])
+
+        var_writer.writerow(row)

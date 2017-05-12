@@ -21,6 +21,10 @@ TIME_LIMIT = None
 # Note that if MAX_NO_MPS is not None, the optimal solution is no longer guaranteed
 MAX_NO_MPS = None
 
+# assign variants classified as absent by the Bayesian inference model to their next most likely mutation pattern
+# i.e. also show variants in tiny subclones in the inferred phylogeny
+SHOW_BI_ABSENT_MUTS = False
+
 # #################### BAYESIAN sequencing data analysis settings ######################
 BI_E = 0.01            # sequencing error rate for bayesian inference
 BI_C0 = 0.5            # prior mixture parameter of delta function and uniform distribution for bayesian inference

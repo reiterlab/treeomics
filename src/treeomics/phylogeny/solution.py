@@ -3,6 +3,7 @@ import logging
 import math
 import numpy as np
 from collections import defaultdict
+import settings
 import utils.int_settings as def_sets
 
 
@@ -75,6 +76,8 @@ class Solution:
             "As long as weights are given by the number of mutations: {} == {}".format(
                 conflicting_mutations_weight, self.obj_val / Solution.SCALING_FACTOR)
 
+        if not settings.SHOW_BI_ABSENT_MUTS:
+            self.compatible_nodes.add(frozenset([]))
         logger.debug('Identified compatible mutation patterns: {}'.format(self.compatible_nodes))
 
     def _calculate_sol_log_likelihood(self, sol_values, obj_func_vals, no_muts):

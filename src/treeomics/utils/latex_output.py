@@ -15,6 +15,7 @@ def write_tikz_header(latex_file, germline_distance=2.0, standalone=False):
     """
     Write the latex and tikz header to the given and already opened file
     :param latex_file: already opened file writer instance
+    :param germline_distance: distance from the germ line (root node) to the first branch in the tikz figure
     :param standalone: plot cut on the border of the figure instead of regular paper format
     """
 

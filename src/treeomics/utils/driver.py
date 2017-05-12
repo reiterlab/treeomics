@@ -46,8 +46,8 @@ class Driver:
         self.mutation_effect = mutation_effect
         self.genomic_location = None
 
-        if cgc_driver:
-            self.cgc_driver = True
+        if cgc_driver is not None:
+            self.cgc_driver = cgc_driver
 
         elif cgc_driver is None and cgc_drivers is not None:
             if gene_name in cgc_drivers:
@@ -116,7 +116,7 @@ def potential_driver(gene_name, user_drivers, variant=None, cgc_drivers=None):
 
     if driver_gene and variant is not None and VARCODE:
         mut_effect = get_top_effect_name(variant)
-        put_driver = can_be_driver(mut_effect)
+        put_driver = is_functional(mut_effect)
 
         if not put_driver:
             return driver_gene, put_driver, None, mut_effect
@@ -155,7 +155,7 @@ def potential_driver(gene_name, user_drivers, variant=None, cgc_drivers=None):
         return driver_gene, put_driver, None, mut_effect
 
 
-def can_be_driver(effect_name):
+def is_functional(effect_name):
     """
     Can this variant effect the expression of a gene?
     :param effect_name: varcode variant top priority effect, see https://github.com/hammerlab/varcode
