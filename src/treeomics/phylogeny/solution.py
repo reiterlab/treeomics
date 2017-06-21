@@ -28,8 +28,10 @@ class Solution:
 
         # calculate log likelihood
         self._calculate_sol_log_likelihood(solution_values, obj_func_vals, no_muts)
+        logger.debug('Solution of rank {} (obj-val: {:.2e}) with log-likelihood {:.3e} ({:.3e}).'.format(
+            rank, obj_val / Solution.SCALING_FACTOR, self.llh, math.exp(self.llh)))
 
-        self._translate_solution(solution_values, cf_graph)
+        self._translate_solution(solution_values, cf_graph, rank=rank)
 
         # maps from each evolutionarily compatible MP to the selected set of variants
         self.max_lh_nodes = None
@@ -55,7 +57,7 @@ class Solution:
         self.false_negatives = None
         self.false_negative_unknowns = None
 
-    def _translate_solution(self, sol_values, cf_graph):
+    def _translate_solution(self, sol_values, cf_graph, rank=None):
         # set of conflicting mutation patterns, set of compatible mutation patterns
         # translate solution of the ILP back to the phylogeny problem
         # removing the minimum vertex cover (conflicting mutation patterns) gives the maximum compatible set of mps
@@ -66,11 +68,16 @@ class Solution:
         for col_idx, (node, data) in enumerate(cf_graph.nodes_iter(data=True)):
 
             # if round(sol.get_values(str(node)), 5) == 0:
-            if round(sol_values[col_idx], 5) == 0:
+            if round(sol_values[col_idx], 5) == 0:              # compatible
                 self.compatible_nodes.add(node)
-            else:
+            else:                                               # incompatible
                 self.incompatible_nodes.add(node)
                 conflicting_mutations_weight += data['weight']
+
+        if rank is not None and rank <= 30:
+            logger.debug('Solution values: '
+                         + ', '.join('{}: {:.1f} (w:{:.2e})'.format(node, sol_values[col_idx], data['weight'])
+                                     for col_idx, (node, data) in enumerate(cf_graph.nodes_iter(data=True))))
 
         assert round(conflicting_mutations_weight, 4) == round(self.obj_val / Solution.SCALING_FACTOR, 4), \
             "As long as weights are given by the number of mutations: {} == {}".format(
@@ -78,7 +85,10 @@ class Solution:
 
         if not settings.SHOW_BI_ABSENT_MUTS:
             self.compatible_nodes.add(frozenset([]))
-        logger.debug('Identified compatible mutation patterns: {}'.format(self.compatible_nodes))
+
+        if rank is not None and rank <= 30:
+            logger.debug('Identified {} compatible mutation patterns: {}'.format(
+                len(self.compatible_nodes), self.compatible_nodes))
 
     def _calculate_sol_log_likelihood(self, sol_values, obj_func_vals, no_muts):
         """
@@ -90,20 +100,29 @@ class Solution:
         """
 
         self.llh = 0.0  # log likelihood
+        # llh_comp_mps = 0.0
 
         for ilp_col_idx, val in enumerate(sol_values):
             # o = obj_vals[ilp_col_idx]
             # p_p = -np.expm1(-obj_vals[ilp_col_idx] * no_muts)  # probability to exhibit at least one mutation
             # p_a = math.exp(-obj_vals[ilp_col_idx] * no_muts)   # probability to not exhibit any mutation
 
-            # mutation pattern was not selected and hence is evolutionary compatible with the nodes in the solution
-            if round(val, 5) == 0:
-                # numpy.expm1(x[, out]): exp(x) - 1 =>> -(exp(x) - 1) =>> 1 - exp(x)
-                # unnormlize reliability score by multiplying with no_muts
-                self.llh += math.log(-np.expm1(-obj_func_vals[ilp_col_idx] * no_muts))
-            else:  # mutation pattern was selected and hence is evolutionary incompatible
-                # unnormlize reliability score by multiplying with no_muts
+            # mutation pattern was not selected and hence is evolutionary incompatible with the nodes in the solution
+            if round(val, 5) != 0:
+                # unnormalize reliability score by multiplying with no_muts
+                # probability that no mutation has this pattern
                 self.llh += -obj_func_vals[ilp_col_idx] * no_muts
+
+            # mutation pattern was selected and hence is evolutionary compatible
+            # else:
+            #     # numpy.expm1(x[, out]): exp(x) - 1 =>> -(exp(x) - 1) =>> 1 - exp(x)
+            #     # unnormalize reliability score by multiplying with no_muts
+            #     # probability that some mutation has this pattern
+            #     # self.llh += math.log(-np.expm1(-obj_func_vals[ilp_col_idx] * no_muts))
+            #     llh_comp_mps += math.log(-np.expm1(-obj_func_vals[ilp_col_idx] * no_muts))
+
+        # logger.debug('Compatible mutation patterns likelihood: {:.3e} (log: {:.3e})'.format(
+        #     math.exp(llh_comp_mps), llh_comp_mps))
 
     def get_unscaled_obj_value(self):
         # scaling factor is used that python does not run into numerical precision errors with CPLEX

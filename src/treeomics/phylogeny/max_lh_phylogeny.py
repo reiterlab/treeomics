@@ -62,32 +62,53 @@ class MaxLHPhylogeny(Phylogeny):
         self.max_no_mps = None
 
         # calculate the minimal number of variant reads k_min at the median coverage and purity such that p_1 > 50%
-        k_mins = []
+        k_mins = None
         called_ps = []
         missed_ps = []
         pres_lp = math.log(0.5)
         lh = 1.0
         for sa_idx, sample_name in enumerate(patient.sample_names):
             # calculate posterior according to prior, estimated purity and data
-            for k in range(5000):
+            for k in range(min(5000, int(np.nanmedian(patient.sample_coverages[sample_name])))):
                 _, p1 = get_log_p0(np.nanmedian(patient.sample_coverages[sample_name]), k, self.patient.bi_error_rate,
                                    self.patient.bi_c0, cutoff_f=self.patient.get_cutoff_frequency(sample_name),
                                    pseudo_alpha=def_sets.PSEUDO_ALPHA, pseudo_beta=patient.betas[sample_name])
                 if p1 > pres_lp:
-                    k_mins.append(k)
+                    k_mins = k
                     break
 
+            if k_mins is None:
+                if np.nanmedian(patient.sample_coverages[sample_name]) > 5000:
+                    for k in range(5000, int(np.nanmedian(patient.sample_coverages[sample_name])),
+                                   int(np.nanmedian(patient.sample_coverages[sample_name]) * 0.01)):
+
+                        _, p1 = get_log_p0(np.nanmedian(patient.sample_coverages[sample_name]), k,
+                                           self.patient.bi_error_rate,
+                                           self.patient.bi_c0, cutoff_f=self.patient.get_cutoff_frequency(sample_name),
+                                           pseudo_alpha=def_sets.PSEUDO_ALPHA, pseudo_beta=patient.betas[sample_name])
+                        if p1 > pres_lp:
+                            k_mins = k
+                            break
+
+                    else:
+                        k_mins = int(np.nanmedian(patient.sample_coverages[sample_name]) * 0.05)
+                        logger.warning('Treeomics struggles with the high median coverage {} and made some assumption.'
+                                       .format(np.nanmedian(patient.sample_coverages[sample_name])))
+                else:
+                    logger.warning('Median coverage is very low. Perhaps exclude this sample: {}'.format(sample_name))
+                    k_mins = 1
+
             logger.debug('{}: Minimum number of mutant reads such that presence probability is greater than 50%: {}.'
-                         .format(sample_name, k_mins[-1]))
-            called_ps.append(1.0 - binom.cdf(k_mins[-1]-1, int(np.nanmedian(patient.sample_coverages[sample_name])),
+                         .format(sample_name, k_mins))
+            called_ps.append(1.0 - binom.cdf(k_mins-1, int(np.nanmedian(patient.sample_coverages[sample_name])),
                                              self.patient.bi_error_rate))
             logger.debug('Probability to observe an incorrectly called variant: {:.3%}'.format(called_ps[-1]))
 
             if sample_name in patient.estimated_purities:
-                missed_ps.append(binom.cdf(k_mins[-1]-1, int(np.nanmedian(patient.sample_coverages[sample_name])),
+                missed_ps.append(binom.cdf(k_mins-1, int(np.nanmedian(patient.sample_coverages[sample_name])),
                                            self.patient.estimated_purities[sample_name] / 2.0))
             else:
-                missed_ps.append(binom.cdf(k_mins[-1]-1, int(np.nanmedian(patient.sample_coverages[sample_name])),
+                missed_ps.append(binom.cdf(k_mins-1, int(np.nanmedian(patient.sample_coverages[sample_name])),
                                            np.nanmedian(self.patient.sample_mafs[sample_name])))
             logger.debug('Probability to miss a clonal variant: {:.1e}'.format(missed_ps[-1]))
 
@@ -674,7 +695,7 @@ def infer_ml_graph_nodes(log_p01, sample_names, mut_keys, gene_names=None, max_n
             node_scores[node] = sys.float_info.min
 
     # Show nodes with highest reliability score
-    for node, score in itertools.islice(sorted(node_scores.items(), key=lambda k: -k[1]), 0, 25):
+    for node, score in itertools.islice(sorted(node_scores.items(), key=lambda k: -k[1]), 0, 30):
         logger.debug('Pattern {} has a normalized reliability score of {:.2e}.'.format(node, score))
 
     return node_scores, idx_to_mp, mp_col_ids, mp_weights

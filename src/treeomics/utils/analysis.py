@@ -6,6 +6,7 @@ import csv
 import math
 from collections import defaultdict
 from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
+import utils.int_settings as def_sets
 import numpy as np
 from utils.similarity_analysis import calculate_genetic_similarity, calculate_bi_genetic_similarity
 from utils.data_tables import write_posterior_table, write_vep_input, write_cravat_input
@@ -19,12 +20,13 @@ __author__ = 'Johannes REITER'
 logger = logging.getLogger('treeomics')
 
 
-def analyze_data(patient, post_table_filepath=None, vep_filepath=None, cravat_filepath=None):
+def analyze_data(patient, post_table_filepath=None, jsc_filepath=None, vep_filepath=None, cravat_filepath=None):
     """
     Process data and write posterior table
     Possibility of apply various filters
     :param patient: data structure around sequencing data of a subject
     :param post_table_filepath: file path for generating a table with posterior probabilities
+    :param jsc_filepath: output path to file where Jaccard similarity matrix will be stored
     :param vep_filepath: output file path to write all substitution variants in a format acceptable to Ensembl VEP
     :param cravat_filepath: output file path to write all substitution variants in a format acceptable to CHASM/CRAVAT
     """
@@ -62,15 +64,15 @@ def analyze_data(patient, post_table_filepath=None, vep_filepath=None, cravat_fi
         write_vep_input(vep_filepath, patient)
         write_cravat_input(cravat_filepath, patient)
 
-    patient.sharing_status = determine_sharing_status(patient)
+    # calculate homogeneity index (Jaccard similarity coefficient)
+    patient.gen_dis, patient.sim_coeff, patient.sim_coeff_ex = calculate_genetic_similarity(patient)
+    patient.bi_gen_dis, patient.bi_sim_coeff = calculate_bi_genetic_similarity(patient)
+
+    patient.sharing_status = determine_sharing_status(patient, jsc_filepath=jsc_filepath)
     assert (len(patient.mut_keys) == len(patient.sharing_status)), 'Error inferring sharing status with BI model'
 
     # keep list of mutations present in some of the used samples
     patient.present_mutations = get_present_mutations(patient.log_p01)
-
-    # calculate homogeneity index (Jaccard similarity coefficient)
-    patient.gen_dis, patient.sim_coeff, patient.sim_coeff_ex = calculate_genetic_similarity(patient)
-    patient.bi_gen_dis, patient.bi_sim_coeff = calculate_bi_genetic_similarity(patient)
 
     if post_table_filepath is not None:
         # write file with posterior probabilities
@@ -82,10 +84,11 @@ def analyze_data(patient, post_table_filepath=None, vep_filepath=None, cravat_fi
     patient.calculate_no_present_vars()
 
 
-def determine_sharing_status(patient):
+def determine_sharing_status(patient, jsc_filepath=None):
     """
     Determine which samples share the various mutations based on the Bayesian inference model
     :param patient: data structure around sequencing data of a subject
+    :param jsc_filepath: output path to file where Jaccard similarity matrix will be stored
     """
 
     pres_lp = math.log(0.5)  # log probability of 50%
@@ -204,6 +207,37 @@ def determine_sharing_status(patient):
     #     logger.debug('Mutation pattern {} shares mutations: {} '.format(str(key), value))
 
     logger.info('Total number of distinct mutation patterns: {}'.format(len(patient.mps)))
+
+    if jsc_filepath is not None:
+
+        # write analysis to file
+        with open(jsc_filepath, 'w') as similarity_file:
+
+            csvwriter = csv.writer(similarity_file)
+            jscs = [patient.bi_sim_coeff[sa1_idx][sa2_idx] for sa1_idx in range(patient.n) for sa2_idx in
+                    range(sa1_idx)]
+
+            similarity_file.write(
+                '# {}: Probabilistic Jaccard similarity coefficient between'.format(patient.name) +
+                ' all pairs of samples (median: {:.2f}; mean: {:.2f}; classification threshold: {:.0%}).\n'.format(
+                    np.median(jscs), np.mean(jscs), def_sets.CLA_CONFID_TH))
+
+            col_names = ['Sample'] + patient.sample_names
+
+            # write header
+            csvwriter.writerow(col_names)
+
+            # build up output data sequentially
+            for sa1_idx, sample_name in enumerate(patient.sample_names):
+
+                row = list()
+                row.append(sample_name.replace('_', ' '))
+
+                for sa2_idx in range(len(patient.sample_names)):
+                    row.append('{:.2f}'.format(patient.bi_sim_coeff[sa1_idx][sa2_idx]))
+
+                # write row to file
+                csvwriter.writerow(row)
 
     return sharing_status
 

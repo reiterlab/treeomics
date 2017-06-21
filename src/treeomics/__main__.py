@@ -135,18 +135,21 @@ def get_output_fn_template(name, total_no_samples, subclone_detection=False, fpr
     return pattern
 
 
-def characterize_drivers(patient, ref_genome, filepath=None):
+def characterize_drivers(patient, ref_genome, driver_filepath, cgc_filepath, output_filepath=None):
     """
     Find putative driver mutations among the somatic variants and return a
     set of genes with likely drivers, a dictionary with driver variants (and instances of Driver), and
     a counter of unlikely driver mutation effects
     :param patient: data structure around sequencing data of a subject
     :param ref_genome:
-    :param filepath: prefix path to a possible output file summarizing the putative drivers, also serving as an
+    :param driver_filepath: CSV file with user defined list of putative driver genes that will be annotated
+                            in the inferred phylogeny
+    :param cgc_filepath: path to file with CGC list
+    :param output_filepath: prefix path to a possible output file summarizing the putative drivers, also serving as an
                      input file to Ensembl VEP and CRAVAT
     :return: set of driver genes, dict of driver variants, Counter of unlikely mutation effects
     """
-    cgc_drivers, user_drivers = get_drivers(settings.CGC_PATH, settings.DRIVER_PATH, ref_genome)
+    cgc_drivers, user_drivers = get_drivers(cgc_filepath, driver_filepath, ref_genome)
     # check if any of the variants are a putative driver
     put_driver_vars = dict()
     put_driver_genes = set()
@@ -188,9 +191,9 @@ def characterize_drivers(patient, ref_genome, filepath=None):
                         mut_effect + ' v' if mut_effect is not None else 'V', patient.gene_names[mut_idx],
                         ' (chr {}, pos {})'.format(mut_pos[0], mut_pos[1]) if mut_pos is not None else ''))
 
-    if filepath is not None and patient.ensembl_data is not None:
-        with open(filepath+'_vep.tsv', 'w') as vep_file, open(filepath+'_cravat.tsv', 'w') as cravat_file:
-            logger.debug('Write {} putative driver variants to file: {}'.format(len(put_driver_vars), filepath))
+    if output_filepath is not None and patient.ensembl_data is not None:
+        with open(output_filepath+ '_vep.tsv', 'w') as vep_file, open(output_filepath+ '_cravat.tsv', 'w') as cravat_file:
+            logger.debug('Write {} putative driver variants to file: {}'.format(len(put_driver_vars), output_filepath))
             tsv_vep = csv.writer(vep_file, delimiter='\t')
             tsv_cravat = csv.writer(cravat_file, delimiter='\t')
             # csv_writer.writerow(['Chromosome', 'StartPosition', 'EndPosition', 'RefAllele', 'AltAllele'])
@@ -214,7 +217,7 @@ def characterize_drivers(patient, ref_genome, filepath=None):
                                      '-' if var.ref == '' else var.ref, '-' if var.alt == '' else var.alt,
                                      patient.name])
 
-            logger.info('Wrote {} putative driver variants to file: {}'.format(len(put_driver_vars), filepath))
+            logger.info('Wrote {} putative driver variants to file: {}'.format(len(put_driver_vars), output_filepath))
 
     return put_driver_genes, put_driver_vars, unlikely_driver_mut_effects
 
@@ -400,15 +403,23 @@ def main():
         logger.error('Subclone and partial solution space search are not supported to be performed at the same time! ')
         usage()
 
+    if os.getcwd().endswith('treeomics'):
+        # application has been started from this directory
+        input_directory = os.path.join('..')
+    else:
+        input_directory = os.path.join('.')
+
     if args.wes_filtering:
         logger.info('All intronic or intergenic variants will be excluded (WES filtering).')
 
     if args.common_vars_file:
-        if os.path.isfile(args.common_vars_file):
-            common_vars = read_table(args.common_vars_file, ['Chromosome', 'Position', 'RefAllele', 'AltAllele'],
+        common_vars_filepath = os.path.join(input_directory, args.common_vars_file)
+        if os.path.isfile(common_vars_filepath):
+            common_vars = read_table(common_vars_filepath, ['Chromosome', 'Position', 'RefAllele', 'AltAllele'],
                                      ['__', '__', '>', ''], ['AlleleFrequency', 'Gene_Symbol'])
             logger.info('Read common variants file with {:.2e} variants that are excluded as artifacts.'.format(
                 len(common_vars)))
+
         else:
             logger.error('Given path to common variants file {} could not be found!'.format(args.common_vars_file))
             common_vars = None
@@ -485,8 +496,10 @@ def main():
                                    output_dir=args.output if args.output is not settings.OUTPUT_FOLDER else None)
 
     # find and characterize all possible driver gene mutations
+    driver_filepath = os.path.join(input_directory, settings.DRIVER_PATH)
+    cgc_filepath = os.path.join(input_directory, settings.CGC_PATH)
     put_driver_genes, put_driver_vars, unlikely_driver_mut_effects = characterize_drivers(
-        patient, ref_genome, filepath=os.path.join(
+        patient, ref_genome, driver_filepath, cgc_filepath, output_filepath=os.path.join(
             output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_putativedrivers')
 
     # create output filename pattern
@@ -500,12 +513,16 @@ def main():
     post_filepath = os.path.join(output_directory, get_output_fn_template(
         patient.name, read_no_samples, min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf,
         bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf) + '_posterior.txt')
+    # write matrix with Jaccard similarity coefficients in CSV format
+    jsc_filepath = os.path.join(
+            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_jsc-matrix.csv'
     # output file path to write all variants in a format acceptable to Ensembl VEP and CHASM/CRAVAT
     vep_filepath = os.path.join(
             output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_func_variants_vep.tsv'
     cravat_filepath = os.path.join(
             output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_func_variants_cravat.tsv'
-    analyze_data(patient, post_table_filepath=post_filepath, vep_filepath=vep_filepath, cravat_filepath=cravat_filepath)
+    analyze_data(patient, post_table_filepath=post_filepath, jsc_filepath=jsc_filepath,
+                 vep_filepath=vep_filepath, cravat_filepath=cravat_filepath)
 
     if plots_report:   # deactivate plot generation for debugging and benchmarking
 
@@ -740,6 +757,7 @@ def main():
     html_report.end_report(patient.bi_error_rate, patient.bi_c0, patient.max_absent_vaf, settings.LOH_FREQUENCY,
                            fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf,
                            max_no_mps=args.max_no_mps)
+
     logger.info('Treeomics finished evolutionary analysis.')
 
 if __name__ == '__main__':

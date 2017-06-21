@@ -17,7 +17,7 @@ SUBCLONE_DETECTION = False
 # For data sets with less than 10-15 samples, a time limit is typically not required (TIME_LIMIT = None)
 TIME_LIMIT = None
 
-# For efficiency, the number of explored mutation pattern per variant can be limited
+# For efficiency, the number of explored mutation pattern (MAX_NO_MPS) per variant can be limited
 # Note that if MAX_NO_MPS is not None, the optimal solution is no longer guaranteed
 MAX_NO_MPS = None
 
@@ -55,7 +55,7 @@ MIN_VAR_READS = 0
 # path to a list of all cancer gene census from COSMIC in a comma separated value file
 # if not available, provide None
 # hg18 (GRCh36) is not available, hg19 corresponds to GRCh37, hg38 corresponds to GRCh38
-CGC_PATH = '../input/cancer_gene_census_grch37_v80.csv'
+CGC_PATH = 'input/cancer_gene_census_grch37_v80.csv'
 # CGC_PATH = None
 
 # additional gene names list to be highlighted in mutation table independent of the COSMIC list
@@ -63,7 +63,7 @@ CGC_PATH = '../input/cancer_gene_census_grch37_v80.csv'
 # DRIVER_PATH = '../input/PDAC_drivers.csv'
 
 # union of driver lists inferred by 20/20plus, TUSON and MutsigCV in Tokheim et al, PNAS, 2016
-DRIVER_PATH = '../input/Tokheim_drivers_union.csv'
+DRIVER_PATH = 'input/Tokheim_drivers_union.csv'
 
 # only necessary to predict the mutation type (silent, intronic, etc)
 REF_GENOME = 'grch37'
@@ -71,7 +71,7 @@ REF_GENOME = 'grch37'
 # path to CSV file with variants common in ExAC or other panel of normals
 # These variants are likely sequencing artifacts and therefore excluded by Treeomics
 # ExAC_FILE = '../input/ExAC/ExAC_sites_0_0001.csv'
-COMMON_VARS_FILE = '../input/ExAC/ExAC_sites_0_001.csv'
+COMMON_VARS_FILE = 'input/ExAC/ExAC_sites_0_001.csv'
 # COMMON_VARS_FILE = None
 
 # ########################## OUTPUT CONFIGURATIONS #################################

@@ -33,6 +33,7 @@ class HTMLReport(object):
         :param patient_name: name of the subject
         """
 
+        self.filepath = file_path
         self.file = open(file_path, 'w')
         self.patient_name = patient_name
 
@@ -207,7 +208,11 @@ class HTMLReport(object):
             if driver is None or driver.mutation_effect == 'unknown':
                 return gene_name
 
-            r, g, b, _ = Driver.colors()[len(driver.sources)]   # number of supporting sources
+            # number of supporting sources
+            if Driver.MaxSourceSupport > 0:
+                r, g, b, _ = Driver.colors()[len(driver.sources)]
+            else:
+                r, g, b = (0.8, 0.2, 0.2)
             c = 'color:#{0:02x}{1:02x}{2:02x};'.format(_clamp(r*255), _clamp(g*255), _clamp(b*255))
             tag = '<font style="{}">{}{}</font>'.format(c, gene_name, '' if suffix is None else suffix)
             if driver.cgc_driver:   # is driver in CGC list
@@ -239,7 +244,8 @@ class HTMLReport(object):
                 self._inds[self._ind] + 'Total number of likely driver gene mutations: {} in {} genes ({}; '.format(
                     len(put_driver_vars), len(put_driver_genes),
                     ', '.join(d for d in sorted(driver_strs))) +
-                'more red colored gene names correspond to better supported driver genes. '
+                ('more red colored gene names correspond to better supported driver genes. '
+                 if Driver.MaxSourceSupport > 0 else '') +
                 'Bold names are also present in the Cancer Gene Census list)</br>\n')
 
         if unlikely_driver_mut_effects is not None and sum(unlikely_driver_mut_effects.values()) > 0:
@@ -767,3 +773,40 @@ class HTMLReport(object):
             self.file.close()
 
             self.file = None
+
+            # try to create a PDF report from the HTML document
+            self.create_pdf()
+
+    def create_pdf(self):
+        """
+        Convert HTML report to PDF
+        """
+
+        try:  # check if varcode and pyensembl is available (necessary for Windows)
+            import pdfkit
+
+        except ImportError:
+            logger.warning('PDFKIT not available and hence no PDF of the HTML report was created.')
+            return
+
+        pdf_filepath = self.filepath.replace('.html', '.pdf')
+
+        options = {
+            'zoom': 2.6,
+            'page-size': 'Letter',
+            'margin-top': '1in',
+            'margin-right': '0.75in',
+            'margin-bottom': '1in',
+            'margin-left': '0.75in'
+            # 'encoding': "UTF-8",
+            # 'custom-header': [
+            #     ('Accept-Encoding', 'gzip')
+            # ]
+            # 'cookie': [
+            #     ('cookie-name1', 'cookie-value1'),
+            #     ('cookie-name2', 'cookie-value2'),
+            # ],
+            # 'no-outline': None
+        }
+
+        pdfkit.from_file(self.filepath, pdf_filepath, options=options)

@@ -240,7 +240,7 @@ def assess_solutions(sol, objective_function, cf_graph, ilp_col_mps, no_muts, po
 
         for node in node_frequencies.keys():
             # weighted_node_counts[node] /= total_log_sol_weight
-            node_frequencies[node] /= len(llhs)
+            node_frequencies[node] /= len(llhs)     # normalize by the number of produced solutions
             # weighted_node_lh[node] *= sum(math.exp(llh) for llh in llhs)
 
             # sum likelihoods of solutions where node was present
@@ -252,7 +252,7 @@ def assess_solutions(sol, objective_function, cf_graph, ilp_col_mps, no_muts, po
 
         logger.debug('Mutation patterns sorted by their weighted likelihood:')
         for node, weighted_lh in islice(sorted(weighted_node_lh.items(), key=lambda k: -k[1]), 0, 50):
-            logger.debug('Weighted lh {:.2%} (freq: {:.2%}): {}'.format(
+            logger.debug('Weighted lh {:.4%} (freq: {:.2%}): {}'.format(
                 weighted_lh, node_frequencies[node], ', '.join(str(n) for n in node)))
             # logger.debug('opt lh {:.3e}; total lh {:.3e}'.format(opt_lh, sum(lhs)))
 
