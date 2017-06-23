@@ -797,7 +797,8 @@ class HTMLReport(object):
             'margin-top': '1in',
             'margin-right': '0.75in',
             'margin-bottom': '1in',
-            'margin-left': '0.75in'
+            'margin-left': '0.75in',
+            'quiet': ''
             # 'encoding': "UTF-8",
             # 'custom-header': [
             #     ('Accept-Encoding', 'gzip')

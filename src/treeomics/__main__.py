@@ -146,7 +146,7 @@ def characterize_drivers(patient, ref_genome, driver_filepath, cgc_filepath, out
                             in the inferred phylogeny
     :param cgc_filepath: path to file with CGC list
     :param output_filepath: prefix path to a possible output file summarizing the putative drivers, also serving as an
-                     input file to Ensembl VEP and CRAVAT
+                            input file to Ensembl VEP and CRAVAT
     :return: set of driver genes, dict of driver variants, Counter of unlikely mutation effects
     """
     cgc_drivers, user_drivers = get_drivers(cgc_filepath, driver_filepath, ref_genome)
@@ -499,8 +499,7 @@ def main():
     driver_filepath = os.path.join(input_directory, settings.DRIVER_PATH)
     cgc_filepath = os.path.join(input_directory, settings.CGC_PATH)
     put_driver_genes, put_driver_vars, unlikely_driver_mut_effects = characterize_drivers(
-        patient, ref_genome, driver_filepath, cgc_filepath, output_filepath=os.path.join(
-            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_putativedrivers')
+        patient, ref_genome, driver_filepath, cgc_filepath)
 
     # create output filename pattern
     fn_pattern = get_output_fn_template(
@@ -516,13 +515,8 @@ def main():
     # write matrix with Jaccard similarity coefficients in CSV format
     jsc_filepath = os.path.join(
             output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_jsc-matrix.csv'
-    # output file path to write all variants in a format acceptable to Ensembl VEP and CHASM/CRAVAT
-    vep_filepath = os.path.join(
-            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_func_variants_vep.tsv'
-    cravat_filepath = os.path.join(
-            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_func_variants_cravat.tsv'
-    analyze_data(patient, post_table_filepath=post_filepath, jsc_filepath=jsc_filepath,
-                 vep_filepath=vep_filepath, cravat_filepath=cravat_filepath)
+
+    analyze_data(patient, post_table_filepath=post_filepath, jsc_filepath=jsc_filepath)
 
     if plots_report:   # deactivate plot generation for debugging and benchmarking
 

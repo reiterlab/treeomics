@@ -61,8 +61,10 @@ def analyze_data(patient, post_table_filepath=None, jsc_filepath=None, vep_filep
         #            (','.join(patient.sample_names[sa_idx] for sa_idx in patient.mutations[mut_idx]))))
 
     if patient.vc_variants is not None:
-        write_vep_input(vep_filepath, patient)
-        write_cravat_input(cravat_filepath, patient)
+        if vep_filepath is not None:
+            write_vep_input(vep_filepath, patient)
+        if cravat_filepath is not None:
+            write_cravat_input(cravat_filepath, patient)
 
     # calculate homogeneity index (Jaccard similarity coefficient)
     patient.gen_dis, patient.sim_coeff, patient.sim_coeff_ex = calculate_genetic_similarity(patient)

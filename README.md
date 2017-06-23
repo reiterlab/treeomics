@@ -40,9 +40,11 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
   - Install the IBM ILOG CPLEX Optimization Studio ([http://www-01.ibm.com/support/docview.wss?uid=swg21444285](http://www-01.ibm.com/support/docview.wss?uid=swg21444285))
     and then setup the Python API ([https://www.ibm.com/support/knowledgecenter/en/SSSA5P_12.6.3/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html](https://www.ibm.com/support/knowledgecenter/en/SSSA5P_12.6.3/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html));
     An IBM Academic License to freely download CPLEX can be obtained here: [http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative](http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative)
-  - Install wkhtmltopdf ([https://wkhtmltopdf.org](https://wkhtmltopdf.org)) and pdfkit ([https://github.com/JazzCore/python-pdfkit](https://github.com/JazzCore/python-pdfkit)) to create a PDF from the HTML report
-  - If you want evolutionary conflict graphs automatically generated, install circos ((with ```circos``` in your ```PATH``` environment variable; [http://circos.ca/software/installation](http://circos.ca/software/installation))
-  - For automatically generating evolutionary tree plots, install LaTeX/TikZ (with ```pdflatex``` in your ```PATH``` environment variable; 
+
+3. Install optional packages:
+  - To create a PDF from the HTML report, install wkhtmltopdf ([https://wkhtmltopdf.org](https://wkhtmltopdf.org)) and pdfkit ([https://github.com/JazzCore/python-pdfkit](https://github.com/JazzCore/python-pdfkit))
+  - To automatically generate evolutionary conflict graphs, install circos ((with ```circos``` in your ```PATH``` environment variable; [http://circos.ca/software/installation](http://circos.ca/software/installation))
+  - For automatically generating evolutionary tree plots, install LaTeX/TikZ (with ```pdflatex``` in your ```PATH``` environment variable;
     [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html)) and/or ETE3 [https://github.com/etetoolkit/ete](https://github.com/etetoolkit/ete) (installing ETE3 can be tricky; we recommend using Anaconda [https://www.continuum.io](https://www.continuum.io)
   - For annotating only non-synonymous variants in driver genes, install pyensembl ([https://github.com/hammerlab/pyensembl](https://github.com/hammerlab/pyensembl)) and varcode ([https://github.com/hammerlab/varcode](https://github.com/hammerlab/varcode))
     
