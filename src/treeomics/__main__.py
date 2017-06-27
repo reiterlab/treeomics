@@ -141,12 +141,12 @@ def characterize_drivers(patient, ref_genome, driver_filepath, cgc_filepath, out
     set of genes with likely drivers, a dictionary with driver variants (and instances of Driver), and
     a counter of unlikely driver mutation effects
     :param patient: data structure around sequencing data of a subject
-    :param ref_genome:
+    :param ref_genome: reference genome build
     :param driver_filepath: CSV file with user defined list of putative driver genes that will be annotated
                             in the inferred phylogeny
     :param cgc_filepath: path to file with CGC list
     :param output_filepath: prefix path to a possible output file summarizing the putative drivers, also serving as an
-                            input file to Ensembl VEP and CRAVAT
+                     input file to Ensembl VEP and CRAVAT
     :return: set of driver genes, dict of driver variants, Counter of unlikely mutation effects
     """
     cgc_drivers, user_drivers = get_drivers(cgc_filepath, driver_filepath, ref_genome)
@@ -393,7 +393,7 @@ def main():
     min_absent_cov = args.min_absent_coverage
     logger.debug('Minimum coverage for an absent variant: {} (otherwise unknown)'.format(min_absent_cov))
 
-    ref_genome = args.ref_genome.lower()
+    ref_genome = args.ref_genome.lower() if args.ref_genome is not None else None
     logger.info('Sequencing data was aligned to reference genome: {}'.format(ref_genome))
 
     if args.boot > 0:
@@ -496,10 +496,19 @@ def main():
                                    output_dir=args.output if args.output is not settings.OUTPUT_FOLDER else None)
 
     # find and characterize all possible driver gene mutations
-    driver_filepath = os.path.join(input_directory, settings.DRIVER_PATH)
-    cgc_filepath = os.path.join(input_directory, settings.CGC_PATH)
+    if settings.DRIVER_PATH is not None:
+        driver_filepath = os.path.join(input_directory, settings.DRIVER_PATH)
+    else:
+        driver_filepath = None
+
+    if settings.CGC_PATH is not None:
+        cgc_filepath = os.path.join(input_directory, settings.CGC_PATH)
+    else:
+        cgc_filepath = None
+
     put_driver_genes, put_driver_vars, unlikely_driver_mut_effects = characterize_drivers(
-        patient, ref_genome, driver_filepath, cgc_filepath)
+        patient, ref_genome, driver_filepath, cgc_filepath, output_filepath=os.path.join(
+            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_putativedrivers')
 
     # create output filename pattern
     fn_pattern = get_output_fn_template(
@@ -516,7 +525,13 @@ def main():
     jsc_filepath = os.path.join(
             output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_jsc-matrix.csv'
 
-    analyze_data(patient, post_table_filepath=post_filepath, jsc_filepath=jsc_filepath)
+    # output file path to write all variants in a format acceptable to Ensembl VEP and CHASM/CRAVAT
+    vep_filepath = os.path.join(
+            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_func_variants_vep.tsv'
+    cravat_filepath = os.path.join(
+            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_func_variants_cravat.tsv'
+    analyze_data(patient, post_table_filepath=post_filepath, jsc_filepath=jsc_filepath,
+                 vep_filepath=vep_filepath, cravat_filepath=cravat_filepath)
 
     if plots_report:   # deactivate plot generation for debugging and benchmarking
 
