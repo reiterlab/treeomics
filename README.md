@@ -30,22 +30,23 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
 ### <a name="installation"> Installation
 1. Open a terminal and clone the repository from GitHub with ```git clone https://github.com/johannesreiter/treeomics.git```
 2. Install required packages:
-  - Install Python 3.4 ([https://www.python.org/downloads](https://www.python.org/downloads); CPLEX explicitly requires Python 3.4)
+  - Install Python 3.4 ([https://www.python.org/downloads](https://www.python.org/downloads))
   - Install NumPy ([http://www.numpy.org](http://www.numpy.org)), 
     SciPy ([http://www.numpy.org](http://www.numpy.org))
   - Install networkx ([https://networkx.github.io/](https://networkx.github.io/))
   - Install matplotlib 1.4 or 1.5 (matplotlib 2 can cause various problems with the layout; [http://matplotlib.org](http://matplotlib.org/))
   - Install pandas ([http://pandas.pydata.org/](http://pandas.pydata.org/))
   - Install seaborn ([https://stanford.edu/~mwaskom/software/seaborn/](https://stanford.edu/~mwaskom/software/seaborn/))
-  - Install the IBM ILOG CPLEX Optimization Studio ([http://www-01.ibm.com/support/docview.wss?uid=swg21444285](http://www-01.ibm.com/support/docview.wss?uid=swg21444285))
+  - Install the IBM ILOG CPLEX Optimization Studio 12.6.3 ([http://www-01.ibm.com/support/docview.wss?uid=swg21444285](http://www-01.ibm.com/support/docview.wss?uid=swg21444285))
     and then setup the Python API ([https://www.ibm.com/support/knowledgecenter/en/SSSA5P_12.6.3/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html](https://www.ibm.com/support/knowledgecenter/en/SSSA5P_12.6.3/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html));
-    An IBM Academic License to freely download CPLEX can be obtained here: [http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative](http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative)
+    An IBM Academic License to freely download CPLEX can be obtained here: [http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative](http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative). 
+    In the new version 12.7.1 apparently Python 3.4 is no longer officially supported, however, cplex seems to work nicely after updating two files and changing the version check from ```(3, 5, 0)``` to ```(3, 4, 0)``` in both the ```setup.py``` (in MacOS here: ```Applications/IBM/ILOG/CPLEX_Studio1271/cplex/python/3.5/x86-64_osx/```) to install cplex in Python 3.4 as well as in your miniconda installation ```miniconda3/lib/python3.4/site-packages/cplex/_internal/_pycplex_platform.py```. You will see where an exception is thrown if you test your installation with ```python3 -c 'import cplex'```
 
 3. Install optional packages:
   - To create a PDF from the HTML report, install wkhtmltopdf ([https://wkhtmltopdf.org](https://wkhtmltopdf.org)) and pdfkit ([https://github.com/JazzCore/python-pdfkit](https://github.com/JazzCore/python-pdfkit))
-  - To automatically generate evolutionary conflict graphs, install circos ((with ```circos``` in your ```PATH``` environment variable; [http://circos.ca/software/installation](http://circos.ca/software/installation))
+  - To automatically generate evolutionary conflict graphs, install circos (with ```circos``` in your ```PATH``` environment variable; [http://circos.ca/software/installation](http://circos.ca/software/installation))
   - For automatically generating evolutionary tree plots, install LaTeX/TikZ (with ```pdflatex``` in your ```PATH``` environment variable;
-    [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html)) and/or ETE3 [https://github.com/etetoolkit/ete](https://github.com/etetoolkit/ete) (installing ETE3 can be tricky; we recommend using Anaconda [https://www.continuum.io](https://www.continuum.io)
+    [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html)) and/or ETE3 [https://github.com/etetoolkit/ete](https://github.com/etetoolkit/ete) (installing ETE3 can be very frustrating, in particular in Python 3.5+ as it  requires Qt4; we recommend using Python 3.4 and Miniconda [https://www.continuum.io](https://www.continuum.io): ```conda install python=3.4 qt=4``` and then install ete3 ```conda install -c etetoolkit ete3 ete3_external_apps```. You can test your installation with ```python3 -c 'from ete3 import TreeStyle'```.
   - For annotating only non-synonymous variants in driver genes, install pyensembl ([https://github.com/hammerlab/pyensembl](https://github.com/hammerlab/pyensembl)) and varcode ([https://github.com/hammerlab/varcode](https://github.com/hammerlab/varcode))
     
 ### <a name="getting"> Getting started with Treeomics
@@ -96,7 +97,7 @@ All plots, analysis and logging files, and the HTML report will be in this outpu
 ### <a name="examples"> Examples
 Example 1:
 ```shell
-$ python treeomics -r input/Makohon2017/Pam03_mutant_reads.txt -s input/Makohon2017/Pam03_phredcoverage.txt -e 0.005 -O
+$ python treeomics -r input/Makohon2017/Pam03_1-10_mutant_reads.txt -s input/Makohon2017/Pam03_1-10_phredcoverage.txt -n Pam03N3 -e 0.005 -O
 ```
 Reconstructs the phylogeny of pancreatic cancer patient Pam03 based on targeted sequencing data 
 of 5 distinct liver metastases, 3 distinct lung metastases, and 2 samples of the primary tumor.
@@ -114,7 +115,7 @@ If you have any questions, you can contact us ([https://github.com/johannesreite
 
 
 ### License
-Copyright (C) 2016 Johannes Reiter
+Copyright (C) 2017 Johannes Reiter
 
 Treeomics is licensed under the GNU General Public License, Version 3.
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, 
