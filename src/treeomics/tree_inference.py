@@ -21,7 +21,7 @@ logger = logging.getLogger('treeomics')
 
 def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepath=None, subclone_detection=False,
                        loh_frequency=0.0, driver_vars=set(), max_no_mps=None, time_limit=None, plots=True,
-                       pool_size=0, no_bootstrap_samples=0, variant_filepath=None):
+                       pool_size=0, no_bootstrap_samples=0, variant_filepath=None, n_max_threads=0):
     """
     Create an evolutionary tree based on the maximum likelihood mutation patterns of each variant
     :param patient: data structure around the patient
@@ -36,6 +36,8 @@ def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepat
     :param time_limit: time limit for MILP solver in seconds
     :param plots: generate pdf from tex file
     :param pool_size: number of best solutions explored by ILP solver to estimate confidence
+    :param n_max_threads: Sets the default maximal number of parallel threads that will be invoked by CPLEX
+                          (0: default, let CPLEX decide; 1: single threaded; N: uses up to N threads)
     :param no_bootstrap_samples: number of samples with replacement for the bootstrapping
     :param variant_filepath: path to output file with information about variants and where they were acquired
     :return: evolutionary tree as graph
@@ -44,7 +46,7 @@ def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepat
     mlh_pg = MaxLHPhylogeny(patient, patient.mps, loh_frequency=loh_frequency)
 
     mlh_tree = mlh_pg.infer_max_lh_tree(subclone_detection=subclone_detection, max_no_mps=max_no_mps,
-                                        pool_size=pool_size, time_limit=time_limit,
+                                        pool_size=pool_size, time_limit=time_limit, n_max_threads=n_max_threads,
                                         no_bootstrap_samples=no_bootstrap_samples)
 
     if mlh_tree is not None:

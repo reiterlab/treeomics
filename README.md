@@ -69,7 +69,8 @@ $ python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d
 - *-a <max absent VAF>:* Maximum VAF for an absent variant *f<sub>absent</sub>* before considering the estimated purity (default 5%)
 - *-z <prior absent probability>:* Prior probability for a variant being absent *c<sub>0</sub> (default 0.5).
 - *-o <output directory>:* Provide different output directory (default src/output)
-- *-n <normal sample names>:* If a normal sample is provided, variants significantly present in the normal are removed. Additional normal samples (or other samples that should be ignored) can be provided via a space-separated enumeration. E.g. ```-n FIRSTNORMALSAMPLE SECONDNORMALSAMPLE ```
+- *-n <normal sample names>:* If a normal sample is provided, variants significantly present in the normal are removed. Additional normal samples can be provided via a space-separated enumeration. E.g. ```-n FIRSTNORMALSAMPLE SECONDNORMALSAMPLE ```
+- *-n <samples to exclude>:* Space-separated enumeration of sample names to exclude from the analysis. E.g. ```-x FIRSTEXCLUDEDSAMPLE SECONDEXCLUDEDSAMPLE ```
 - ```--pool_size``` *<Pool size of ILP solver>:* Number of best solutions explored by ILP solver to assess the support of the inferred branches (default 1000)
 - *-b <No bootstrapping samples>:* Number of bootstrapping samples (default 0); Generally using the solution pool instead of bootstrapping seems to be the more efficient way to assess confidence.
 - *-u:* Enables subclone detection (default ```False```)
@@ -80,8 +81,11 @@ $ python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d
 - *-i <false discovery rate>:* Targeted false-discovery rate of conventional binary classification  (only relevant for artifact comparison)
 - *-y <min absent coverage>:* Minimum coverage for a powered absent variant  (only relevant for artifact comparison)
 - *-t <time limit>:* Maximum running time for CPLEX to solve the MILP (in seconds, default ```None```). If not ```None```, the obtained solution is no longer guaranteed to be optimal
+- ```--threads=<N>``` Maximal number of parallel threads that will be invoked by CPLEX (```0```: default, let CPLEX decide; ```1```: single threaded; ```N```: uses up to N threads)
+
 - *-l <max no MPS>:* Maximum number of considered mutation patterns per variant (default ```None```). If not ```None```, the obtained solution is no longer guaranteed to be optimal
-- ```--wes_filtering``` Removes intronic and intergenic variants in WES data; default ```False```)
+- ```--driver_genes=<path to file>``` Path to CSV file with names of putative driver genes highlighted in inferred phylogeny (default ```--driver_genes=../input/Tokheim_drivers_union.csv```)
+- ```--wes_filtering``` Removes intronic and intergenic variants in WES data (default ```False```)
 - ```--common_vars_file``` Path to file with common variants in normal samples and therefore removed from analysis (default ```None```)
 - ```--no_plots``` Disables generation of plots (useful for benchmarking; default ```True```)
 - ```--benchmarking``` Generates mutation matrix and mutation pattern files that can be used for automatic benchmarking of silico data (default ```False```)

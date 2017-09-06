@@ -58,15 +58,17 @@ MIN_VAR_READS = 0
 CGC_PATH = 'input/cancer_gene_census_grch37_v80.csv'
 # CGC_PATH = None
 
-# additional gene names list to be highlighted in mutation table independent of the COSMIC list
+# additional gene names list to be highlighted in mutation table and inferred phylogeny independent of the COSMIC list
 # drivers specific to pancreatic cancer
-# DRIVER_PATH = '../input/PDAC_drivers.csv'
+# DRIVER_PATH = 'input/PDAC_drivers.csv'
 
 # union of driver lists inferred by 20/20plus, TUSON and MutsigCV in Tokheim et al, PNAS, 2016
 DRIVER_PATH = 'input/Tokheim_drivers_union.csv'
+# DRIVER_PATH = 'input/mCRC/mCRC_drivers.csv'
 
 # only necessary to predict the mutation type (silent, intronic, etc)
 REF_GENOME = 'grch37'
+# REF_GENOME = None
 
 # path to CSV file with variants common in ExAC or other panel of normals
 # These variants are likely sequencing artifacts and therefore excluded by Treeomics

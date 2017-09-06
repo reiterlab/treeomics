@@ -252,6 +252,9 @@ def main():
     parser.add_argument("-n", "--normal", help="names of normal samples (excluded from analysis)", type=str, nargs='*',
                         default=None)
 
+    parser.add_argument("-x", "--exclude", help="names of samples to exclude of analysis", type=str, nargs='*',
+                        default=None)
+
     parser.add_argument("-r", "--mut_reads", help="path table with the number of reads with a mutation", type=str)
     parser.add_argument("-s", "--coverage", help="path to table with read coverage at the mutated positions", type=str)
 
@@ -278,6 +281,9 @@ def main():
                         type=str, default=settings.REF_GENOME)
 
     parser.add_argument('--wes_filtering', action='store_true', help="Remove intronic and intergenic variants?")
+
+    parser.add_argument('--driver_genes', type=str, default=settings.DRIVER_PATH,
+                        help='path to CSV file with names of putative driver genes highlighted in inferred phylogeny')
 
     parser.add_argument('--common_vars_file', type=str, default=settings.COMMON_VARS_FILE,
                         help='path to CSV file with common variants present in normal samples '
@@ -312,6 +318,8 @@ def main():
     parser.add_argument("-t", "--time_limit",
                         help="maximum running time for CPLEX to solve the MILP",
                         type=int, default=settings.TIME_LIMIT)
+    parser.add_argument('--threads', help='maximal number of parallel threads that will be invoked by CPLEX',
+                        type=int, default=0)
     parser.add_argument("-l", "--max_no_mps", help="limit the solution space size by the maximal number of " +
                                                    "explored mutation patterns per variant",
                         type=int, default=settings.MAX_NO_MPS)
@@ -355,6 +363,12 @@ def main():
     else:
         normal_sample_name = None
         excluded_samples = set()
+
+    # exclude given sample names from analysis
+    if args.exclude is not None:
+        for sample_name in args.exclude:
+            logger.info('Exclude sample from analysis: {}'.format(sample_name))
+            excluded_samples.add(sample_name)
 
     if args.min_median_coverage > 0:
         logger.info('Minimum sample median coverage (otherwise discarded): {}'.format(
@@ -496,10 +510,12 @@ def main():
                                    output_dir=args.output if args.output is not settings.OUTPUT_FOLDER else None)
 
     # find and characterize all possible driver gene mutations
-    if settings.DRIVER_PATH is not None:
-        driver_filepath = os.path.join(input_directory, settings.DRIVER_PATH)
-    else:
-        driver_filepath = None
+    # if settings.DRIVER_PATH is not None:
+    #     driver_filepath = os.path.join(input_directory, settings.DRIVER_PATH)
+    # else:
+    #     driver_filepath = None
+    if args.driver_genes:
+        driver_filepath = args.driver_genes
 
     if settings.CGC_PATH is not None:
         cgc_filepath = os.path.join(input_directory, settings.CGC_PATH)
@@ -625,7 +641,7 @@ def main():
                 mm_filepath=mm_filepath, mp_filepath=mp_filepath,
                 subclone_detection=args.subclone_detection, loh_frequency=settings.LOH_FREQUENCY,
                 driver_vars=put_driver_vars, pool_size=args.pool_size, no_bootstrap_samples=args.boot,
-                max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=plots_report,
+                max_no_mps=args.max_no_mps, time_limit=args.time_limit, n_max_threads=args.threads, plots=plots_report,
                 variant_filepath=os.path.join(output_directory, fn_tree+'_variants.csv'))
 
             # previously used for benchmarking

@@ -78,7 +78,7 @@ def read_mutation_table(filename, normal_sample=None, excluded_columns=set(), ex
                     for sample_name in headers[first_sa_col:]:
                         if sample_name not in excluded_columns and sample_name != normal_sample:
                             sample_names.append(sample_name)
-                        elif sample_name == sample_name:
+                        elif sample_name == normal_sample:
                             logger.info('Normal sample {}'.format(sample_name))
                         else:
                             logger.info('Exclude sample {}'.format(sample_name))

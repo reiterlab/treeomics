@@ -19,7 +19,7 @@ __date__ = 'April, 2014'
 logger = logging.getLogger('treeomics')
 
 
-def solve_conflicting_phylogeny(cf_graph, no_muts, pool_size, time_limit=None):
+def solve_conflicting_phylogeny(cf_graph, no_muts, pool_size, time_limit=None, n_max_threads=0):
     """
     Translates given conflict graph into a integer linear program and
     solves the ILP for the minimum number of mutation patterns (set of identical mutation patterns)
@@ -28,6 +28,9 @@ def solve_conflicting_phylogeny(cf_graph, no_muts, pool_size, time_limit=None):
     :param no_muts: Number of processed mutations
     :param pool_size: number of best solutions explored by ILP solver to estimate confidence
     :param time_limit: time limit for MILP solver in seconds
+    :param n_max_threads: Sets the default maximal number of parallel threads that will be invoked by CPLEX
+      (0: default, let CPLEX decide; 1: single threaded; N: uses up to N threads)
+      https://www.ibm.com/support/knowledgecenter/en/SS9UKU_12.5.0/com.ibm.cplex.zos.help/Parameters/topics/Threads.html
     :return list of top solutions, dictionary with calculated node likelihoods based on likelihood of
             each solution in the solution pool
     """
@@ -61,6 +64,7 @@ def solve_conflicting_phylogeny(cf_graph, no_muts, pool_size, time_limit=None):
 
     # set objective function which is the minimum number of positions with a sequencing error
     lp.objective.set_sense(lp.objective.sense.minimize)
+    lp.parameters.threads.set(n_max_threads)
     # see more information at:
     # http://www.ibm.com/support/knowledgecenter/en/SS9UKU_12.4.0/com.ibm.cplex.zos.help/Parameters/topics/SolnPoolGap.html?view=embed
     # lp.parameters.mip.tolerances.absmipgap.set(1e-15)

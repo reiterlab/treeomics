@@ -140,7 +140,7 @@ class MaxLHPhylogeny(Phylogeny):
             -math.log(1.0 - lh_9999)))
 
     def infer_max_lh_tree(self, subclone_detection=False, pool_size=1, no_bootstrap_samples=0, max_no_mps=None,
-                          time_limit=None):
+                          time_limit=None, n_max_threads=0):
         """
         Infer maximum likelihood tree via calculation reliability scores for each
         possible mutation pattern from the likelihood that no variant has this pattern
@@ -152,6 +152,8 @@ class MaxLHPhylogeny(Phylogeny):
             is explored per variant
         :param no_bootstrap_samples: number of samples with replacement for the bootstrapping
         :param time_limit: time limit for MILP solver in seconds
+        :param n_max_threads: Sets the default maximal number of parallel threads that will be invoked by CPLEX
+                              (0: default, let CPLEX decide; 1: single threaded; N: uses up to N threads)
         :return inferred evolutionary tree
         """
 
@@ -178,7 +180,7 @@ class MaxLHPhylogeny(Phylogeny):
             # translate the conflict graph into a minimum vertex cover problem
             # and solve this using integer linear programming
             self.solutions, self.weighted_node_lh = cps.solve_conflicting_phylogeny(
-                self.cf_graph, len(self.patient.log_p01), pool_size, time_limit=time_limit)
+                self.cf_graph, len(self.patient.log_p01), pool_size, time_limit=time_limit, n_max_threads=n_max_threads)
 
             opt_sol = self.solutions[0]
             opt_sol.assign_variants(self, max_no_mps)
