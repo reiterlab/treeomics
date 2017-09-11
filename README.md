@@ -87,7 +87,8 @@ $ python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d
 - ```--driver_genes=<path to file>``` Path to CSV file with names of putative driver genes highlighted in inferred phylogeny (default ```--driver_genes=../input/Tokheim_drivers_union.csv```)
 - ```--wes_filtering``` Removes intronic and intergenic variants in WES data (default ```False```)
 - ```--common_vars_file``` Path to file with common variants in normal samples and therefore removed from analysis (default ```None```)
-- ```--no_plots``` Disables generation of plots (useful for benchmarking; default ```True```)
+- ```--no_plots``` Disables generation of X11 depending plots (useful for benchmarking; default plots are generated ```plots```)
+- ```--no_tikztrees``` Disables generation of latex trees which do not depend on X11 (default latex trees are generated ```tikztrees```)
 - ```--benchmarking``` Generates mutation matrix and mutation pattern files that can be used for automatic benchmarking of silico data (default ```False```)
 
 Default parameter values as well as output directory can be changed in ```treeomics/src/treeomics/settings.py```.

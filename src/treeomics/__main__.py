@@ -307,6 +307,11 @@ def main():
     plots_parser.add_argument('--no_plots', dest='plots', action='store_false', help="Is plot detection disabled?")
     parser.set_defaults(plots=True)
 
+    plots_parser = parser.add_mutually_exclusive_group(required=False)
+    plots_parser.add_argument('--tikztrees', dest='tikztrees', action='store_true', help='Generate Tikz trees?')
+    plots_parser.add_argument('--no_tikztrees', dest='tikztrees', action='store_false', help='Generate Tikz trees?')
+    parser.set_defaults(tikztrees=True)
+
     parser.add_argument('--benchmarking', action='store_true', help="Generate mutation matrix for benchmarking.")
 
     parser.add_argument('-b', '--boot', help='Number of bootstrapping samples', type=int,
@@ -412,6 +417,10 @@ def main():
 
     if args.boot > 0:
         logger.info('Number of samples for bootstrapping analysis: {}'.format(args.boot))
+
+    if args.threads > 0:
+        logger.info('The maximal number of parallel threads that will be invoked by CPLEX has been set to {}.'.format(
+            args.threads))
 
     if args.subclone_detection and args.max_no_mps is not None:
         logger.error('Subclone and partial solution space search are not supported to be performed at the same time! ')
@@ -642,7 +651,7 @@ def main():
                 subclone_detection=args.subclone_detection, loh_frequency=settings.LOH_FREQUENCY,
                 driver_vars=put_driver_vars, pool_size=args.pool_size, no_bootstrap_samples=args.boot,
                 max_no_mps=args.max_no_mps, time_limit=args.time_limit, n_max_threads=args.threads, plots=plots_report,
-                variant_filepath=os.path.join(output_directory, fn_tree+'_variants.csv'))
+                tikztrees=args.tikztrees, variant_filepath=os.path.join(output_directory, fn_tree+'_variants.csv'))
 
             # previously used for benchmarking
             # if plots_paper:     # generate Java Script D3 trees
@@ -667,7 +676,8 @@ def main():
                     pg = ti.create_max_lh_tree(
                         patient, tree_filepath=None, mm_filepath=None, mp_filepath=None, subclone_detection=False,
                         loh_frequency=settings.LOH_FREQUENCY, driver_vars=put_driver_vars, pool_size=args.pool_size,
-                        no_bootstrap_samples=0, max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=False)
+                        no_bootstrap_samples=0, max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=False,
+                        tikztrees=False)
                 else:
                     pg = phylogeny
 
