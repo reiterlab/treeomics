@@ -170,11 +170,14 @@ def bayesian_hinton(log_p01, output_directory, filename, row_labels=None, column
         for x_pos, mut_idx in enumerate(sorted(displayed_mutations,
                                                key=lambda k: (-priorities[k], column_labels[k]))):
 
+            # number of supporting sources
+            c = ((Driver.colors()[len(put_driver_vars[mut_idx].sources)] if Driver.MaxSourceSupport > 0
+                  else 'darkred') if put_driver_vars is not None and mut_idx in put_driver_vars else 'black')
+
             ax.text(x_pos * width + (width/2) + 0.2, label_y_pos + (height+y_spacing) * (len(log_p01[mut_idx])),
                     _format_gene_name(column_labels[mut_idx], max_length=12),
                     rotation='vertical', horizontalalignment='center', verticalalignment='bottom', fontsize=8,
-                    color=(Driver.colors()[len(put_driver_vars[mut_idx].sources)]
-                           if put_driver_vars is not None and mut_idx in put_driver_vars else 'black'),  # sources?
+                    color=c,  # sources?
                     weight=('bold' if put_driver_vars is not None and mut_idx in put_driver_vars and
                             put_driver_vars[mut_idx].cgc_driver else 'normal'))     # is in CGC
 

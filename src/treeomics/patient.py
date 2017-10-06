@@ -1039,8 +1039,9 @@ class Patient(object):
                 self.sample_names.append(sample_name)
                 logger.info('Sample {}: median coverage {:.1f}, median VAF {:.3f}.'.format(
                     sample_name, np.nanmedian(self.sample_coverages[sample_name]) if
-                    len(self.sample_coverages[sample_name]) > 0 else 'nan',
-                    np.nanmedian(self.sample_mafs[sample_name]) if len(self.sample_mafs[sample_name]) > 0 else 'nan'))
+                    len(self.sample_coverages[sample_name]) > 0 else float('nan'),
+                    np.nanmedian(self.sample_mafs[sample_name]) if len(self.sample_mafs[sample_name]) > 0
+                    else float('nan')))
                 # logger.info('Median distinct phred coverage in sample {}: {}'.format(
                 #     sample_name, np.median(self.sample_dis_phred_coverages[sample_name])))
 

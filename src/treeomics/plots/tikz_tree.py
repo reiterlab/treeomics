@@ -421,25 +421,25 @@ def _write_muts(var_writer, pg, patient, muts, sample_ids, driver_vars=None):
             if all(sa_idx in sample_ids for sa_idx in range(len(patient.sample_names))):
                 phylogeny_annotations.append('Trunk')
             else:
-                if (all(sa_idx in sample_ids for sa_idx, sa_name in enumerate(patient.sample_names)
+                if (all(sa_idx in sample_ids for sa_idx, sa_name in enumerate(patient.sc_names)
                         if 'M' in sa_name and 'TM' not in sa_name)
                         and any('M' in sa_name and 'TM' not in sa_name for sa_name in patient.sample_names)):
                     phylogeny_annotations.append('UntrMetTrunk')
 
-                elif (all(sa_idx in sample_ids for sa_idx, sa_name in enumerate(patient.sample_names) if 'M' in sa_name)
+                elif (all(sa_idx in sample_ids for sa_idx, sa_name in enumerate(patient.sc_names) if 'M' in sa_name)
                       and any('M' in sa_name for sa_name in patient.sample_names)):
                     phylogeny_annotations.append('MetTrunk')
 
-                elif any('M' in patient.sample_names[sa_idx] and 'TM' not in patient.sample_names[sa_idx]
+                elif any('M' in patient.sc_names[sa_idx] and 'TM' not in patient.sc_names[sa_idx]
                          for sa_idx in sample_ids):
                     phylogeny_annotations.append('UntrMetShared')
 
-                elif any('M' in patient.sample_names[sa_idx] for sa_idx in sample_ids):
+                elif any('M' in patient.sc_names[sa_idx] for sa_idx in sample_ids):
                     phylogeny_annotations.append('MetShared')
 
-                if (all(sa_idx in sample_ids for sa_idx, sa_name in enumerate(patient.sample_names)
+                if (all(sa_idx in sample_ids for sa_idx, sa_name in enumerate(patient.sc_names)
                         if 'PT' in sa_name or 'Primary' in sa_name)
-                        and any('PT' in sa_name or 'Primary' in sa_name for sa_name in patient.sample_names)):
+                        and any('PT' in sa_name or 'Primary' in sa_name for sa_name in patient.sc_names)):
                     phylogeny_annotations.append('PTTrunk')
 
                 if len(phylogeny_annotations) == 0:

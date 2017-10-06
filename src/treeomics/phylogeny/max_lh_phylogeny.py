@@ -160,7 +160,7 @@ class MaxLHPhylogeny(Phylogeny):
         if subclone_detection:
             self.patient.sc_names = deepcopy(self.patient.sample_names)
         else:
-            self.patient.sc_names = None
+            self.patient.sc_names = self.patient.sample_names
 
         # only the given number of most likely (by joint likelihood) mutation patterns is explored per variant
         self.max_no_mps = max_no_mps
