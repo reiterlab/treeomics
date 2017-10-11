@@ -649,7 +649,8 @@ def main():
                 patient, tree_filepath=os.path.join(output_directory, fn_tree+'_mlhtree'),
                 mm_filepath=mm_filepath, mp_filepath=mp_filepath,
                 subclone_detection=args.subclone_detection, loh_frequency=settings.LOH_FREQUENCY,
-                driver_vars=put_driver_vars, pool_size=args.pool_size, no_bootstrap_samples=args.boot,
+                driver_vars=put_driver_vars, pool_size=args.pool_size,
+                no_plotted_solutions=settings.NO_PLOTTED_SOLUTIONS, no_bootstrap_samples=args.boot,
                 max_no_mps=args.max_no_mps, time_limit=args.time_limit, n_max_threads=args.threads, plots=plots_report,
                 tikztrees=args.tikztrees, variant_filepath=os.path.join(output_directory, fn_tree+'_variants.csv'))
 
@@ -676,8 +677,8 @@ def main():
                     pg = ti.create_max_lh_tree(
                         patient, tree_filepath=None, mm_filepath=None, mp_filepath=None, subclone_detection=False,
                         loh_frequency=settings.LOH_FREQUENCY, driver_vars=put_driver_vars, pool_size=args.pool_size,
-                        no_bootstrap_samples=0, max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=False,
-                        tikztrees=False)
+                        no_plotted_solutions=settings.NO_PLOTTED_SOLUTIONS, no_bootstrap_samples=0,
+                        max_no_mps=args.max_no_mps, time_limit=args.time_limit, plots=False, tikztrees=False)
                 else:
                     pg = phylogeny
 

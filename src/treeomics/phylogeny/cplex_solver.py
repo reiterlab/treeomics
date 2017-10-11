@@ -18,8 +18,10 @@ __date__ = 'April, 2014'
 # get logger for application
 logger = logging.getLogger('treeomics')
 
+NO_PLOTTED_SOLUTIONS = 5
 
-def solve_conflicting_phylogeny(cf_graph, no_muts, pool_size, time_limit=None, n_max_threads=0):
+
+def solve_conflicting_phylogeny(cf_graph, no_muts, pool_size, no_plotted_solutions, time_limit=None, n_max_threads=0):
     """
     Translates given conflict graph into a integer linear program and
     solves the ILP for the minimum number of mutation patterns (set of identical mutation patterns)
@@ -31,6 +33,7 @@ def solve_conflicting_phylogeny(cf_graph, no_muts, pool_size, time_limit=None, n
     :param n_max_threads: Sets the default maximal number of parallel threads that will be invoked by CPLEX
       (0: default, let CPLEX decide; 1: single threaded; N: uses up to N threads)
       https://www.ibm.com/support/knowledgecenter/en/SS9UKU_12.5.0/com.ibm.cplex.zos.help/Parameters/topics/Threads.html
+    :param no_plotted_solutions: number of best solutions from the solution pool that will be plotted
     :return list of top solutions, dictionary with calculated node likelihoods based on likelihood of
             each solution in the solution pool
     """
@@ -125,12 +128,12 @@ def solve_conflicting_phylogeny(cf_graph, no_muts, pool_size, time_limit=None, n
 
     # assess obtained solutions
     solutions, weighted_node_lh = assess_solutions(
-        lp.solution, objective_function, cf_graph, ilp_col_mps, no_muts, pool_size)
+        lp.solution, objective_function, cf_graph, ilp_col_mps, no_muts, pool_size, no_plotted_solutions)
 
     return solutions, weighted_node_lh
 
 
-def assess_solutions(sol, objective_function, cf_graph, ilp_col_mps, no_muts, pool_size):
+def assess_solutions(sol, objective_function, cf_graph, ilp_col_mps, no_muts, pool_size, no_plotted_solutions):
     """
     Assess solution pool and infer the compatible and incompatible mutation patterns as well as their support
     :param sol: solutions obtained by the ILP solver
@@ -139,9 +142,15 @@ def assess_solutions(sol, objective_function, cf_graph, ilp_col_mps, no_muts, po
     :param ilp_col_mps: list with mapping from column ids to nodes (mutation patterns)
     :param no_muts: Number of processed mutations
     :param pool_size: number of best solutions explored by ILP solver to estimate confidence
+    :param no_plotted_solutions: number of solutions where the inferred trees will be plotted
     :return list of top solutions, dictionary with calculated node likelihoods based on likelihood of
             each solution in the solution pool
     """
+
+    assert pool_size >= no_plotted_solutions, \
+        'Solution pool size needs to be larger than the number of plotted solutions!'
+    assert 1 <= no_plotted_solutions <= 20, 'At least 1 and not more than 20 solutions can be plotted: {}'.format(
+        no_plotted_solutions)
 
     no_sols = sol.pool.get_num()
     logger.debug("The solution pool contains {} solutions.".format(no_sols))
@@ -214,7 +223,7 @@ def assess_solutions(sol, objective_function, cf_graph, ilp_col_mps, no_muts, po
 
             llhs.append(solution.llh)
 
-            if rank < 6:
+            if rank <= no_plotted_solutions:
                 solutions.append(solution)
 
             # calculate a solution weight depending on the best and the worst values

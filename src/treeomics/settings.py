@@ -5,7 +5,8 @@ __author__ = 'Johannes REITER'
 # ######################### DEFAULT PARAMETER VALUES #############################
 
 # Explore the solution space to assess the support of the inferred branches
-POOL_SIZE = 1000        # number of best solutions explored by ILP solver
+POOL_SIZE = 1000            # number of best solutions explored by ILP solver
+NO_PLOTTED_SOLUTIONS = 5   # number of best ranked solution trees that will be plotted (cannot be larger than the pool)
 
 # number of bootstrapping samples
 NO_BOOTSTRAP_SAMPLES = 0

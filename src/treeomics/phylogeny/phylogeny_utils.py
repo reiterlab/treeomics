@@ -1,7 +1,5 @@
 #!/usr/bin/python
 """Provides abstract class for all subclasses (different methods to infer compatible patterns)"""
-__author__ = 'Johannes REITER'
-__date__ = 'April, 2014'
 
 import logging
 import itertools
@@ -12,6 +10,8 @@ import networkx as nx
 from networkx.readwrite import json_graph
 import json
 
+__author__ = 'Johannes REITER'
+__date__ = 'April, 2014'
 
 # get logger for application
 logger = logging.getLogger('treeomics')
@@ -375,12 +375,12 @@ def _add_evolutionary_node(tree, parent, mp, node_name, mutations, confidence=No
         tree.remove_edge(parent, grandchild)
         tree.add_edge(mp, grandchild, muts=helper_mutations)
         tree.node[grandchild]['muts'] = tree.node[grandchild]['muts'].union(mutations)
-        # logger.debug('{} became a child of {}.'.format(grandchild, clone))
+        logger.debug('{} became a child of {}.'.format(grandchild, mp))
 
     # insert edge to the newly added clone (node)
     tree.add_edge(parent, mp, muts=mutations)
-    # logger.debug('Successfully inserted {} with {} mutations as child of {}.'.format(clone,
-    #              len(tree.node[clone]['muts']), parent))
+    logger.debug('Successfully inserted {} with {} mutations as child of {}.'.format(mp,
+                 len(tree.node[mp]['muts']), parent))
 
     return True
 

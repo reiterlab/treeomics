@@ -26,7 +26,8 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
 * Treeomics 1.7.5 2017-04-11: Improved putative driver gene analysis and HTML report. Allow multiple normal samples. Implemented optional filter of common normal variants.
 * Treeomics 1.7.6 2017-05-12: Generate new out put file ```<subject>_variants.csv``` with information about the individual variants and how they were classified in the inferred phylogeny. Solved issues with subclone detection and solution pool.
 * Treeomics 1.7.7 2017-06-21: Made Treeomics ready for ultra deep targeted sequencing data. Fixed bug in calculation of branch confidence values in partial solution space. Use wkhtmltopdf to create a PDF from the HTML report.
-* Treeomics 1.7.8 2017-10-06: Fixed problem with ete3 visualization of detected subclones. Added additional command line parameters: path to CSV file to highlight given genes in inferred phylogeny and set the maximal number of used threads by CPLEX
+* Treeomics 1.7.8 2017-10-06: Fixed problem with ete3 visualization of detected subclones. Added additional command line parameters: path to CSV file to highlight given genes in inferred phylogeny and set the maximal number of used threads by CPLEX.
+* Treeomics 1.7.9 2017-10-10: Configure the number of top ranked solution trees that are plotted.
 
 ### <a name="installation"> Installation
 1. Open a terminal and clone the repository from GitHub with ```git clone https://github.com/johannesreiter/treeomics.git```

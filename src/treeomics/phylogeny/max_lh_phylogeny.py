@@ -139,8 +139,8 @@ class MaxLHPhylogeny(Phylogeny):
         logger.debug('Reliability score of a pattern with 99.99% certainty in each call: {:.3e}'.format(
             -math.log(1.0 - lh_9999)))
 
-    def infer_max_lh_tree(self, subclone_detection=False, pool_size=1, no_bootstrap_samples=0, max_no_mps=None,
-                          time_limit=None, n_max_threads=0):
+    def infer_max_lh_tree(self, subclone_detection=False, pool_size=1, no_plotted_solutions=1, no_bootstrap_samples=0,
+                          max_no_mps=None, time_limit=None, n_max_threads=0):
         """
         Infer maximum likelihood tree via calculation reliability scores for each
         possible mutation pattern from the likelihood that no variant has this pattern
@@ -148,6 +148,7 @@ class MaxLHPhylogeny(Phylogeny):
         The mutation pattern of each variant is given by the mp maximizing its likelihood
         :param subclone_detection: is subclone detection enabled?
         :param pool_size: number of best solutions explored by ILP solver to estimate confidence
+        :param no_plotted_solutions: number of best solutions from the solution pool that will be plotted
         :param max_no_mps: only the given number of most likely (by joint likelihood) mutation patterns
             is explored per variant
         :param no_bootstrap_samples: number of samples with replacement for the bootstrapping
@@ -180,7 +181,8 @@ class MaxLHPhylogeny(Phylogeny):
             # translate the conflict graph into a minimum vertex cover problem
             # and solve this using integer linear programming
             self.solutions, self.weighted_node_lh = cps.solve_conflicting_phylogeny(
-                self.cf_graph, len(self.patient.log_p01), pool_size, time_limit=time_limit, n_max_threads=n_max_threads)
+                self.cf_graph, len(self.patient.log_p01), pool_size, no_plotted_solutions,
+                time_limit=time_limit, n_max_threads=n_max_threads)
 
             opt_sol = self.solutions[0]
             opt_sol.assign_variants(self, max_no_mps)

@@ -21,7 +21,8 @@ logger = logging.getLogger('treeomics')
 
 def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepath=None, subclone_detection=False,
                        loh_frequency=0.0, driver_vars=set(), max_no_mps=None, time_limit=None, plots=True,
-                       tikztrees=True, pool_size=0, no_bootstrap_samples=0, variant_filepath=None, n_max_threads=0):
+                       tikztrees=True, pool_size=0, no_plotted_solutions=1, no_bootstrap_samples=0,
+                       variant_filepath=None, n_max_threads=0):
     """
     Create an evolutionary tree based on the maximum likelihood mutation patterns of each variant
     :param patient: data structure around the patient
@@ -37,6 +38,7 @@ def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepat
     :param plots: generate pdf from tex file
     :param tikztrees: should Latex/Tikz trees be generated?
     :param pool_size: number of best solutions explored by ILP solver to estimate confidence
+    :param no_plotted_solutions: number of best solutions from the solution pool that will be plotted
     :param n_max_threads: Sets the default maximal number of parallel threads that will be invoked by CPLEX
                           (0: default, let CPLEX decide; 1: single threaded; N: uses up to N threads)
     :param no_bootstrap_samples: number of samples with replacement for the bootstrapping
@@ -46,9 +48,10 @@ def create_max_lh_tree(patient, tree_filepath=None, mm_filepath=None, mp_filepat
 
     mlh_pg = MaxLHPhylogeny(patient, patient.mps, loh_frequency=loh_frequency)
 
-    mlh_tree = mlh_pg.infer_max_lh_tree(subclone_detection=subclone_detection, max_no_mps=max_no_mps,
-                                        pool_size=pool_size, time_limit=time_limit, n_max_threads=n_max_threads,
-                                        no_bootstrap_samples=no_bootstrap_samples)
+    mlh_tree = mlh_pg.infer_max_lh_tree(
+        subclone_detection=subclone_detection, max_no_mps=max_no_mps, pool_size=pool_size,
+        no_plotted_solutions=no_plotted_solutions, time_limit=time_limit, n_max_threads=n_max_threads,
+        no_bootstrap_samples=no_bootstrap_samples)
 
     if mlh_tree is not None:
 
@@ -140,41 +143,49 @@ def _create_tree_plots(solution, mlh_pg, mlh_tree, plots, tikztrees, tree_filepa
 
             except ImportError as ie:
                 logger.warn('ImportError! ete3 is not installed! {}'.format(ie))
+            except Exception as e:
+                logger.error('Generation of ete3-tree for solution of rank {} failed!'.format(solution.rank))
+                logger.exception(e)
 
         if tikztrees:
-            # create Latex/TIkZ tree
-            tikz_tree = tikz.create_figure_file(
-                mlh_tree, tikz.TREE_ROOT, tree_filepath + '_tikz.tex', mlh_pg.patient, mlh_pg, caption,
-                driver_vars=driver_vars, germline_distance=10.0 * max(1.0, len(solution.mlh_founders) / median_no_muts),
-                standalone=True, variant_filepath=variant_filepath)
-            # add information about the ignored mutations and the position of the acquired mutations
-            latex.add_branch_mut_info(tree_filepath, mlh_pg, mlh_tree)
+            try:
+                # create Latex/TIkZ tree
+                tikz_tree = tikz.create_figure_file(
+                    mlh_tree, tikz.TREE_ROOT, tree_filepath + '_tikz.tex', mlh_pg.patient, mlh_pg, caption,
+                    driver_vars=driver_vars, standalone=True, variant_filepath=variant_filepath,
+                    germline_distance=10.0 * max(1.0, len(solution.mlh_founders) / median_no_muts))
+                # add information about the ignored mutations and the position of the acquired mutations
+                latex.add_branch_mut_info(tree_filepath, mlh_pg, mlh_tree)
 
-            # add information about the resolved mutation positions
-            # which are likely sequencing errors
-            latex.add_artifact_info(tree_filepath, mlh_pg)
+                # add information about the resolved mutation positions
+                # which are likely sequencing errors
+                latex.add_artifact_info(tree_filepath, mlh_pg)
 
-            tikz_path, tikz_file = os.path.split(tikz_tree)
-            logger.debug('Tikzpath: {} {}'.format(tikz_path, tikz_file))
-            # increase buffer size on mac: 'buf_size=1000000 pdflatex {}'.format(tikz_file)
-            # increase buffer size on windows: 'pdflatex --buf-size=1000000 {}'.format(tikz_file)
-            # check which operating system is used
-            if sys.platform == 'darwin':
-                pdflatex_cmd = 'buf_size=1000000 pdflatex {}'.format(tikz_file)
-            elif sys.platform == 'win32':
-                pdflatex_cmd = 'pdflatex --buf-size=1000000 {}'.format(tikz_file)
-            else:
-                pdflatex_cmd = 'pdflatex {}'.format(tikz_file)
+                tikz_path, tikz_file = os.path.split(tikz_tree)
+                logger.debug('Tikzpath: {} {}'.format(tikz_path, tikz_file))
+                # increase buffer size on mac: 'buf_size=1000000 pdflatex {}'.format(tikz_file)
+                # increase buffer size on windows: 'pdflatex --buf-size=1000000 {}'.format(tikz_file)
+                # check which operating system is used
+                if sys.platform == 'darwin':
+                    pdflatex_cmd = 'buf_size=1000000 pdflatex {}'.format(tikz_file)
+                elif sys.platform == 'win32':
+                    pdflatex_cmd = 'pdflatex --buf-size=1000000 {}'.format(tikz_file)
+                else:
+                    pdflatex_cmd = 'pdflatex {}'.format(tikz_file)
 
-            fnull = open(os.devnull, 'w')
-            return_code = call(pdflatex_cmd, shell=True, cwd=tikz_path, stdout=fnull)
+                fnull = open(os.devnull, 'w')
+                return_code = call(pdflatex_cmd, shell=True, cwd=tikz_path, stdout=fnull)
 
-            if return_code == 0:
-                pdf_tree = tikz_tree.replace('.tex', '.pdf')
-                logger.info('Successfully called pdflatex to create pdf of the evolutionary tree at {}'.format(
-                    pdf_tree))
-            else:
-                logger.error('PDF of the evolutionary tree was not created. Is Latex/tikz installed?')
+                if return_code == 0:
+                    pdf_tree = tikz_tree.replace('.tex', '.pdf')
+                    logger.info('Successfully called pdflatex to create pdf of the evolutionary tree at {}'.format(
+                        pdf_tree))
+                else:
+                    logger.error('PDF of the evolutionary tree was not created. Is Latex/tikz installed?')
+
+            except Exception as e:
+                logger.error('Generation of latex/tikz-tree for solution of rank {} failed!'.format(solution.rank))
+                logger.exception(e)
 
 
 def infer_max_compatible_tree(filepath, patient, drivers=set(), time_limit=None):
