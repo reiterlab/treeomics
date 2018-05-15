@@ -550,8 +550,8 @@ def vaf_distribution_plot(filename, patient):
     sns.despine(right=False, top=False)
 
     for sa_idx in range(len(df_vafs.columns)):
-        if patient.sample_names[sa_idx] in patient.estimated_purities:
-            ax_vaf.text(sa_idx, 1.08, '{:.0%}'.format(patient.estimated_purities[patient.sample_names[sa_idx]]),
+        if patient.sample_names[sa_idx] in patient.purities:
+            ax_vaf.text(sa_idx, 1.08, '{:.0%}'.format(patient.purities[patient.sample_names[sa_idx]]),
                         horizontalalignment='center', fontsize=9, color='black', rotation=45)
         else:
             ax_vaf.text(sa_idx, 1.08, '{:.0%}'.format(df_vafs[df_vafs > 0].median()[sa_idx]),

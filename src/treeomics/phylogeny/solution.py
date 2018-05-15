@@ -28,8 +28,8 @@ class Solution:
 
         # calculate log likelihood
         self._calculate_sol_log_likelihood(solution_values, obj_func_vals, no_muts)
-        logger.debug('Solution of rank {} (obj-val: {:.2e}) with log-likelihood {:.3e} ({:.3e}).'.format(
-            rank, obj_val / Solution.SCALING_FACTOR, self.llh, math.exp(self.llh)))
+        # logger.debug('Solution of rank {} (obj-val: {:.2e}) with log-likelihood {:.3e} ({:.3e}).'.format(
+        #     rank, obj_val / Solution.SCALING_FACTOR, self.llh, math.exp(self.llh)))
 
         self._translate_solution(solution_values, cf_graph, rank=rank)
 

@@ -23,12 +23,14 @@ except ImportError:     # python 3
 logger = logging.getLogger('treeomics')
 
 
-def read_mutation_table(filename, normal_sample=None, excluded_columns=set(), exclude_chr_arm=False):
+def read_mutation_table(filename, normal_sample=None, excluded_columns=set(), considered_samples=None,
+                        exclude_chr_arm=False):
     """
     Reads TSV file with sequencing data of variants in multiple samples (columns)
     :param normal_sample: name of normal sample; if provided, subsequent filtering on these data is performed
     :param filename: path to TSV file
     :param excluded_columns: samples (column names) which should not be returned
+    :param considered_samples: if not None then only samples included in this set will be considered
     :param exclude_chr_arm: remove chromosome arm information from the key if parameter is set
     :return: dictionary of the data per variant and sample, dictionary of the gene names per variant
     """
@@ -76,7 +78,8 @@ def read_mutation_table(filename, normal_sample=None, excluded_columns=set(), ex
 
                     # add identified samples
                     for sample_name in headers[first_sa_col:]:
-                        if sample_name not in excluded_columns and sample_name != normal_sample:
+                        if ((sample_name not in excluded_columns and sample_name != normal_sample)
+                                and (considered_samples is None or sample_name in considered_samples)):
                             sample_names.append(sample_name)
                         elif sample_name == normal_sample:
                             logger.info('Normal sample {}'.format(sample_name))
@@ -100,7 +103,8 @@ def read_mutation_table(filename, normal_sample=None, excluded_columns=set(), ex
                         key = var.Chromosome+'__'+var.Position+'__'+var.Change
                     gene_names[key] = var.Gene
 
-                    if sample_name not in excluded_columns and sample_name != normal_sample:
+                    if ((sample_name not in excluded_columns and sample_name != normal_sample)
+                            and (considered_samples is None or sample_name in considered_samples)):
                         if var[sa_idx].lower() != 'n/a':
                             data[key][sample_name] = int(var[sa_idx])
                         else:
@@ -113,7 +117,7 @@ def read_mutation_table(filename, normal_sample=None, excluded_columns=set(), ex
         return data, gene_names, normal_data
 
 
-def read_csv_file(filename, normal_sample=None, excluded_columns=set()):
+def read_csv_file(filename, normal_sample=None, excluded_columns=set(), considered_samples=None):
     """
     Reads CSV file with sequencing data of variants (rows) across multiple samples (columns)
     Reference allele count column names have to end with '_ref'
@@ -121,6 +125,7 @@ def read_csv_file(filename, normal_sample=None, excluded_columns=set()):
     :param filename: path to CSV file
     :param normal_sample: name of normal sample
     :param excluded_columns: name of samples to exclude
+    :param considered_samples: if not None then only samples included in this set will be considered
     :return: dictionary with coverage, dict with mut reads, dict of gene names,
     dict of coverage in normal, dict of mut reads in normal
     """
@@ -181,17 +186,18 @@ def read_csv_file(filename, normal_sample=None, excluded_columns=set()):
                     # add identified samples
                     excluded_sample_ids = set()
                     for idx, ref_col_idx in enumerate(reference_cols):
-                        sa_name = headers[ref_col_idx][0:-4]
-                        if sa_name not in excluded_columns and sa_name != normal_sample:
-                            sample_names.append(sa_name)
-                        elif sa_name == normal_sample:
+                        sample_name = headers[ref_col_idx][0:-4]
+                        if ((sample_name not in excluded_columns and sample_name != normal_sample)
+                                and (considered_samples is None or sample_name in considered_samples)):
+                            sample_names.append(sample_name)
+                        elif sample_name == normal_sample:
                             ref_norm_idx = headers.index(normal_sample+'_ref')
                             alt_norm_idx = headers.index(normal_sample+'_alt')
-                            logger.info('Normal sample {}'.format(sa_name))
+                            logger.info('Normal sample {}'.format(sample_name))
                             excluded_sample_ids.add(idx)
                         else:
                             excluded_sample_ids.add(idx)
-                            logger.info('Exclude sample {}'.format(sa_name))
+                            logger.info('Exclude sample {}'.format(sample_name))
                     for idx in excluded_sample_ids:
                         del reference_cols[idx]
                         del alternate_cols[idx]
@@ -209,13 +215,13 @@ def read_csv_file(filename, normal_sample=None, excluded_columns=set()):
                 if gene_col_idx is not None:
                     gene_names[key] = row[gene_col_idx]
 
-                for ref_col_idx, alt_col_idx, sa_name in zip(reference_cols, alternate_cols, sample_names):
+                for ref_col_idx, alt_col_idx, sample_name in zip(reference_cols, alternate_cols, sample_names):
                     if row[ref_col_idx].lower() != 'n/a':
-                        coverage[key][sa_name] = int(row[ref_col_idx]) + int(row[alt_col_idx])
-                        mut_reads[key][sa_name] = int(row[alt_col_idx])
+                        coverage[key][sample_name] = int(row[ref_col_idx]) + int(row[alt_col_idx])
+                        mut_reads[key][sample_name] = int(row[alt_col_idx])
                     else:
-                        coverage[key][sa_name] = -1
-                        mut_reads[key][sa_name] = -1
+                        coverage[key][sample_name] = -1
+                        mut_reads[key][sample_name] = -1
 
                 if ref_norm_idx is not None:
                     if row[ref_norm_idx].lower() != 'n/a':
@@ -254,9 +260,16 @@ def read_table(filename, variant_key_column_names, variant_key_pattern, data_col
         p_remove = re.compile(r'#| ')
 
         # process data table header
-        row = next(f_tsv)
-        headers = [p_replace.sub('_', p_remove.sub('', e)) for e in row]
-        logger.debug('Read file {} with header: {}'.format(filename, headers))
+        # row = next(f_tsv)
+        headers = None
+        for row in f_tsv:
+            if row[0].startswith('#') or not len(row[0]):
+                # skip comments and blank lines
+                continue
+            else:
+                headers = [p_replace.sub('_', p_remove.sub('', e)) for e in row]
+                logger.debug('Read file {} with header: {}'.format(filename, headers))
+                break
 
         key_columns = []
         data_columns = []
@@ -396,7 +409,7 @@ def write_vep_input(filepath, patient):
     :param patient: data structure around sequencing data of a subject
     """
 
-    if patient.ensembl_data is not None:
+    if patient.ensembl_data is not None and any(var is not None for var in patient.vc_variants):
         from utils.driver import is_functional
 
         with open(filepath, 'w') as file:
@@ -429,7 +442,7 @@ def write_cravat_input(filepath, patient):
     :param patient: data structure around sequencing data of a subject
     """
 
-    if patient.ensembl_data is not None:
+    if patient.ensembl_data is not None and any(var is not None for var in patient.vc_variants):
         from utils.driver import is_functional
 
         with open(filepath, 'w') as file:

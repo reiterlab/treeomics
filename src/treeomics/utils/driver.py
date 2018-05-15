@@ -296,11 +296,13 @@ def get_drivers(cgc_path, user_driver_path, reference_genome):
     return cgc_drivers, user_drivers
 
 
-def read_driver_file(driver_list_path):
+def read_driver_file(driver_list_path, cancer_type=None):
     """
     Path to CSV file with cancer drivers
-    Column "Gene_Symbol" with the gene name is required, column "Genome_Location" is optional
-    :param driver_list_path:
+    Column "Gene_Symbol" with the gene name is required,
+    columns "Genome_Location" and "CancerType" are optional
+    :param driver_list_path: path to CSV file with driver gene
+    :param cancer_type: only read driver genes for the given cancer type
     :return: dictionary with driver genes as keys and instances of class Driver as values
     """
 
@@ -331,6 +333,10 @@ def read_driver_file(driver_list_path):
             else:  # process entries in given list of drivers
                 driver = DriverEntry(*row)
 
+                if cancer_type is not None and hasattr(DriverEntry, 'CancerType'):
+                    if driver.CancerType != cancer_type:
+                        continue
+
                 if driver.Gene_Symbol in driver_dict:
                     d = driver_dict[driver.Gene_Symbol]
                 else:
@@ -358,7 +364,10 @@ def read_driver_file(driver_list_path):
                     if len(sources) > 0:
                         d.sources = sources
 
-        logger.info("Read {} entries in driver list file file {}. ".format(len(driver_dict), driver_list_path))
+        logger.info("Read {} entries in driver list file {}{}. ".format(
+            len(driver_dict), driver_list_path,
+            ' of cancery type '+cancer_type if (cancer_type is not None
+                                                and hasattr(DriverEntry, 'CancerType')) else ''))
 
         return driver_dict
 

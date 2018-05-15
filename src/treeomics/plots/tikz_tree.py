@@ -56,6 +56,11 @@ def create_figure_file(tree, tree_root_key, filename, patient, phylogeny, figure
                 header += ['p1_'+sample_name for sample_name in patient.sample_names]
                 header.append('BISharingStatus')
 
+                for sample_name in patient.sample_names:
+                    header.append('cov_'+sample_name)
+                    header.append('var_'+sample_name)
+                    header.append('VAF_'+sample_name)
+
                 var_writer.writerow(header)
             else:
                 var_writer = None
@@ -408,7 +413,7 @@ def _write_muts(var_writer, pg, patient, muts, sample_ids, driver_vars=None):
                 phylogeny_annotations.append('TrMetPrivate')
             elif 'M' in sa_name and 'TM' not in sa_name:
                 phylogeny_annotations.append('UntrMetPrivate')
-            elif 'PT' in sa_name or 'Primary' in sa_name:
+            elif 'PT' in sa_name or 'Primary' in sa_name or 'P' == sa_name:
                 phylogeny_annotations.append('PTPrivate')
             else:
                 phylogeny_annotations.append('Private')
@@ -438,9 +443,14 @@ def _write_muts(var_writer, pg, patient, muts, sample_ids, driver_vars=None):
                     phylogeny_annotations.append('MetShared')
 
                 if (all(sa_idx in sample_ids for sa_idx, sa_name in enumerate(patient.sc_names)
-                        if 'PT' in sa_name or 'Primary' in sa_name)
-                        and any('PT' in sa_name or 'Primary' in sa_name for sa_name in patient.sc_names)):
+                        if 'PT' in sa_name or 'Primary' in sa_name or 'P' == sa_name)
+                        and any('PT' in sa_name or 'Primary' in sa_name or 'P' == sa_name
+                                for sa_name in patient.sc_names)):
                     phylogeny_annotations.append('PTTrunk')
+
+                elif any('PT' in patient.sc_names[sa_idx] or 'Primary' in patient.sc_names[sa_idx]
+                         or 'P' == patient.sc_names[sa_idx] in patient.sc_names[sa_idx] for sa_idx in sample_ids):
+                    phylogeny_annotations.append('PTShared')
 
                 if len(phylogeny_annotations) == 0:
                     phylogeny_annotations.append('Shared')
@@ -456,5 +466,14 @@ def _write_muts(var_writer, pg, patient, muts, sample_ids, driver_vars=None):
             len(patient.sample_names))]
 
         row.append(patient.sharing_status[mut_idx])
+
+        # add sequencing information to the file
+        for sa_name in patient.sample_names:
+            row.append(patient.coverage[mut_key][sa_name])
+            row.append(patient.mut_reads[mut_key][sa_name])
+            if patient.coverage[mut_key][sa_name] > 0:
+                row.append('{:.4f}'.format(patient.mut_reads[mut_key][sa_name] / patient.coverage[mut_key][sa_name]))
+            else:
+                row.append(0.0)
 
         var_writer.writerow(row)

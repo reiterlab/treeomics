@@ -79,7 +79,7 @@ def analyze_data(patient, post_table_filepath=None, jsc_filepath=None, vep_filep
     if post_table_filepath is not None:
         # write file with posterior probabilities
         write_posterior_table(
-            post_table_filepath, patient.sample_names, patient.estimated_purities, patient.sample_mafs,
+            post_table_filepath, patient.sample_names, patient.purities, patient.sample_mafs,
             patient.mut_positions, patient.gene_names, patient.log_p01, patient.betas)
 
     # calculate mutation numbers per sample based on the Bayesian inference model
@@ -417,8 +417,8 @@ def create_data_analysis_file(patient, analysis_filepath):
             row.append(sample_name)
 
             row.append(np.nanmedian(patient.sample_coverages[sample_name]))
-            if sample_name in patient.estimated_purities:
-                row.append('{:.5f}'.format(patient.estimated_purities[sample_name]))
+            if sample_name in patient.purities:
+                row.append('{:.5f}'.format(patient.purities[sample_name]))
             else:
                 row.append('-')
 

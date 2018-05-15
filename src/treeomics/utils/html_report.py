@@ -122,8 +122,8 @@ class HTMLReport(object):
                                                 np.mean(patient.sample_mafs[sample_name])))
 
             # estimated purity
-            if sample_name in patient.estimated_purities:
-                row.append('{:.1%}'.format(patient.estimated_purities[sample_name]))
+            if sample_name in patient.purities:
+                row.append('{:.1%}'.format(patient.purities[sample_name]))
             else:
                 row.append('-')
 
@@ -712,7 +712,7 @@ class HTMLReport(object):
     def end_report(self, e, c0, max_absent_vaf, loh_frequency, fpr, fdr,
                    min_absent_cov, min_median_cov, min_median_maf, max_no_mps=None):
         """
-        Add used parameter values, HTML file footer, and close the file
+        Add used parameter values, HTML file footer, close the file, and create PDF file
         :param e: sequencing error rate for bayesian inference
         :param c0: prior mixture parameter of delta function and uniform distribution for bayesian inference
         :param max_absent_vaf: maximal absent VAF before considering estimated purity
@@ -793,12 +793,16 @@ class HTMLReport(object):
 
         options = {
             'zoom': 2.6,
+            'dpi': 400,
+            # 'print-media-type': '',
             'page-size': 'Letter',
             'margin-top': '1in',
             'margin-right': '0.75in',
             'margin-bottom': '1in',
             'margin-left': '0.75in',
+            'disable-smart-shrinking': '',
             'quiet': ''
+
             # 'encoding': "UTF-8",
             # 'custom-header': [
             #     ('Accept-Encoding', 'gzip')

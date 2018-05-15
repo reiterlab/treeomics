@@ -97,7 +97,7 @@ def _create_tree_plots(solution, mlh_pg, mlh_tree, plots, tikztrees, tree_filepa
     :param tikztrees: should Latex/Tikz trees be generated?
     :param tree_filepath:
     :param driver_vars: defaultdict with mutation IDs and instance of driver class
-    :param variant_filepath:
+    :param variant_filepath: path to output file with information about variants and where they were acquired
     """
 
     # ignore mutations which are not in any sample which passed the filtering

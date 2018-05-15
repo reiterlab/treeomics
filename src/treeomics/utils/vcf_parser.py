@@ -98,6 +98,8 @@ class VCFParser(object):
 
                         if filter_name == 'PASS':
                             continue
+                        elif filter_name == 'REJECT':
+                            failed_filter = True
                         elif filter_name == 'StrandBiasFilter' \
                                 or filter_name == 'Mask' \
                                 or filter_name == 'SnpCluster' \
@@ -114,11 +116,11 @@ class VCFParser(object):
                             logger.warning('Unrecognized filter value: {}'.format(filter_name))
                             failed_filter = True
 
-                    # exclude structural variants for now
-                    # TODO: include structural variants
                     for info in var.INFO.split(';'):
-                        if info == 'SVTYPE=DUP' or info == 'SVTYPE=DEL':
-                            failed_filter = True
+                        # if info == 'SVTYPE=DUP' or info == 'SVTYPE=DEL':
+                            # failed_filter = True
+                        if info.startswith('SVTYPE='):
+                            var_type = 'SV-'+info[7:]
                         elif info.startswith('GN='):        # gene name
                             gene_name = info[3:]
                         elif info.startswith('ANN='):       # functional annotations
@@ -164,6 +166,9 @@ class VCFParser(object):
                                 logger.warning('Could not parse data {} for sample {} at chr {} and pos {}'
                                                .format(sa, headers[sa_idx], var.CHROM, var.POS))
                                 logger.info('Row {}'.format(row))
+
+                                if logger.isEnabledFor(logging.DEBUG):
+                                    logging.exception('A variant was not parsed successfully!')
 
             for sample_name in headers[9:]:
                 logger.debug('{} variants were detected in sample {}.'.format(
@@ -220,12 +225,13 @@ def generate_variant(var, sample, gene_name=None, var_type=None):
     return variant
 
 
-def read_vcf_files(directory_name, excluded_samples=None):
+def read_vcf_files(directory_name, excluded_samples=None, considered_samples=None):
     """
     Read all VCF files in the given directory and return a list of
     the samples including their variants
     :param directory_name: path to directory with VCF files
     :param excluded_samples: exclude variants in samples of this name (e.g. normal samples)
+    :param considered_samples: if not None then only samples included in this set will be considered
     :return: dictionary of relevant samples
     """
 
@@ -235,7 +241,8 @@ def read_vcf_files(directory_name, excluded_samples=None):
         if filename.endswith('.vcf'):
 
             # parse VCF file
-            s = read_vcf_file(os.path.join(directory_name, filename), excluded_samples)
+            s = read_vcf_file(os.path.join(directory_name, filename), excluded_samples=excluded_samples,
+                              considered_samples=considered_samples)
             for sample_name, sample in s.items():
                 samples[sample_name] = sample
 
@@ -246,11 +253,12 @@ def read_vcf_files(directory_name, excluded_samples=None):
         return samples
 
 
-def read_vcf_file(vcf_file, excluded_samples=None):
+def read_vcf_file(vcf_file, excluded_samples=None, considered_samples=None):
     """
     Read the given VCF file return a list of the samples including their variants
     :param vcf_file: path to VCF file
     :param excluded_samples: exclude variants in samples of this name (e.g. normal samples)
+    :param considered_samples: if not None then only samples included in this set will be considered
     :return: dictionary of relevant samples
     """
 
@@ -261,7 +269,7 @@ def read_vcf_file(vcf_file, excluded_samples=None):
     for sample in vcf.samples.values():
 
         # exclude given samples (e.g. normal samples)
-        if sample.name not in excluded_samples:
+        if (sample.name not in excluded_samples) and (considered_samples is None or sample.name in considered_samples):
             samples[sample.name] = sample
             logger.info('Read sample {} with {} variants from file {}.'.format(
                 sample.name, len(sample.variants), vcf_file))

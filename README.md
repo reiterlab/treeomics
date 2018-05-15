@@ -28,6 +28,7 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
 * Treeomics 1.7.7 2017-06-21: Made Treeomics ready for ultra deep targeted sequencing data. Fixed bug in calculation of branch confidence values in partial solution space. Use wkhtmltopdf to create a PDF from the HTML report.
 * Treeomics 1.7.8 2017-10-06: Fixed problem with ete3 visualization of detected subclones. Added additional command line parameters: path to CSV file to highlight given genes in inferred phylogeny and set the maximal number of used threads by CPLEX.
 * Treeomics 1.7.9 2017-10-10: Configure the number of top ranked solution trees that are plotted.
+* Treeomics 1.7.10 2018-05-15: Improved PDF-report generation. Added support for structural variants. Added support for providing externally estimated sample purities via ```--purities <SAMPLE NAMES>```. Added ```--verbose``` option to run Treeomics in DEBUG logging level. Fixed VCF parsing error thanks to Frank's bug report.
 
 ### <a name="installation"> Installation
 1. Open a terminal and clone the repository from GitHub with ```git clone https://github.com/johannesreiter/treeomics.git```
@@ -38,7 +39,7 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
   - Install networkx ([https://networkx.github.io/](https://networkx.github.io/))
   - Install matplotlib 1.4 or 1.5 (matplotlib 2 can cause various problems with the layout; [http://matplotlib.org](http://matplotlib.org/))
   - Install pandas ([http://pandas.pydata.org/](http://pandas.pydata.org/))
-  - Install seaborn ([https://stanford.edu/~mwaskom/software/seaborn/](https://stanford.edu/~mwaskom/software/seaborn/))
+  - Install seaborn ([http://seaborn.pydata.org/](http://seaborn.pydata.org/))
   - Install the IBM ILOG CPLEX Optimization Studio 12.6.3 ([http://www-01.ibm.com/support/docview.wss?uid=swg21444285](http://www-01.ibm.com/support/docview.wss?uid=swg21444285))
     and then setup the Python API ([https://www.ibm.com/support/knowledgecenter/en/SSSA5P_12.6.3/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html](https://www.ibm.com/support/knowledgecenter/en/SSSA5P_12.6.3/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html));
     An IBM Academic License to freely download CPLEX can be obtained here: [http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative](http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative). 
@@ -72,7 +73,7 @@ $ python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d
 - *-z <prior absent probability>:* Prior probability for a variant being absent *c<sub>0</sub> (default 0.5).
 - *-o <output directory>:* Provide different output directory (default src/output)
 - *-n <normal sample names>:* If a normal sample is provided, variants significantly present in the normal are removed. Additional normal samples can be provided via a space-separated enumeration. E.g. ```-n FIRSTNORMALSAMPLE SECONDNORMALSAMPLE ```
-- *-n <samples to exclude>:* Space-separated enumeration of sample names to exclude from the analysis. E.g. ```-x FIRSTEXCLUDEDSAMPLE SECONDEXCLUDEDSAMPLE ```
+- *-x <samples to exclude>:* Space-separated enumeration of sample names to exclude from the analysis. E.g. ```-x FIRSTEXCLUDEDSAMPLE SECONDEXCLUDEDSAMPLE ```
 - ```--pool_size``` *<Pool size of ILP solver>:* Number of best solutions explored by ILP solver to assess the support of the inferred branches (default 1000)
 - *-b <No bootstrapping samples>:* Number of bootstrapping samples (default 0); Generally using the solution pool instead of bootstrapping seems to be the more efficient way to assess confidence.
 - *-u:* Enables subclone detection (default ```False```)

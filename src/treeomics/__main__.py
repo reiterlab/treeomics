@@ -254,6 +254,11 @@ def main():
 
     parser.add_argument("-x", "--exclude", help="names of samples to exclude of analysis", type=str, nargs='*',
                         default=None)
+    parser.add_argument("--include", help="names of samples to include in analysis", type=str, nargs='*',
+                        default=None)
+
+    parser.add_argument("--purities", help="provide estimated purities for samples given by '--include <SAMPLES>'",
+                        type=float, nargs='*', default=None)
 
     parser.add_argument("-r", "--mut_reads", help="path table with the number of reads with a mutation", type=str)
     parser.add_argument("-s", "--coverage", help="path to table with read coverage at the mutated positions", type=str)
@@ -300,7 +305,7 @@ def main():
                         help="minimum coverage for a true negative (negative threshold)",
                         type=int, default=settings.MIN_ABSENT_COVERAGE)
 
-    # -v, --verbose Verbose mode to provide more information while running treeomics
+    parser.add_argument('--verbose', action='store_true', help="Run Treeomics in DEBUG logging level.")
 
     plots_parser = parser.add_mutually_exclusive_group(required=False)
     plots_parser.add_argument('--plots', dest='plots', action='store_true', help="Is plot generation enabled?")
@@ -338,10 +343,14 @@ def main():
 
     args = parser.parse_args()
 
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
+        logger.info('Run Treeomics in verbose mode.')
+
     # disable plot generation if the script is called from another script (benchmarking)
     # set log level to info
     if not os.getcwd().endswith('treeomics') and not os.getcwd().endswith('src'):
-        logger.setLevel(logging.INFO)
+        # logger.setLevel(logging.INFO)
         fh.setLevel(logging.INFO)
         ch.setLevel(logging.INFO)
 
@@ -374,6 +383,28 @@ def main():
         for sample_name in args.exclude:
             logger.info('Exclude sample from analysis: {}'.format(sample_name))
             excluded_samples.add(sample_name)
+
+    # exclude given sample names from analysis
+    if args.include is not None:
+        included_samples = list()
+        for sample_name in args.include:
+            included_samples.append(sample_name)
+
+        logger.info('Only the following samples are included in the analysis: {}'.format(
+            ', '.join(sa_name for sa_name in included_samples)))
+    else:
+        included_samples = None
+
+    if args.purities is not None:
+        if included_samples is None or len(included_samples) != len(args.purities):
+            raise ValueError('If externally estimated purity values are provided, the same number of samples must be '
+                             'given by "--input <SAMPLE NAMES>"')
+        purities = dict()
+        for sample_name, purity in zip(included_samples, args.purities):
+            purities[sample_name] = purity
+
+    else:
+        purities = None
 
     if args.min_median_coverage > 0:
         logger.info('Minimum sample median coverage (otherwise discarded): {}'.format(
@@ -461,11 +492,12 @@ def main():
             patient_name = patient_name[:patient_name.find('_')]
         logger.debug('Patient name: {}'.format(patient_name))
         patient = Patient(error_rate=args.error_rate, c0=args.prob_zero, max_absent_vaf=args.max_absent_vaf,
-                          pat_name=patient_name, min_absent_cov=min_absent_cov, reference_genome=ref_genome)
+                          pat_name=patient_name, min_absent_cov=min_absent_cov, reference_genome=ref_genome,
+                          purities=purities)
         read_no_samples = patient.process_raw_data(
             fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf, var_table=args.mut_reads,
             cov_table=args.coverage, normal_sample=normal_sample_name, excluded_columns=excluded_samples,
-            wes_filtering=args.wes_filtering, artifacts=common_vars)
+            considered_samples=included_samples, wes_filtering=args.wes_filtering, artifacts=common_vars)
 
     elif args.csv_file:
 
@@ -474,10 +506,11 @@ def main():
             patient_name = patient_name[:patient_name.find('_')]
         logger.debug('Patient name: {}'.format(patient_name))
         patient = Patient(error_rate=args.error_rate, c0=args.prob_zero, max_absent_vaf=args.max_absent_vaf,
-                          pat_name=patient_name, min_absent_cov=min_absent_cov, reference_genome=ref_genome)
+                          pat_name=patient_name, min_absent_cov=min_absent_cov, reference_genome=ref_genome,
+                          purities=purities)
         read_no_samples = patient.process_raw_data(
             fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf, csv_file=args.csv_file,
-            normal_sample=normal_sample_name, excluded_columns=excluded_samples)
+            normal_sample=normal_sample_name, excluded_columns=excluded_samples, considered_samples=included_samples)
 
     elif args.vcf_file:      # take path to the input VCF file
         vcf_file = args.vcf_file
@@ -489,11 +522,12 @@ def main():
         if patient_name.find('_') != -1:
             patient_name = patient_name[:patient_name.find('_')]
         patient = Patient(error_rate=args.error_rate, c0=args.prob_zero, max_absent_vaf=args.max_absent_vaf,
-                          pat_name=patient_name, reference_genome=ref_genome)
+                          pat_name=patient_name, reference_genome=ref_genome, purities=purities)
         read_no_samples = patient.read_vcf_file(
             vcf_file, fpr, fdr, min_sa_cov=args.min_median_coverage, min_sa_maf=args.min_median_vaf,
             min_absent_cov=args.min_absent_coverage, normal_sample_name=normal_sample_name,
-            excluded_samples=excluded_samples, wes_filtering=args.wes_filtering, artifacts=common_vars)
+            excluded_samples=excluded_samples, considered_samples=included_samples, wes_filtering=args.wes_filtering,
+            artifacts=common_vars)
 
     elif args.directory:      # take path to the directory with all VCF files
         vcf_directory = args.directory
@@ -506,11 +540,11 @@ def main():
         patient_name = get_patients_name(
             vcf_directory[:-1] if vcf_directory.endswith('/') else vcf_directory)
         patient = Patient(error_rate=args.error_rate, c0=args.prob_zero, max_absent_vaf=args.max_absent_vaf,
-                          pat_name=patient_name, reference_genome=ref_genome)
+                          pat_name=patient_name, reference_genome=ref_genome, purities=purities)
         read_no_samples = patient.read_vcf_directory(
             vcf_directory, args.min_median_coverage, args.min_median_vaf, fpr, fdr, min_absent_cov,
             normal_sample_name=normal_sample_name, excluded_samples=excluded_samples,
-            wes_filtering=args.wes_filtering, artifacts=common_vars)
+            considered_samples=included_samples, wes_filtering=args.wes_filtering, artifacts=common_vars)
 
     else:
         raise RuntimeError('No input files were provided!')
@@ -525,6 +559,12 @@ def main():
     #     driver_filepath = None
     if args.driver_genes:
         driver_filepath = args.driver_genes
+        if not os.path.isfile(driver_filepath):
+            driver_filepath = os.path.join(input_directory, args.driver_genes)
+            if not os.path.isfile(driver_filepath):
+                logger.warning('CSV-file with driver gene names for annotation was not found: {}'.format(
+                    os.path.abspath(args.driver_genes)))
+                driver_filepath = None
 
     if settings.CGC_PATH is not None:
         cgc_filepath = os.path.join(input_directory, settings.CGC_PATH)

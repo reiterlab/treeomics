@@ -104,9 +104,9 @@ class MaxLHPhylogeny(Phylogeny):
                                              self.patient.bi_error_rate))
             logger.debug('Probability to observe an incorrectly called variant: {:.3%}'.format(called_ps[-1]))
 
-            if sample_name in patient.estimated_purities:
+            if sample_name in patient.purities:
                 missed_ps.append(binom.cdf(k_mins-1, int(np.nanmedian(patient.sample_coverages[sample_name])),
-                                           self.patient.estimated_purities[sample_name] / 2.0))
+                                           self.patient.purities[sample_name] / 2.0))
             else:
                 missed_ps.append(binom.cdf(k_mins-1, int(np.nanmedian(patient.sample_coverages[sample_name])),
                                            np.nanmedian(self.patient.sample_mafs[sample_name])))

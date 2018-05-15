@@ -79,7 +79,7 @@ class Variant(object):
         :param dp: total reads in the tumor sample at this position
         """
 
-        self.DP = float('nan') if math.isnan(dp) or int(dp) < 0 else int(dp)
+        self.DP = float('nan') if math.isnan(float(dp)) or int(dp) < 0 else int(dp)
 
     def set_baf(self, fa):
         """
