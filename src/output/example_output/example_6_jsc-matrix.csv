@@ -1,0 +1,8 @@
+# example: Probabilistic Jaccard similarity coefficient between all pairs of samples (median: 0.46; mean: 0.46; classification threshold: 90%).
+Sample,Met1,Met2,Met3,Met4,Met5,Met6
+Met1,1.00,0.44,0.52,0.41,0.41,0.50
+Met2,0.44,1.00,0.46,0.45,0.44,0.50
+Met3,0.52,0.46,1.00,0.43,0.43,0.52
+Met4,0.41,0.45,0.43,1.00,0.46,0.47
+Met5,0.41,0.44,0.43,0.46,1.00,0.46
+Met6,0.50,0.50,0.52,0.47,0.46,1.00

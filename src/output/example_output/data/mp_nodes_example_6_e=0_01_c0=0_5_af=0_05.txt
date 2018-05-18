@@ -1,0 +1,14 @@
+# chr - ID LABEL(=samples) START END COLOR
+chr - n1 1.0 0 1 blue
+chr - n2 0.6 0 1 lgrey
+chr - n3 0.5 0 1 lgrey
+chr - n4 0.5 0 1 lgrey
+chr - n5 0.5 0 1 lgrey
+chr - n6 0.5 0 1 lgrey
+chr - n7 0.4 0 1 lgrey
+chr - n8 0.08 0 1 blue
+chr - n9 0.06 0 1 blue
+chr - n10 0.043 0 1 blue
+chr - n11 0.020 0 1 blue
+chr - n12 0.016 0 1 blue
+chr - n13 <0.010 0 1 grey

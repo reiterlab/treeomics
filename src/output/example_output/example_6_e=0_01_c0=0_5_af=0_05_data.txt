@@ -1,0 +1,8 @@
+# Analyzed data from patient example.
+Sample	MedianCoverage	EstPurity	MedianMAF	BayPresent	BayAbsent	Present	Absent	Unknown
+Met1	143.0	0.69799	0.346	115	195	116	184	10
+Met2	147.5	0.71429	0.343	102	208	102	195	13
+Met3	146.0	0.67470	0.336	109	201	111	193	6
+Met4	144.0	0.71930	0.351	106	204	109	193	8
+Met5	147.0	0.70520	0.333	112	198	114	186	10
+Met6	145.0	0.70833	0.350	101	209	101	204	5

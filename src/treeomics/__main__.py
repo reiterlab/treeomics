@@ -192,7 +192,8 @@ def characterize_drivers(patient, ref_genome, driver_filepath, cgc_filepath, out
                         ' (chr {}, pos {})'.format(mut_pos[0], mut_pos[1]) if mut_pos is not None else ''))
 
     if output_filepath is not None and patient.ensembl_data is not None:
-        with open(output_filepath+ '_vep.tsv', 'w') as vep_file, open(output_filepath+ '_cravat.tsv', 'w') as cravat_file:
+        with open(output_filepath + '_vep.tsv', 'w') as vep_file, \
+                open(output_filepath + '_cravat.tsv', 'w') as cravat_file:
             logger.debug('Write {} putative driver variants to file: {}'.format(len(put_driver_vars), output_filepath))
             tsv_vep = csv.writer(vep_file, delimiter='\t')
             tsv_cravat = csv.writer(cravat_file, delimiter='\t')

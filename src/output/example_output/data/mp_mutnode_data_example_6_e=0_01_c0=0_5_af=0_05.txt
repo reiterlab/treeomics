@@ -1,0 +1,24 @@
+# chr - ID START END VALUE [options]
+n1 0 1 1 shared=6
+n1 0 1 2 shared=6
+n1 0 1 3 shared=6
+n1 0 1 4 shared=6
+n1 0 1 5 shared=6
+n1 0 1 6 shared=6
+n2 0 1 5 shared=1
+n3 0 1 4 shared=1
+n4 0 1 1 shared=1
+n5 0 1 2 shared=1
+n6 0 1 3 shared=1
+n7 0 1 6 shared=1
+n8 0 1 1 shared=2
+n8 0 1 3 shared=2
+n9 0 1 1 shared=3
+n9 0 1 3 shared=3
+n9 0 1 6 shared=3
+n10 0 1 4 shared=2
+n10 0 1 5 shared=2
+n12 0 1 1 shared=4
+n12 0 1 2 shared=4
+n12 0 1 3 shared=4
+n12 0 1 6 shared=4

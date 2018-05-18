@@ -112,9 +112,18 @@ of 5 distinct liver metastases, 3 distinct lung metastases, and 2 samples of the
 
 Example 2:
 ```shell
-$ python treeomics -r input/Bashashati2013/Case5_mutant_reads.txt -s input/Bashashati2013/Case5_coverage.txt -e 0.005 -O
+$ python treeomics -r input/Bashashati2013/Case5_mutant_reads.txt -s input/Bashashati2013/Case5_coverage.txt -e 0.01 -O
 ```
 Reconstructs the phylogeny of the high-grade serous ovarian cancer of Case 5 in Bashashati et al. (2013).
+
+Example 3:
+```shell
+$ python -v input/example.vcf -O
+```
+Reconstructs the phylogeny of a simulated cancer with 6 metastases from a given VCF file (see [src/input/example.vcf](src/input/example.vcf)).
+Regarding the VCF file input format, Treeomics expects the standard columns: #CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT as well as for each considered sample an additional column.
+Minimally AD (Allelic depth) has to be provided in the FORMAT column and then the actually observed number of reference and alternate alleles in each sample in their corresponding columns).
+The generated output can be found in ```src/output/example_output``` and the corresponding Treeomics report at [src/output/example_output/example_6_e=0_01_c0=0_5_af=0_05_report.pdf](src/output/example_output/example_6_e=0_01_c0=0_5_af=0_05_report.pdf).
 
 ========
 

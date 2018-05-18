@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="description" content="Treeomics analysis report of patient example">
+		<meta name="author" content="Johannes G. Reiter">
+
+		<title>Treeomics analysis report of patient example</title>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+		<style>body{ margin:0 100; background:white; }</style>
+	</head>
+
+	<body>
+		<div class="container" style="max-width:900px">
+			<div class="page-header">
+				<h2>Treeomics analysis report of patient example</h2>
+			</div>
+			<h4>Input data</h4>
+			<table class="table table-striped" style="text-align: center;width:98%;max-width:800px;font-size:9pt">
+				<th class="text-center">Sample</th><th class="text-center">Median coverage (mean)</th><th class="text-center">Median MAF (mean)</th><th class="text-center">Purity</th><th class="text-center">No variants present</th><th class="text-center">absent</th>
+				<tr><td>Met1</td><td>143.0 (147.2)</td><td>34.6% (30.7%)</td><td>69.8%</td><td>115</td><td>195</td></tr>
+				<tr><td>Met2</td><td>147.5 (147.6)</td><td>34.3% (30.1%)</td><td>71.4%</td><td>102</td><td>208</td></tr>
+				<tr><td>Met3</td><td>146.0 (148.6)</td><td>33.6% (29.9%)</td><td>67.5%</td><td>109</td><td>201</td></tr>
+				<tr><td>Met4</td><td>144.0 (148.3)</td><td>35.1% (31.0%)</td><td>71.9%</td><td>106</td><td>204</td></tr>
+				<tr><td>Met5</td><td>147.0 (148.1)</td><td>33.3% (29.9%)</td><td>70.5%</td><td>112</td><td>198</td></tr>
+				<tr><td>Met6</td><td>145.0 (148.6)</td><td>35.0% (31.2%)</td><td>70.8%</td><td>101</td><td>209</td></tr>
+			</table>
+			<p>
+				Samples that passed the filtering: 6/6</br>
+				Median coverage in the passed samples: 146.0 (mean: 148.08)
+			</p>
+			<p>
+				Total number of passed somatic variants: 310 </br>
+				Variants removed due to common variants filter: 1 </br>
+				Variants classified as present in at least one of the samples that passed the filtering: 310 </br>
+				Founders (variants present in all samples): 63 (20.3%) </br>
+				Mean number of unique (private) variants per sample: 38.8 (35.7%) </br>
+				Total number of likely driver gene mutations: 1 in 1 genes (<strong><font style="color:#8b0000;">KRAS</font></strong>; more red colored gene names correspond to better supported driver genes. Bold names are also present in the Cancer Gene Census list)</br>
+				Other mutations in likely driver genes: IncompleteTranscript (1), Intronic (1)</br>
+			</p>
+			<div align="center">
+			<div style="width:98%;max-width:800px">
+				<figure>
+					<img class="img-responsive" src="example_6_e=0_01_c0=0_5_af=0_05_bayesian_data_table.png" alt="Variant classification table" width="800"/>
+					<div align="left">
+					<figcaption>
+					<b>Probabilistic variant classification across 6 samples of patient example.</b>
+					Blue rectangles correspond to present variants, red to absent variants, and white to unknown mutation status. Brighter colors denote higher probability. Reddish colored gene names correspond to likely cancer drivers with increasing support. Bold names are also present in the Cancer Gene Census list. 
+					</figcaption>
+					</div>
+				</figure>
+			</div>
+			</div>
+			</br>
+
+			<h4>Genetic similarity</h4>
+			<table class="table table-striped" style="text-align: center;width:98%;max-width:800px;font-size:9pt">
+				<caption>Probabilistic Jaccard similarity coefficient between all pairs of samples (median: 0.46; mean: 0.46; classification threshold: 90%).</caption>
+				<th class="text-center">Sample</th><th class="text-center">Met1</th><th class="text-center">Met2</th><th class="text-center">Met3</th><th class="text-center">Met4</th><th class="text-center">Met5</th><th class="text-center">Met6</th>
+				<tr><td>Met1</td><td>1.00</td></tr>
+				<tr><td>Met2</td><td>0.44</td><td>1.00</td></tr>
+				<tr><td>Met3</td><td>0.52</td><td>0.46</td><td>1.00</td></tr>
+				<tr><td>Met4</td><td>0.41</td><td>0.45</td><td>0.43</td><td>1.00</td></tr>
+				<tr><td>Met5</td><td>0.41</td><td>0.44</td><td>0.43</td><td>0.46</td><td>1.00</td></tr>
+				<tr><td>Met6</td><td>0.50</td><td>0.50</td><td>0.52</td><td>0.47</td><td>0.46</td><td>1.00</td></tr>
+			</table>
+
+			<table class="table table-striped" style="text-align: center;width:98%;max-width:800px;font-size:9pt">
+				<caption>Genetic distance between all pairs of samples (median: 78; mean: 77.7; classification threshold: 90%).</caption>
+				<th class="text-center">Sample</th><th class="text-center">Met1</th><th class="text-center">Met2</th><th class="text-center">Met3</th><th class="text-center">Met4</th><th class="text-center">Met5</th><th class="text-center">Met6</th>
+				<tr><td>Met1</td><td>0</td></tr>
+				<tr><td>Met2</td><td>83</td><td>0</td></tr>
+				<tr><td>Met3</td><td>69</td><td>76</td><td>0</td></tr>
+				<tr><td>Met4</td><td>91</td><td>78</td><td>84</td><td>0</td></tr>
+				<tr><td>Met5</td><td>93</td><td>80</td><td>86</td><td>80</td><td>0</td></tr>
+				<tr><td>Met6</td><td>70</td><td>65</td><td>63</td><td>73</td><td>75</td><td>0</td></tr>
+			</table>
+			</br>
+
+			<h4>Inferred cancer phylogeny</h4>
+			<div align="center">
+			<div style="width:98%;max-width:700px">
+				<figure>
+					<img class="img-responsive" src="example_6_e=0_01_c0=0_5_af=0_05_mlhtree_1.png" alt="Evolutionary tree" width="750"/>
+					<div align="left">
+					<figcaption>
+					<b>Phylogenetic tree illustrating the evolutionary history of the cancer in example.</b>
+					Numbers on top of each branch indicate the number of acquired variants (including likely driver gene mutations reported separately in orange).
+					Numbers on bottom of each branch indicate the estimated support values.
+					</figcaption>
+					</div>
+				</figure>
+			</div>
+			</div>
+			</br>
+
+			<h4>Evolutionary conflict graph</h4>
+			<div align="center">
+			<div style="width:98%;max-width:700px">
+				<figure>
+					<img class="img-responsive" src="fig_mp_example.png" alt="Evolutionary conflict graph" width="500"/>
+					<div align="left">
+					<figcaption>
+					<b>Evolutionary conflict graph of 6 samples in patient example.</b>
+					Treeomics considered 65 distinct mutation patterns (MPs).
+					Each circular line represents a distinct sample. Inner to outer lines denote: Met1, Met2, Met3, Met4, Met5, Met6. Marks on these lines denote present variants. 
+					Labels denote the MP reliability scores. Only nodes with the highest reliability score are depicted. Blue colored nodes (MPs) are evolutionarily compatible and red colored nodes are evolutionarily incompatible indicated by edges among the nodes. Minimum reliability score value to be considered as a potential subclone: 0.018.
+					</figcaption>
+					</div>
+				</figure>
+			</div>
+			</div>
+			</br>
+
+			</br><p><em>Treeomics settings:</em>
+			 sequencing error rate e: 0.01, prior absent probability c0: 0.5, max absent VAF: 0.05, LOH frequency: 0.0, false discovery rate: 0.05, false-positive rate: 0.005. absent classification minimum coverage: 100. 			</p>
+		</div> <!-- /container -->
+		<footer class="footer">
+			<div class="container">
+				<p class="text-muted">&copy; Treeomics 1.7.10, May 18, 2018</p>
+			</div>
+		</footer>
+	</body>
+</html>

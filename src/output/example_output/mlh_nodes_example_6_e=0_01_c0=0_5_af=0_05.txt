@@ -1,0 +1,12 @@
+# chr - ID LABEL(=samples) START END COLOR
+chr - n1 0,1,2,3,4,5 0 63 blue
+chr - n2 0,1,2,5 0 1 blue
+chr - n3 0,2,5 0 4 blue
+chr - n4 3,4 0 3 blue
+chr - n5 0,2 0 6 blue
+chr - n6 4 0 46 blue
+chr - n7 5 0 33 blue
+chr - n8 3 0 40 blue
+chr - n9 0 0 41 blue
+chr - n10 1 0 38 blue
+chr - n11 2 0 35 blue
