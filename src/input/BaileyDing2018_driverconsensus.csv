@@ -1,0 +1,740 @@
+Gene_Symbol,CancerType,KEY,DriverType,Decision,TissueFrequency,PancanFrequency,ConsensusScore,CorrelationAdustedScore,Novel,Rescue Notes,Note about previous publication
+ABL1,PANCAN,ABL1_PANCAN,,rescued,NA,1.17%,0,#N/A,0,Evidence from OncoImpact/DriverNET overlap (SNV result),#N/A
+ACVR1,UCEC,ACVR1_UCEC,oncogene,official,5.30%,0.75%,1.5,1.5,0,,0
+ACVR1B,PANCAN,ACVR1B_PANCAN,possible tsg,official,NA,1.09%,1,0,0,,Found in 24132290
+ACVR2A,COADREAD,ACVR2A_COADREAD,tsg,official,2.85%,1.40%,1.5,1.5,0,,Found in 22810696
+ACVR2A,LIHC,ACVR2A_LIHC,possible tsg,official,3.11%,1.40%,1.5,1.5,0,,Found in private communication about integrative LIHC analysis
+ACVR2A,PANCAN,ACVR2A_PANCAN,possible tsg,official,NA,1.40%,2,2,0,,Found in 24132290
+AJUBA,PANCAN,AJUBA_PANCAN,tsg,official,NA,0.90%,2,1.48,0,,Found in 24132290
+AJUBA,HNSC,AJUBA_HNSC,tsg,official,6.37%,0.90%,4.5,3.41,0,,Found in 25631445
+AKT1,CESC,AKT1_CESC,oncogene,official,2.55%,1.01%,1.5,1.5,0,,0
+AKT1,PRAD,AKT1_PRAD,oncogene,official,0.63%,1.01%,1.5,1.5,0,,Found in 26544944
+AKT1,PANCAN,AKT1_PANCAN,oncogene,official,NA,1.01%,2.5,2.5,0,,Found in 24132290
+AKT1,THCA,AKT1_THCA,oncogene,official,1.02%,1.01%,2.5,2.5,0,,0
+AKT1,UCEC,AKT1_UCEC,oncogene,official,3.54%,1.01%,3,3,0,,0
+AKT1,BRCA,AKT1_BRCA,oncogene,official,3.21%,1.01%,4,3.52,0,,Found in 23000897
+ALB,LIHC,ALB_LIHC,possible tsg,official,13.56%,1.66%,2.5,2.08,1,,Found in private communication about integrative LIHC analysis
+ALK,PANCAN,ALK_PANCAN,,rescued,NA,2.43%,0,#N/A,0,Evidence from OncoImpact (SNV result),#N/A
+AMER1,PANCAN,AMER1_PANCAN,possible tsg,official,NA,2.74%,2,2,0,,0
+AMER1,COADREAD,AMER1_COADREAD,possible tsg,official,11.71%,2.74%,3,2.43,0,,0
+APC,PRAD,APC_PRAD,tsg,official,2.10%,5.87%,3,1.99,0,,0
+APC,PANCAN,APC_PANCAN,tsg,official,NA,5.87%,3.5,2.98,0,,Found in 24132290
+APC,STAD,APC_STAD,tsg,official,8.96%,5.87%,4,3.47,0,,Found in 25079317
+APC,COADREAD,APC_COADREAD,tsg,official,81.96%,5.87%,4.5,2.93,0,,Found in 22810696
+APOB,LIHC,APOB_LIHC,possible tsg,official,10.17%,8.08%,1.5,1.5,1,,Found in private communication about integrative LIHC analysis
+AR,PANCAN,AR_PANCAN,,rescued,NA,1.46%,0,#N/A,0,Evidence from OncoImpact (SNV result),#N/A
+ARAF,PANCAN,ARAF_PANCAN,,rescued,NA,0.79%,0,#N/A,0,Evidence from DriverNet (SNV result),#N/A
+ARHGAP35,LUSC,ARHGAP35_LUSC,tsg,official,6.03%,2.58%,2,2,0,,0
+ARHGAP35,PANCAN,ARHGAP35_PANCAN,tsg,official,NA,2.58%,2.5,1.98,0,,Found in 24132290
+ARHGAP35,UCEC,ARHGAP35_UCEC,tsg,official,13.89%,2.58%,3,2.7,0,,0
+ARID1A,ESCA,ARID1A_ESCA,tsg,official,6.98%,6.69%,1,0,0,,Found in 28052061
+ARID1A,LUAD,ARID1A_LUAD,tsg,official,4.64%,6.69%,2,2,0,,Found in 25079552
+ARID1A,LUSC,ARID1A_LUSC,tsg,official,7.33%,6.69%,2,2,0,,0
+ARID1A,UCS,ARID1A_UCS,tsg,official,9.09%,6.69%,2,2,0,,Found in 28292439
+ARID1A,CHOL,ARID1A_CHOL,,official,11.76%,6.69%,2.5,1.8,0,,Found in 28297679
+ARID1A,COADREAD,ARID1A_COADREAD,possible oncogene,official,5.06%,6.69%,2.5,2.5,0,,Found in 22810696
+ARID1A,CESC,ARID1A_CESC,tsg,official,5.84%,6.69%,3,1.91,0,,Found in 28112728
+ARID1A,LGG,ARID1A_LGG,possible tsg,official,3.92%,6.69%,3,2.47,0,,Found in 26061751
+ARID1A,PAAD,ARID1A_PAAD,tsg,official,5.16%,6.69%,3,2.45,0,,Found in private communication about integrative PAAD analysis
+ARID1A,BLCA,ARID1A_BLCA,tsg,official,25.91%,6.69%,3.5,2.43,0,,Found in 24476821
+ARID1A,BRCA,ARID1A_BRCA,tsg,official,3.34%,6.69%,3.5,3.5,0,,0
+ARID1A,LIHC,ARID1A_LIHC,tsg,official,9.04%,6.69%,3.5,3.08,0,,Found in private communication about integrative LIHC analysis
+ARID1A,PANCAN,ARID1A_PANCAN,tsg,official,NA,6.69%,3.5,2.98,0,,Found in 24132290
+ARID1A,UCEC,ARID1A_UCEC,tsg,official,39.65%,6.69%,3.5,3.2,0,,Found in 23636398
+ARID1A,STAD,ARID1A_STAD,tsg,official,15.41%,6.69%,4,3.47,0,,Found in 25079317
+ARID2,HNSC,ARID2_HNSC,possible tsg,official,3.78%,3.16%,2,1.46,0,,0
+ARID2,LGG,ARID2_LGG,possible tsg,official,1.96%,3.16%,2,1.47,0,,0
+ARID2,STAD,ARID2_STAD,possible tsg,official,5.32%,3.16%,2,1.47,0,,0
+ARID2,LIHC,ARID2_LIHC,tsg,official,5.65%,3.16%,3,3,0,,Found in private communication about integrative LIHC analysis
+ARID2,PANCAN,ARID2_PANCAN,tsg,official,NA,3.16%,3.5,2.98,0,,0
+ARID2,SKCM,ARID2_SKCM,tsg,official,12.09%,3.16%,3.5,3.5,0,,Found in 26091043
+ARID5B,UCEC,ARID5B_UCEC,possible tsg,official,12.12%,1.72%,1.5,1.2,0,,0
+ASXL1,PANCAN,ASXL1_PANCAN,possible tsg,official,NA,2.10%,1.5,1.5,0,,Found in 24132290
+ASXL1,LAML,ASXL1_LAML,tsg,official,4.32%,2.10%,2.5,2.5,0,,0
+ASXL2,PANCAN,ASXL2_PANCAN,possible tsg,official,NA,1.85%,1.5,1.5,0,,0
+ASXL2,BLCA,ASXL2_BLCA,possible tsg,official,7.51%,1.85%,3,2.58,0,,0
+ATF7IP,UCEC,ATF7IP_UCEC,possible tsg,official,4.80%,1.75%,1.5,1.5,1,,0
+ATF7IP,PANCAN,ATF7IP_PANCAN,tsg,official,NA,1.75%,2,1.48,1,,0
+ATM,UCEC,ATM_UCEC,tsg,official,10.35%,4.12%,1.5,1.5,0,,0
+ATM,BLCA,ATM_BLCA,possible tsg,official,13.47%,4.12%,2,1.58,0,,0
+ATM,PANCAN,ATM_PANCAN,tsg,official,NA,4.12%,3,2.48,0,,Found in 24132290
+ATM,LUAD,ATM_LUAD,tsg,official,7.89%,4.12%,3.5,3.5,0,,0
+ATM,KIRC,ATM_KIRC,tsg,official,4.08%,4.12%,4,2.97,0,,0
+ATR,PANCAN,ATR_PANCAN,possible tsg,official,NA,2.81%,0.5,0,0,,Found in 24132290
+ATR,UCEC,ATR_UCEC,possible tsg,official,4.80%,2.81%,0.5,0,0,,Found in 23636398 
+ATRX,ACC,ATRX_ACC,possible tsg,official,4.44%,5.69%,2,2,0,,Found in 27165744
+ATRX,GBM,ATRX_GBM,tsg,official,7.40%,5.69%,3.5,2.41,0,,Found in 24120142
+ATRX,PANCAN,ATRX_PANCAN,tsg,official,NA,5.69%,4,3.48,0,,Found in 24132290
+ATRX,SARC,ATRX_SARC,tsg,official,16.67%,5.69%,5,3.21,0,,Found in private communication about integrative SARC analysis
+ATRX,LGG,ATRX_LGG,tsg,official,38.24%,5.69%,5.5,3.57,0,,Found in 26061751
+ATXN3,PANCAN,ATXN3_PANCAN,possible tsg,official,NA,0.40%,1.5,1.5,1,,0
+AXIN1,PANCAN,AXIN1_PANCAN,tsg,official,NA,1.41%,2.5,1.98,0,,0
+AXIN1,LIHC,AXIN1_LIHC,tsg,official,7.63%,1.41%,3.5,3.08,0,,Found in private communication about integrative LIHC analysis
+AXIN2,PANCAN,AXIN2_PANCAN,possible tsg,rescued,NA,1.27%,0,#N/A,0,Evidence from OncoImpact (SNV result),#N/A
+B2M,PANCAN,B2M_PANCAN,possible tsg,official,NA,0.91%,2.5,1.98,0,,0
+B2M,DLBC,B2M_DLBC,possible tsg,official,24.32%,0.91%,3,2.2,0,,0
+BAP1,KIRP,BAP1_KIRP,possible tsg,official,5.09%,2.14%,2,1.28,0,,0
+BAP1,PANCAN,BAP1_PANCAN,tsg,official,NA,2.14%,3,2.48,0,,Found in 24132290
+BAP1,CHOL,BAP1_CHOL,tsg,official,17.65%,2.14%,3.5,2.8,0,,Found in 28297679
+BAP1,LIHC,BAP1_LIHC,tsg,official,5.93%,2.14%,3.5,3.08,0,,Found in private communication about integrative LIHC analysis
+BAP1,UVM,BAP1_UVM,tsg,official,16.25%,2.14%,3.5,2.79,0,,Found in private communication about integrative UVM analysis
+BAP1,MESO,BAP1_MESO,tsg,official,22.22%,2.14%,4.5,2.65,0,,0
+BAP1,KIRC,BAP1_KIRC,tsg,official,10.60%,2.14%,6.5,4.76,0,,Found in 23792563
+BCL2,PANCAN,BCL2_PANCAN,,rescued,NA,0.40%,0,#N/A,0,Evidence from DriverNet (CNA result) and OncoImpact (CNA result) ,#N/A
+BCL2L11,UCS,BCL2L11_UCS,,official,3.64%,0.54%,1.5,1.5,0,,0
+BCOR,UCEC,BCOR_UCEC,possible oncogene,official,11.11%,2.65%,2.5,2.2,0,,0
+BCOR,STAD,BCOR_STAD,tsg,official,5.60%,2.65%,3,2.47,0,,Found in 25079317
+BCOR,PANCAN,BCOR_PANCAN,tsg,official,NA,2.65%,3.5,2.98,0,,0
+BRAF,PRAD,BRAF_PRAD,possible oncogene,official,1.26%,7.10%,0.5,0,0,,Found in 26544944
+BRAF,GBM,BRAF_GBM,oncogene,official,1.93%,7.10%,2.5,2.5,0,,Found in 24120142
+BRAF,COADREAD,BRAF_COADREAD,oncogene,official,5.06%,7.10%,4.5,4.5,0,,Found in 22810696
+BRAF,PANCAN,BRAF_PANCAN,oncogene,official,NA,7.10%,5,4.48,0,,Found in 24132290
+BRAF,LUAD,BRAF_LUAD,oncogene,official,7.19%,7.10%,5.5,5,0,,Found in 25079552
+BRAF,SKCM,BRAF_SKCM,oncogene,official,52.13%,7.10%,6,5.54,0,,Found in 26091043
+BRAF,THCA,BRAF_THCA,oncogene,official,59.15%,7.10%,7,4.37,0,,Found in 25417114
+BRCA1,OV,BRCA1_OV,possible tsg,official,4.41%,2.05%,1,0,0,,Found in 21720365
+BRCA1,PANCAN,BRCA1_PANCAN,tsg,official,NA,2.05%,2.5,1.98,0,,Found in 24132290
+BRCA1,BRCA,BRCA1_BRCA,tsg,official,3.08%,2.05%,3,3,0,,0
+BRCA2,PANCAN,BRCA2_PANCAN,possible tsg,official,NA,3.27%,0.5,0,0,,Found in 24132290
+BRD7,LIHC,BRD7_LIHC,tsg,official,3.11%,0.85%,1.5,1.5,1,,0
+BRD7,PANCAN,BRD7_PANCAN,tsg,official,NA,0.85%,2.5,1.98,1,,0
+BRD7,SKCM,BRD7_SKCM,tsg,official,2.84%,0.85%,2.5,2.5,1,,0
+BTG2,DLBC,BTG2_DLBC,possible tsg,official,35.14%,0.57%,2,1.2,1,,0
+CACNA1A,PANCAN,CACNA1A_PANCAN,possible oncogene,official,NA,3.43%,2,2,1,,0
+CARD11,DLBC,CARD11_DLBC,possible oncogene,official,21.62%,2.80%,2,1.2,0,,0
+CASP8,CESC,CASP8_CESC,tsg,official,4.38%,1.75%,2.5,2.5,0,,Found in 28112728
+CASP8,STAD,CASP8_STAD,possible tsg,official,2.24%,1.75%,2.5,2.5,0,,0
+CASP8,PANCAN,CASP8_PANCAN,tsg,official,NA,1.75%,3,2.48,0,,0
+CASP8,BRCA,CASP8_BRCA,possible tsg,official,2.05%,1.75%,3.5,2.45,0,,0
+CASP8,HNSC,CASP8_HNSC,tsg,official,10.36%,1.75%,5,3.91,0,,Found in 25631445
+CBFB,PANCAN,CBFB_PANCAN,possible tsg,official,NA,0.48%,0.5,0,0,,Found in 24132290
+CBFB,BRCA,CBFB_BRCA,possible tsg,official,2.31%,0.48%,2,1.52,0,,0
+CBWD3,PANCAN,CBWD3_PANCAN,,official,NA,0.07%,1.5,1.5,1,,0
+CCND1,PANCAN,CCND1_PANCAN,possible oncogene,official,NA,0.77%,2.5,2.5,0,,Found in 24132290
+CCND1,UCEC,CCND1_UCEC,possible oncogene,official,7.07%,0.77%,3.5,2.67,0,,0
+CD70,DLBC,CD70_DLBC,possible tsg,official,10.81%,0.37%,1.5,1.5,0,,0
+CD79B,DLBC,CD79B_DLBC,oncogene,official,13.51%,0.39%,3.5,2.7,0,,0
+CDH1,PANCAN,CDH1_PANCAN,tsg,official,NA,2.43%,2.5,1.98,0,,Found in 24132290
+CDH1,STAD,CDH1_STAD,oncogene,official,8.96%,2.43%,3,3,0,,Found in 25079317
+CDH1,BRCA,CDH1_BRCA,tsg,official,13.09%,2.43%,5,3.42,0,,Found in 23000897
+CDK12,OV,CDK12_OV,tsg,official,4.66%,2.05%,2,2,0,,Found in 21720365
+CDK12,PANCAN,CDK12_PANCAN,tsg,official,NA,2.05%,2.5,1.98,0,,Found in 24132290
+CDK4,PANCAN,CDK4_PANCAN,oncogene,official,NA,0.44%,2,2,0,,0
+CDK4,SKCM,CDK4_SKCM,oncogene,official,2.61%,0.44%,2.5,2.5,0,,0
+CDKN1A,LIHC,CDKN1A_LIHC,possible oncogene,official,2.54%,0.91%,1.5,1.5,0,,0
+CDKN1A,BLCA,CDKN1A_BLCA,tsg,official,9.59%,0.91%,2.5,2.08,0,,Found in 24476821
+CDKN1A,PANCAN,CDKN1A_PANCAN,tsg,official,NA,0.91%,3,2.48,0,,Found in 24132290
+CDKN1B,BRCA,CDKN1B_BRCA,possible tsg,official,1.16%,0.66%,1.5,1.5,0,,Found in 23000897
+CDKN1B,PANCAN,CDKN1B_PANCAN,possible tsg,official,NA,0.66%,2.5,1.98,0,,Found in 24132290
+CDKN2A,LIHC,CDKN2A_LIHC,possible tsg,official,2.82%,3.99%,1.5,1.5,0,,Found in private communication about integrative LIHC analysis
+CDKN2A,LUAD,CDKN2A_LUAD,possible tsg,official,3.71%,3.99%,2,2,0,,Found in 25079552
+CDKN2A,STAD,CDKN2A_STAD,possible tsg,official,3.92%,3.99%,2,2,0,,0
+CDKN2A,BLCA,CDKN2A_BLCA,tsg,official,5.18%,3.99%,3.5,2.43,0,,Found in 24476821
+CDKN2A,ESCA,CDKN2A_ESCA,possible tsg,official,8.14%,3.99%,4,4,0,,Found in 28052061
+CDKN2A,PANCAN,CDKN2A_PANCAN,tsg,official,NA,3.99%,4,3.48,0,,Found in 24132290
+CDKN2A,LUSC,CDKN2A_LUSC,tsg,official,16.16%,3.99%,4.5,4.5,0,,Found in 22960745
+CDKN2A,SKCM,CDKN2A_SKCM,tsg,official,11.37%,3.99%,4.5,4.5,0,,Found in 26091043
+CDKN2A,HNSC,CDKN2A_HNSC,tsg,official,20.72%,3.99%,5,3.91,0,,Found in 25631445
+CDKN2A,PAAD,CDKN2A_PAAD,tsg,official,22.58%,3.99%,5,3,0,,Found in private communication about integrative PAAD analysis
+CDKN2C,PANCAN,CDKN2C_PANCAN,possible tsg,rescued,NA,0.37%,0,#N/A,0,Expert curation,#N/A
+CEBPA,LAML,CEBPA_LAML,possible oncogene,rescued,0.72%,0.19%,0,#N/A,0,"Poor Variant Calling in liquid tumor, from manuscript",#N/A
+CHD3,PANCAN,CHD3_PANCAN,possible tsg,official,NA,2.03%,1.5,1.5,1,,0
+CHD3,UCEC,CHD3_UCEC,possible tsg,official,10.86%,2.03%,2,1.7,1,,0
+CHD4,BRCA,CHD4_BRCA,oncogene,official,2.57%,3.10%,1.5,1.5,0,,0
+CHD4,UCS,CHD4_UCS,possible tsg,official,14.55%,3.10%,1.5,1.5,0,,Found in 28292439
+CHD4,UCEC,CHD4_UCEC,possible oncogene,official,16.92%,3.10%,2.5,2.2,0,,0
+CHD4,PANCAN,CHD4_PANCAN,possible oncogene,official,NA,3.10%,3,2.48,0,,0
+CHD8,PANCAN,CHD8_PANCAN,tsg,official,NA,2.29%,1.5,1.5,0,,0
+CHEK2,PANCAN,CHEK2_PANCAN,possible tsg,official,NA,0.87%,1,0,0,,Found in 24132290
+CIC,PANCAN,CIC_PANCAN,possible tsg,official,NA,2.76%,4.5,3.98,0,,0
+CIC,LGG,CIC_LGG,possible tsg,official,21.37%,2.76%,7.5,5.12,0,,Found in 26061751
+CNBD1,STAD,CNBD1_STAD,oncogene,official,4.20%,1.41%,2.5,2.5,0,,0
+COL5A1,SKCM,COL5A1_SKCM,oncogene,official,17.77%,3.97%,1.5,1.5,0,,0
+CREB3L3,LIHC,CREB3L3_LIHC,possible tsg,official,1.69%,0.96%,1,0,1,,Found in private communication about integrative LIHC analysis
+CREBBP,BLCA,CREBBP_BLCA,tsg,official,12.69%,3.66%,2.5,2.08,0,,0
+CREBBP,PANCAN,CREBBP_PANCAN,tsg,official,NA,3.66%,3,2.48,0,,0
+CSDE1,PCPG,CSDE1_PCPG,tsg,official,2.23%,1.18%,2.5,2.5,0,,Found in 28162975
+CTCF,BRCA,CTCF_BRCA,possible tsg,official,2.57%,1.94%,2,1.52,0,,Found in 23000897
+CTCF,PANCAN,CTCF_PANCAN,tsg,official,NA,1.94%,3,2.48,0,,Found in 24132290
+CTCF,UCEC,CTCF_UCEC,tsg,official,18.43%,1.94%,4.5,4.2,0,,0
+CTNNB1,BLCA,CTNNB1_BLCA,oncogene,official,3.11%,3.57%,2,2,0,,0
+CTNNB1,COADREAD,CTNNB1_COADREAD,oncogene,official,3.80%,3.57%,2.5,2.5,0,,Found in 22810696
+CTNNB1,SKCM,CTNNB1_SKCM,oncogene,official,5.21%,3.57%,2.5,2.18,0,,Found in 26091043
+CTNNB1,PRAD,CTNNB1_PRAD,oncogene,official,1.89%,3.57%,3.5,3.5,0,,Found in 26544944
+CTNNB1,STAD,CTNNB1_STAD,oncogene,official,4.76%,3.57%,3.5,3.5,0,,Found in 25079317
+CTNNB1,LUAD,CTNNB1_LUAD,oncogene,official,3.94%,3.57%,4,3.5,0,,0
+CTNNB1,PANCAN,CTNNB1_PANCAN,oncogene,official,NA,3.57%,4.5,3.98,0,,Found in 24132290
+CTNNB1,UCEC,CTNNB1_UCEC,oncogene,official,21.46%,3.57%,4.5,3.67,0,,Found in 23636398
+CTNNB1,ACC,CTNNB1_ACC,oncogene,official,15.56%,3.57%,5,3.14,0,,Found in 27165744
+CTNNB1,LIHC,CTNNB1_LIHC,oncogene,official,26.27%,3.57%,6.5,5.03,0,,Found in private communication about integrative LIHC analysis
+CTNND1,UCEC,CTNND1_UCEC,tsg,official,6.31%,1.53%,1.5,1.5,0,,0
+CTNND1,PANCAN,CTNND1_PANCAN,tsg,official,NA,1.53%,2.5,1.98,0,,0
+CUL1,BLCA,CUL1_BLCA,oncogene,official,4.66%,1.20%,1.5,1.5,0,,0
+CUL1,PANCAN,CUL1_PANCAN,oncogene,official,NA,1.20%,2.5,1.98,0,,0
+CUL3,HNSC,CUL3_HNSC,possible tsg,official,3.59%,1.40%,2,2,1,,0
+CUL3,LUSC,CUL3_LUSC,tsg,official,5.60%,1.40%,2,2,1,,0
+CUL3,PANCAN,CUL3_PANCAN,tsg,official,NA,1.40%,2.5,1.98,1,,0
+CUL3,KIRP,CUL3_KIRP,tsg,official,3.64%,1.40%,4.5,3.78,1,,0
+CYLD,HNSC,CYLD_HNSC,possible tsg,official,2.39%,0.98%,2,2,0,,0
+CYSLTR2,UVM,CYSLTR2_UVM,oncogene,official,3.75%,0.74%,2.5,2.5,1,,Found in private communication about integrative UVM analysis
+DACH1,SKCM,DACH1_SKCM,oncogene,official,8.53%,1.76%,1.5,1.5,1,,0
+DAZAP1,PANCAN,DAZAP1_PANCAN,possible tsg,official,NA,0.87%,2,2,1,,0
+DDX3X,SKCM,DDX3X_SKCM,tsg,official,5.45%,1.44%,1.5,1.5,0,,Found in 26091043
+DDX3X,PANCAN,DDX3X_PANCAN,tsg,official,NA,1.44%,2,1.48,0,,0
+DHX9,LIHC,DHX9_LIHC,possible oncogene,official,3.11%,1.31%,1.5,1.5,0,,0
+DIAPH2,BLCA,DIAPH2_BLCA,possible oncogene,official,5.44%,1.60%,2,2,1,,0
+DICER1,UCEC,DICER1_UCEC,possible oncogene,official,6.31%,1.93%,2,2,0,,0
+DMD,STAD,DMD_STAD,oncogene,official,10.64%,7.03%,1.5,1.5,0,,0
+DNMT3A,PANCAN,DNMT3A_PANCAN,tsg,official,NA,2.06%,1.5,1.5,0,,Found in 24132290
+DNMT3A,THCA,DNMT3A_THCA,tsg,official,0.81%,2.06%,2,2,0,,0
+DNMT3A,LAML,DNMT3A_LAML,tsg,official,12.23%,2.06%,2.5,1.86,0,,Found in 23634996
+EEF1A1,PANCAN,EEF1A1_PANCAN,possible oncogene,official,NA,1.12%,2,2,0,,0
+EEF1A1,LIHC,EEF1A1_LIHC,oncogene,official,2.82%,1.12%,3.5,3.08,0,,Found in private communication about integrative LIHC analysis
+EEF2,PAAD,EEF2_PAAD,tsg,official,1.94%,1.07%,1.5,1.5,1,,0
+EGFR,PANCAN,EGFR_PANCAN,oncogene,official,NA,3.78%,4,3.48,0,,Found in 24132290
+EGFR,GBM,EGFR_GBM,oncogene,official,23.15%,3.78%,5.5,4.74,0,,Found in 24120142
+EGFR,LUAD,EGFR_LUAD,oncogene,official,13.92%,3.78%,5.5,5,0,,Found in 25079552
+EGFR,LGG,EGFR_LGG,oncogene,official,6.86%,3.78%,6.5,4.72,0,,Found in 26061751
+EGR3,PANCAN,EGR3_PANCAN,,rescued,NA,0.61%,0,#N/A,0,Evidence from DriverNet (SNV result),#N/A
+EIF1AX,PANCAN,EIF1AX_PANCAN,possible oncogene,official,NA,0.62%,3.5,3.5,1,,0
+EIF1AX,THCA,EIF1AX_THCA,oncogene,official,1.42%,0.62%,4,3.56,1,,Found in 25417114
+EIF1AX,UVM,EIF1AX_UVM,oncogene,official,12.50%,0.62%,4.5,3.25,1,,Found in private communication about integrative UVM analysis
+ELF3,PANCAN,ELF3_PANCAN,possible tsg,official,NA,1.33%,1.5,1.5,0,,Found in 24132290
+ELF3,BLCA,ELF3_BLCA,possible tsg,official,13.99%,1.33%,2,1.58,0,,Found in 24476821
+EP300,UCEC,EP300_UCEC,tsg,official,9.09%,3.30%,1.5,1.5,0,,0
+EP300,LUSC,EP300_LUSC,oncogene,official,3.66%,3.30%,2.5,2.5,0,,0
+EP300,PANCAN,EP300_PANCAN,tsg,official,NA,3.30%,3.5,2.98,0,,Found in 24132290
+EP300,BLCA,EP300_BLCA,tsg,official,13.73%,3.30%,4.5,3.43,0,,Found in 24476821
+EP300,HNSC,EP300_HNSC,possible tsg,official,7.37%,3.30%,4.5,3.96,0,,0
+EP300,CESC,EP300_CESC,tsg,official,10.95%,3.30%,6,4.36,0,,Found in 28112728
+EPAS1,PCPG,EPAS1_PCPG,oncogene,official,4.47%,1.33%,6,4.25,0,,Found in 28162975
+EPHA2,CHOL,EPHA2_CHOL,tsg,official,11.76%,1.58%,2.5,2.5,0,,0
+EPHA2,PANCAN,EPHA2_PANCAN,tsg,official,NA,1.58%,2.5,1.98,0,,0
+EPHA2,HNSC,EPHA2_HNSC,tsg,official,4.78%,1.58%,4,4,0,,0
+EPHA3,PANCAN,EPHA3_PANCAN,,rescued,NA,3.61%,0,#N/A,0,Evidence from OncoImpact (SNV result),#N/A
+ERBB2,ESCA,ERBB2_ESCA,possible oncogene,official,4.65%,2.28%,0.5,0,0,,Found in 28052061
+ERBB2,STAD,ERBB2_STAD,oncogene,official,4.20%,2.28%,2,2,0,,Found in 25079317
+ERBB2,UCEC,ERBB2_UCEC,oncogene,official,4.55%,2.28%,2,2,0,,0
+ERBB2,CESC,ERBB2_CESC,oncogene,official,5.11%,2.28%,2.5,2.5,0,,0
+ERBB2,BLCA,ERBB2_BLCA,oncogene,official,12.95%,2.28%,3,2.58,0,,0
+ERBB2,PANCAN,ERBB2_PANCAN,oncogene,official,NA,2.28%,3.5,2.98,0,,0
+ERBB2,BRCA,ERBB2_BRCA,oncogene,official,2.57%,2.28%,5,4.52,0,,0
+ERBB3,CESC,ERBB3_CESC,oncogene,official,5.11%,2.57%,1.5,1.5,0,,Found in 28112728
+ERBB3,BLCA,ERBB3_BLCA,oncogene,official,11.92%,2.57%,2,1.58,0,,Found in 24476821
+ERBB3,PANCAN,ERBB3_PANCAN,possible oncogene,official,NA,2.57%,2,2,0,,0
+ERBB3,UCEC,ERBB3_UCEC,oncogene,official,7.83%,2.57%,2,2,0,,0
+ERBB4,STAD,ERBB4_STAD,oncogene,official,9.80%,3.86%,1.5,1.5,0,,0
+ERCC2,PANCAN,ERCC2_PANCAN,possible oncogene,official,NA,1.13%,1,0,0,,Found in 24132290
+ERCC2,BLCA,ERCC2_BLCA,oncogene,official,9.33%,1.13%,3.5,3.08,0,,Found in 24476821
+ESR1,PANCAN,ESR1_PANCAN,,rescued,NA,1.12%,0,#N/A,0,Evidence from OncoImpact (SNV result) & Structural tools,#N/A
+EZH2,LAML,EZH2_LAML,,rescued,0.00%,0.82%,0,#N/A,0,"Poor Variant Calling in liquid tumor, from manuscript",#N/A
+FAM46D,STAD,FAM46D_STAD,oncogene,official,1.96%,1.10%,1,0,1,,Found in 25079317
+FAT1,CESC,FAT1_CESC,possible tsg,official,8.03%,6.22%,2,2,0,,0
+FAT1,UCEC,FAT1_UCEC,tsg,official,15.15%,6.22%,2,1.7,0,,0
+FAT1,BLCA,FAT1_BLCA,tsg,official,11.66%,6.22%,2.5,2.08,0,,0
+FAT1,PANCAN,FAT1_PANCAN,tsg,official,NA,6.22%,2.5,1.98,0,,Found in 24132290
+FAT1,LUSC,FAT1_LUSC,tsg,official,15.52%,6.22%,3.5,3.5,0,,0
+FAT1,HNSC,FAT1_HNSC,tsg,official,24.10%,6.22%,4,4,0,,Found in 25631445
+FBXW7,BRCA,FBXW7_BRCA,possible oncogene,official,1.80%,3.77%,1.5,1.5,0,,0
+FBXW7,ESCA,FBXW7_ESCA,tsg,official,5.23%,3.77%,2,2,0,,0
+FBXW7,STAD,FBXW7_STAD,tsg,official,3.08%,3.77%,2,2,0,,0
+FBXW7,LUSC,FBXW7_LUSC,possible tsg,official,5.60%,3.77%,2.5,2.5,0,,0
+FBXW7,UCEC,FBXW7_UCEC,possible oncogene,official,16.41%,3.77%,3.5,3.2,0,,Found in 23636398
+FBXW7,BLCA,FBXW7_BLCA,tsg,official,9.07%,3.77%,4.5,3.43,0,,Found in 24476821
+FBXW7,COADREAD,FBXW7_COADREAD,tsg,official,12.03%,3.77%,4.5,3.5,0,,Found in 22810696
+FBXW7,PANCAN,FBXW7_PANCAN,tsg,official,NA,3.77%,4.5,3.98,0,,Found in 24132290
+FBXW7,CESC,FBXW7_CESC,possible tsg,official,11.31%,3.77%,5.5,3.86,0,,Found in 28112728
+FBXW7,UCS,FBXW7_UCS,oncogene,official,38.18%,3.77%,5.5,4.82,0,,Found in 28292439
+FBXW7,HNSC,FBXW7_HNSC,possible tsg,official,7.57%,3.77%,6,4.91,0,,0
+FGFR1,PANCAN,FGFR1_PANCAN,,rescued,NA,1.15%,0,#N/A,0,Evidence from OncoIMPACT (SNV result),#N/A
+FGFR2,LUSC,FGFR2_LUSC,oncogene,official,3.02%,1.94%,1.5,1.5,0,,0
+FGFR2,PANCAN,FGFR2_PANCAN,oncogene,official,NA,1.94%,1.5,1.5,0,,Found in 24132290
+FGFR2,UCEC,FGFR2_UCEC,oncogene,official,12.12%,1.94%,2.5,2.2,0,,0
+FGFR3,PANCAN,FGFR3_PANCAN,oncogene,official,NA,1.53%,3,3,0,,Found in 24132290
+FGFR3,HNSC,FGFR3_HNSC,oncogene,official,1.79%,1.53%,3.5,3,0,,0
+FGFR3,BLCA,FGFR3_BLCA,oncogene,official,15.28%,1.53%,4,3.19,0,,Found in 24476821
+FLNA,HNSC,FLNA_HNSC,tsg,official,3.59%,3.24%,2,1.5,1,,0
+FLT3,LAML,FLT3_LAML,oncogene,official,5.04%,1.76%,1.5,1.5,0,,Found in 23634996
+FOXA1,BLCA,FOXA1_BLCA,possible tsg,official,3.89%,1.34%,1,0,0,,Found in 24476821
+FOXA1,PANCAN,FOXA1_PANCAN,possible oncogene,official,NA,1.34%,3.5,3.5,0,,Found in 24132290
+FOXA1,PRAD,FOXA1_PRAD,possible oncogene,official,6.50%,1.34%,5,3.87,0,,Found in 26544944
+FOXA1,BRCA,FOXA1_BRCA,oncogene,official,3.47%,1.34%,6,4.42,0,,0
+FOXA2,UCEC,FOXA2_UCEC,possible tsg,official,5.56%,0.93%,2,1.7,0,,0
+FOXA2,PANCAN,FOXA2_PANCAN,possible tsg,official,NA,0.93%,2.5,2.5,0,,Found in 24132290
+FOXQ1,BLCA,FOXQ1_BLCA,possible tsg,official,3.89%,0.53%,0.5,0,0,,Found in 24476821
+FUBP1,PANCAN,FUBP1_PANCAN,tsg,official,NA,1.33%,2.5,1.98,0,,0
+FUBP1,LGG,FUBP1_LGG,possible tsg,official,9.22%,1.33%,5,3.07,0,,Found in 26061751
+GABRA6,GBM,GABRA6_GBM,,official,4.50%,1.96%,0.5,0,1,,Found in 24120142
+GATA3,PANCAN,GATA3_PANCAN,possible tsg,official,NA,2.40%,1.5,1.5,0,,Found in 24132290
+GATA3,BRCA,GATA3_BRCA,possible tsg,official,12.58%,2.40%,4,2.95,0,,Found in 23000897
+GNA11,SKCM,GNA11_SKCM,oncogene,official,1.90%,0.78%,1.5,1.5,0,,0
+GNA11,PANCAN,GNA11_PANCAN,oncogene,official,NA,0.78%,2,2,0,,0
+GNA11,UVM,GNA11_UVM,oncogene,official,45.00%,0.78%,4.5,3.25,0,,Found in private communication about integrative UVM analysis
+GNA13,BLCA,GNA13_BLCA,oncogene,official,3.37%,0.59%,1.5,1.5,0,,0
+GNAQ,PANCAN,GNAQ_PANCAN,oncogene,official,NA,0.91%,3,2.48,0,,0
+GNAQ,UVM,GNAQ_UVM,oncogene,official,50.00%,0.91%,5.5,3.65,0,,Found in private communication about integrative UVM analysis
+GNAS,COADREAD,GNAS_COADREAD,oncogene,official,3.48%,2.00%,1.5,1.5,0,,0
+GNAS,LIHC,GNAS_LIHC,oncogene,official,2.82%,2.00%,1.5,1.5,0,,0
+GNAS,PAAD,GNAS_PAAD,oncogene,official,3.87%,2.00%,2.5,2.5,0,,Found in private communication about integrative PAAD analysis
+GPS2,BRCA,GPS2_BRCA,possible tsg,official,1.03%,0.51%,2.5,2.02,0,,0
+GPS2,PANCAN,GPS2_PANCAN,tsg,official,NA,0.51%,2.5,1.98,0,,0
+GRIN2D,PANCAN,GRIN2D_PANCAN,possible oncogene,official,NA,1.18%,1.5,1.5,1,,0
+GTF2I,PANCAN,GTF2I_PANCAN,oncogene,official,NA,1.45%,1.5,1.5,1,,0
+GTF2I,THYM,GTF2I_THYM,oncogene,official,49.59%,1.45%,3.5,2.81,1,,Found in private communication about integrative THYM analysis
+H3F3A,PANCAN,H3F3A_PANCAN,possible oncogene,official,NA,0.34%,1.5,1.5,0,,0
+H3F3C,PANCAN,H3F3C_PANCAN,,official,NA,0.70%,0.5,0,0,,Found in 24132290
+HGF,PANCAN,HGF_PANCAN,,rescued,NA,2.31%,0,#N/A,0,Evidence from OncoImpact/DriverNET overlap (SNV result),#N/A
+HIST1H1C,PANCAN,HIST1H1C_PANCAN,,rescued,NA,1.13%,0,#N/A,0,Expert curation,#N/A
+HIST1H1E,DLBC,HIST1H1E_DLBC,possible oncogene,official,27.03%,1.08%,2,1.2,0,,0
+HIST1H1E,LIHC,HIST1H1E_LIHC,possible tsg,official,1.41%,1.08%,2,1.46,0,,0
+HLA-A,LUSC,HLA-A_LUSC,possible tsg,official,1.29%,0.70%,1.5,1.5,0,,Found in 22960745
+HLA-A,HNSC,HLA-A_HNSC,possible tsg,official,4.38%,0.70%,2.5,1.96,0,,Found in 25631445
+HLA-A,PANCAN,HLA-A_PANCAN,tsg,official,NA,0.70%,3,2.48,0,,0
+HLA-B,DLBC,HLA-B_DLBC,tsg,official,10.81%,0.91%,2,2,0,,0
+HLA-B,HNSC,HLA-B_HNSC,tsg,official,3.98%,0.91%,2.5,2.5,0,,0
+HLA-B,PANCAN,HLA-B_PANCAN,tsg,official,NA,0.91%,2.5,1.98,0,,0
+HLA-B,CESC,HLA-B_CESC,tsg,official,3.65%,0.91%,3,3,0,,Found in 28112728
+HRAS,SKCM,HRAS_SKCM,oncogene,official,1.66%,1.45%,0.5,0,0,,Found in 26091043
+HRAS,LUSC,HRAS_LUSC,oncogene,official,1.72%,1.45%,2,2,0,,0
+HRAS,PRAD,HRAS_PRAD,oncogene,official,0.84%,1.45%,2.5,2.5,0,,Found in 26544944
+HRAS,BLCA,HRAS_BLCA,oncogene,official,4.92%,1.45%,3,2.58,0,,Found in 24476821
+HRAS,HNSC,HRAS_HNSC,oncogene,official,6.37%,1.45%,4,3.5,0,,0
+HRAS,PANCAN,HRAS_PANCAN,oncogene,official,NA,1.45%,4,4,0,,0
+HRAS,THYM,HRAS_THYM,oncogene,official,8.26%,1.45%,4.5,3.81,0,,Found in private communication about integrative THYM analysis
+HRAS,THCA,HRAS_THCA,oncogene,official,3.46%,1.45%,5,4.56,0,,Found in 25417114
+HRAS,PCPG,HRAS_PCPG,oncogene,official,10.06%,1.45%,5.5,3.51,0,,Found in 28162975
+HUWE1,HNSC,HUWE1_HNSC,possible tsg,official,10.16%,4.88%,2.5,2.5,0,,0
+IDH1,LIHC,IDH1_LIHC,oncogene,official,1.98%,5.56%,2.5,2.5,0,,0
+IDH1,PRAD,IDH1_PRAD,oncogene,official,0.84%,5.56%,3.5,3.04,0,,0
+IDH1,LAML,IDH1_LAML,oncogene,official,3.60%,5.56%,4,2.94,0,,Found in 23634996
+IDH1,CHOL,IDH1_CHOL,oncogene,official,14.71%,5.56%,4.5,3.8,0,,Found in 28297679
+IDH1,GBM,IDH1_GBM,oncogene,official,5.14%,5.56%,4.5,3.74,0,,Found in 24120142
+IDH1,SKCM,IDH1_SKCM,oncogene,official,5.69%,5.56%,4.5,4.5,0,,Found in 26091043
+IDH1,PANCAN,IDH1_PANCAN,oncogene,official,NA,5.56%,5,4.48,0,,Found in 24132290
+IDH1,LGG,IDH1_LGG,oncogene,official,77.84%,5.56%,7.5,5.12,0,,Found in 26061751
+IDH2,PANCAN,IDH2_PANCAN,possible oncogene,official,NA,0.65%,1,0,0,,Found in 24132290
+IDH2,LAML,IDH2_LAML,oncogene,official,5.76%,0.65%,4.5,3.86,0,,Found in 23634996
+IDH2,LGG,IDH2_LGG,oncogene,official,4.12%,0.65%,4.5,3.7,0,,Found in 26061751
+IL6ST,LIHC,IL6ST_LIHC,possible tsg,official,3.39%,0.98%,1.5,1.08,0,,Found in private communication about integrative LIHC analysis
+IL7R,PANCAN,IL7R_PANCAN,,rescued,NA,1.91%,0,#N/A,0,Evidence from OncoImpact (CNA result),#N/A
+INPPL1,PANCAN,INPPL1_PANCAN,possible tsg,official,NA,1.87%,1.5,1.5,0,,0
+INPPL1,UCEC,INPPL1_UCEC,possible tsg,official,10.35%,1.87%,1.5,1.2,0,,0
+IRF2,PANCAN,IRF2_PANCAN,tsg,official,NA,0.82%,2,1.48,1,,0
+IRF6,PANCAN,IRF6_PANCAN,possible tsg,official,NA,0.77%,2.5,2.5,0,,0
+JAK1,PANCAN,JAK1_PANCAN,tsg,official,NA,1.37%,1.5,1.5,0,,0
+JAK2,PANCAN,JAK2_PANCAN,,rescued,NA,1.10%,0,#N/A,0,Evidence from DriverNet (SNV result),#N/A
+JAK3,PANCAN,JAK3_PANCAN,,rescued,NA,1.54%,0,#N/A,0,Evidence from OncoImpact (SNV result),#N/A
+KANSL1,BLCA,KANSL1_BLCA,tsg,official,5.18%,1.81%,2,2,1,,0
+KANSL1,UCEC,KANSL1_UCEC,tsg,official,9.34%,1.81%,2,1.7,1,,0
+KANSL1,PANCAN,KANSL1_PANCAN,tsg,official,NA,1.81%,2.5,1.98,1,,0
+KDM5C,PANCAN,KDM5C_PANCAN,possible tsg,official,NA,1.54%,1.5,1.5,0,,Found in 24132290
+KDM5C,KIRC,KDM5C_KIRC,tsg,official,5.43%,1.54%,4,2.97,0,,Found in 23792563
+KDM6A,HNSC,KDM6A_HNSC,tsg,official,3.78%,2.94%,2,1.5,0,,0
+KDM6A,PAAD,KDM6A_PAAD,tsg,official,4.52%,2.94%,2,1.45,0,,0
+KDM6A,PRAD,KDM6A_PRAD,possible tsg,official,2.31%,2.94%,2,2,0,,0
+KDM6A,LUSC,KDM6A_LUSC,tsg,official,5.17%,2.94%,2.5,2.5,0,,0
+KDM6A,BLCA,KDM6A_BLCA,tsg,official,26.42%,2.94%,3.5,2.43,0,,Found in 24476821
+KDM6A,KIRP,KDM6A_KIRP,tsg,official,3.27%,2.94%,3.5,2.95,0,,Found in 26536169
+KDM6A,PANCAN,KDM6A_PANCAN,tsg,official,NA,2.94%,3.5,2.98,0,,Found in 24132290
+KEAP1,LIHC,KEAP1_LIHC,possible tsg,official,5.08%,2.43%,1.5,1.08,0,,Found in private communication about integrative LIHC analysis
+KEAP1,HNSC,KEAP1_HNSC,possible oncogene,official,4.58%,2.43%,2,2,0,,0
+KEAP1,PANCAN,KEAP1_PANCAN,possible tsg,official,NA,2.43%,2,2,0,,Found in 24132290
+KEAP1,LUAD,KEAP1_LUAD,possible tsg,official,17.17%,2.43%,3.5,3.5,0,,Found in 25079552
+KEAP1,LUSC,KEAP1_LUSC,oncogene,official,10.99%,2.43%,4,4,0,,Found in 22960745
+KEL,GBM,KEL_GBM,,official,5.47%,2.09%,0.5,0,0,,Found in 24120142
+KIF1A,KIRC,KIF1A_KIRC,tsg,official,1.63%,2.56%,3,1.97,1,,0
+KIT,LAML,KIT_LAML,oncogene,official,2.16%,2.09%,1.5,1.5,0,,Found in 23634996
+KIT,PANCAN,KIT_PANCAN,possible oncogene,official,NA,2.09%,2,2,0,,Found in 24132290
+KIT,SKCM,KIT_SKCM,oncogene,official,4.27%,2.09%,2,2,0,,0
+KIT,TGCT,KIT_TGCT,oncogene,official,14.48%,2.09%,6.5,6.07,0,,Found in private communication about integrative TGCT analysis
+KLF5,PANCAN,KLF5_PANCAN,possible oncogene,official,NA,0.97%,1.5,1.5,1,,0
+KLF5,BLCA,KLF5_BLCA,possible oncogene,official,5.44%,0.97%,2,1.58,1,,Found in 24476821
+KLF5,LUSC,KLF5_LUSC,oncogene,official,2.59%,0.97%,2,2,1,,0
+KLF5,CESC,KLF5_CESC,possible oncogene,official,3.28%,0.97%,2.5,2.5,1,,0
+KMT2A,PANCAN,KMT2A_PANCAN,tsg,official,NA,3.66%,2.5,1.98,0,,0
+KMT2B,PANCAN,KMT2B_PANCAN,tsg,official,NA,3.21%,2,1.48,1,,0
+KMT2B,UCEC,KMT2B_UCEC,tsg,official,17.68%,3.21%,2.5,2.5,1,,0
+KMT2C,UCEC,KMT2C_UCEC,tsg,official,16.16%,8.11%,1.5,1.5,0,,0
+KMT2C,BLCA,KMT2C_BLCA,tsg,official,20.21%,8.11%,2.5,2.08,0,,0
+KMT2C,PANCAN,KMT2C_PANCAN,tsg,official,NA,8.11%,3,2.48,0,,Found in 24132290
+KMT2C,BRCA,KMT2C_BRCA,tsg,official,9.50%,8.11%,3.5,3.02,0,,Found in 23000897
+KMT2C,CESC,KMT2C_CESC,tsg,official,17.52%,8.11%,4,3.45,0,,0
+KMT2D,ESCA,KMT2D_ESCA,tsg,official,12.79%,8.33%,2,2,0,,Found in 28052061
+KMT2D,BLCA,KMT2D_BLCA,tsg,official,26.94%,8.33%,2.5,2.08,0,,Found in 24476821
+KMT2D,PRAD,KMT2D_PRAD,tsg,official,5.66%,8.33%,2.5,2.5,0,,0
+KMT2D,CESC,KMT2D_CESC,tsg,official,14.96%,8.33%,3,3,0,,0
+KMT2D,PANCAN,KMT2D_PANCAN,tsg,official,NA,8.33%,3,2.48,0,,Found in 24132290
+KMT2D,HNSC,KMT2D_HNSC,tsg,official,15.14%,8.33%,3.5,3.5,0,,Found in 25631445
+KMT2D,LUSC,KMT2D_LUSC,tsg,official,22.41%,8.33%,3.5,3.5,0,,Found in 22960745
+KMT2D,DLBC,KMT2D_DLBC,tsg,official,35.14%,8.33%,4,3.2,0,,0
+KRAS,SKCM,KRAS_SKCM,oncogene,official,2.13%,6.95%,1,0,0,,Found in 26091043
+KRAS,THCA,KRAS_THCA,oncogene,official,0.81%,6.95%,1,0,0,,Found in 25417114
+KRAS,BRCA,KRAS_BRCA,oncogene,official,0.90%,6.95%,2.5,2.5,0,,0
+KRAS,KIRP,KRAS_KIRP,oncogene,official,1.82%,6.95%,2.5,2.5,0,,0
+KRAS,LIHC,KRAS_LIHC,oncogene,official,1.69%,6.95%,2.5,2.5,0,,Found in private communication about integrative LIHC analysis
+KRAS,OV,KRAS_OV,oncogene,official,1.47%,6.95%,2.5,2.5,0,,0
+KRAS,STAD,KRAS_STAD,oncogene,official,7.00%,6.95%,2.5,2.5,0,,Found in 25079317
+KRAS,BLCA,KRAS_BLCA,oncogene,official,4.15%,6.95%,3,2.58,0,,0
+KRAS,CESC,KRAS_CESC,oncogene,official,6.20%,6.95%,3.5,2.95,0,,Found in 28112728
+KRAS,LAML,KRAS_LAML,oncogene,official,4.32%,6.95%,3.5,2.86,0,,Found in 23634996
+KRAS,TGCT,KRAS_TGCT,oncogene,official,8.28%,6.95%,3.5,3.07,0,,Found in private communication about integrative TGCT analysis
+KRAS,UCEC,KRAS_UCEC,oncogene,official,20.96%,6.95%,3.5,3.2,0,,Found in 23636398
+KRAS,UCS,KRAS_UCS,oncogene,official,12.73%,6.95%,3.5,2.82,0,,Found in 28292439
+KRAS,PANCAN,KRAS_PANCAN,oncogene,official,NA,6.95%,4.5,3.98,0,,Found in 24132290
+KRAS,COADREAD,KRAS_COADREAD,oncogene,official,47.78%,6.95%,5.5,4.43,0,,Found in 22810696
+KRAS,LUAD,KRAS_LUAD,oncogene,official,31.55%,6.95%,5.5,5,0,,Found in 25079552
+KRAS,PAAD,KRAS_PAAD,oncogene,official,73.55%,6.95%,6.5,4.5,0,,Found in private communication about integrative PAAD analysis
+KRT222,PANCAN,KRT222_PANCAN,possible tsg,official,NA,0.34%,1.5,1.5,1,,0
+LATS1,CESC,LATS1_CESC,tsg,official,3.65%,1.45%,3,1.91,1,,0
+LATS2,MESO,LATS2_MESO,tsg,official,9.88%,1.31%,3.5,2.27,1,,0
+LEMD2,PANCAN,LEMD2_PANCAN,,official,NA,0.44%,1.5,1.5,1,,0
+LZTR1,GBM,LZTR1_GBM,possible oncogene,official,3.54%,1.49%,1,0,0,,Found in 24120142
+LZTR1,LIHC,LZTR1_LIHC,possible tsg,official,3.95%,1.49%,1.5,1.08,0,,Found in private communication about integrative LIHC analysis
+MACF1,PANCAN,MACF1_PANCAN,possible oncogene,rescued,NA,5.98%,0,#N/A,0,Evidence from DriverNet (SNV result),#N/A
+MAP2K1,PANCAN,MAP2K1_PANCAN,oncogene,official,NA,0.88%,3,2.48,0,,0
+MAP2K1,SKCM,MAP2K1_SKCM,oncogene,official,6.16%,0.88%,4,4,0,,Found in 26091043
+MAP2K4,PANCAN,MAP2K4_PANCAN,tsg,official,NA,1.19%,2.5,1.98,0,,Found in 24132290
+MAP2K4,BRCA,MAP2K4_BRCA,tsg,official,3.98%,1.19%,5,3.42,0,,0
+MAP3K1,CESC,MAP3K1_CESC,tsg,official,1.46%,2.07%,2,2,0,,0
+MAP3K1,PANCAN,MAP3K1_PANCAN,tsg,official,NA,2.07%,2.5,1.98,0,,Found in 24132290
+MAP3K1,UCEC,MAP3K1_UCEC,tsg,official,7.07%,2.07%,3,2.7,0,,0
+MAP3K1,BRCA,MAP3K1_BRCA,tsg,official,8.34%,2.07%,4.5,2.92,0,,0
+MAP3K4,UCS,MAP3K4_UCS,possible tsg,official,5.45%,1.80%,2,2,0,,0
+MAPK1,PANCAN,MAPK1_PANCAN,oncogene,official,NA,0.68%,2.5,1.98,0,,0
+MAPK1,HNSC,MAPK1_HNSC,oncogene,official,1.79%,0.68%,3.5,3.5,0,,0
+MAPK1,CESC,MAPK1_CESC,oncogene,official,4.74%,0.68%,4.5,4.5,0,,Found in 28112728
+MAX,UCEC,MAX_UCEC,oncogene,official,4.55%,0.65%,1.5,1.5,0,,0
+MAX,LGG,MAX_LGG,oncogene,official,0.78%,0.65%,2.5,2.5,0,,0
+MECOM,SKCM,MECOM_SKCM,possible oncogene,official,18.25%,2.70%,2,2,0,,0
+MED12,PRAD,MED12_PRAD,oncogene,official,1.47%,3.21%,2.5,2.5,0,,Found in 26544944
+MEN1,ACC,MEN1_ACC,tsg,official,7.78%,0.82%,2.5,2.5,0,,Found in 27165744
+MET,LUAD,MET_LUAD,possible tsg,official,4.41%,1.93%,1,0,0,,Found in 25079552
+MET,KIRP,MET_KIRP,oncogene,official,8.00%,1.93%,4.5,3.78,0,,Found in 26536169
+MGA,LUAD,MGA_LUAD,tsg,official,6.96%,3.27%,1,0,0,,Found in 25079552
+MGA,PANCAN,MGA_PANCAN,tsg,official,NA,3.27%,2.5,1.98,0,,0
+MGMT,PANCAN,MGMT_PANCAN,,rescued,NA,0.29%,0,#N/A,0,Involved in hypermutator phenotype,#N/A
+MLH1,PANCAN,MLH1_PANCAN,,rescued,NA,0.97%,0,#N/A,0,Involved in hypermutator phenotype,#N/A
+MSH2,PANCAN,MSH2_PANCAN,,rescued,NA,0.83%,0,#N/A,0,Involved in hypermutator phenotype,#N/A
+MSH3,PANCAN,MSH3_PANCAN,possible oncogene,rescued,NA,1.00%,0,#N/A,0,Involved in hypermutator phenotype,#N/A
+MSH6,UCEC,MSH6_UCEC,tsg,official,4.29%,1.06%,2,2,0,,0
+MTOR,PANCAN,MTOR_PANCAN,possible oncogene,official,NA,2.70%,2,2,0,,Found in 24132290
+MTOR,KIRC,MTOR_KIRC,oncogene,official,9.24%,2.70%,5.5,4.79,0,,Found in 23792563
+MUC6,STAD,MUC6_STAD,possible tsg,official,6.72%,2.43%,1,0,1,,Found in 25079317
+MYC,PANCAN,MYC_PANCAN,oncogene,official,NA,0.82%,1.5,1.5,0,,0
+MYCN,UCEC,MYCN_UCEC,oncogene,official,3.28%,0.84%,1.5,1.5,0,,0
+MYD88,DLBC,MYD88_DLBC,oncogene,official,18.92%,0.47%,3.5,2.7,0,,0
+MYH9,HNSC,MYH9_HNSC,oncogene,official,5.18%,2.78%,2.5,2.5,0,,0
+NCOR1,PANCAN,NCOR1_PANCAN,tsg,official,NA,3.01%,1.5,1.5,0,,Found in 24132290
+NCOR1,BRCA,NCOR1_BRCA,tsg,official,4.75%,3.01%,4.5,2.92,0,,0
+NF1,LUSC,NF1_LUSC,tsg,official,11.42%,5.29%,2.5,2.5,0,,0
+NF1,BRCA,NF1_BRCA,tsg,official,3.85%,5.29%,3.5,2.4,0,,0
+NF1,PANCAN,NF1_PANCAN,tsg,official,NA,5.29%,3.5,2.98,0,,Found in 24132290
+NF1,PCPG,NF1_PCPG,tsg,official,8.94%,5.29%,3.5,2.84,0,,Found in 28162975
+NF1,SKCM,NF1_SKCM,tsg,official,12.80%,5.29%,3.5,3.5,0,,Found in 26091043
+NF1,LUAD,NF1_LUAD,tsg,official,12.06%,5.29%,4,4,0,,Found in 25079552
+NF1,GBM,NF1_GBM,tsg,official,10.29%,5.29%,4.5,2.9,0,,Found in 24120142
+NF1,OV,NF1_OV,tsg,official,7.60%,5.29%,4.5,3.98,0,,Found in 21720365
+NF1,LGG,NF1_LGG,tsg,official,5.88%,5.29%,5,3.07,0,,Found in 26061751
+NF2,KIRP,NF2_KIRP,tsg,official,3.27%,1.19%,2,2,0,,Found in 26536169
+NF2,PANCAN,NF2_PANCAN,tsg,official,NA,1.19%,2.5,1.98,0,,0
+NF2,MESO,NF2_MESO,tsg,official,23.46%,1.19%,4.5,2.65,0,,0
+NFE2L2,BLCA,NFE2L2_BLCA,oncogene,official,6.48%,2.78%,3,2.58,0,,0
+NFE2L2,PANCAN,NFE2L2_PANCAN,oncogene,official,NA,2.78%,3,2.48,0,,Found in 24132290
+NFE2L2,UCEC,NFE2L2_UCEC,oncogene,official,7.83%,2.78%,3.5,3.2,0,,0
+NFE2L2,HNSC,NFE2L2_HNSC,oncogene,official,6.18%,2.78%,4,4,0,,0
+NFE2L2,CESC,NFE2L2_CESC,oncogene,official,4.74%,2.78%,4.5,3.95,0,,Found in 28112728
+NFE2L2,LIHC,NFE2L2_LIHC,oncogene,official,3.39%,2.78%,4.5,4.5,0,,Found in private communication about integrative LIHC analysis
+NFE2L2,ESCA,NFE2L2_ESCA,oncogene,official,11.05%,2.78%,5,5,0,,Found in 28052061
+NFE2L2,LUSC,NFE2L2_LUSC,oncogene,official,15.30%,2.78%,5,4.53,0,,Found in 22960745
+NIPBL,PANCAN,NIPBL_PANCAN,tsg,official,NA,3.40%,2.5,1.98,1,,0
+NIPBL,LGG,NIPBL_LGG,tsg,official,3.53%,3.40%,3,2.47,1,,0
+NOTCH1,ESCA,NOTCH1_ESCA,tsg,official,8.72%,3.94%,1,0,0,,Found in 28052061
+NOTCH1,CESC,NOTCH1_CESC,possible tsg,official,6.57%,3.94%,2,1.4,0,,0
+NOTCH1,LUSC,NOTCH1_LUSC,tsg,official,8.84%,3.94%,2.5,2.5,0,,Found in 22960745
+NOTCH1,PANCAN,NOTCH1_PANCAN,tsg,official,NA,3.94%,3,2.48,0,,Found in 24132290
+NOTCH1,LGG,NOTCH1_LGG,possible tsg,official,7.25%,3.94%,5.5,4.1,0,,Found in 26061751
+NOTCH1,HNSC,NOTCH1_HNSC,tsg,official,18.13%,3.94%,6,4.91,0,,Found in 25631445
+NOTCH2,PANCAN,NOTCH2_PANCAN,,rescued,NA,2.41%,0,#N/A,0,Evidence from OncoIMPACT (SNV result),#N/A
+NPM1,LAML,NPM1_LAML,oncogene,official,6.47%,0.51%,3.5,2.86,0,,Found in 23634996
+NRAS,LIHC,NRAS_LIHC,possible tsg,official,1.41%,2.68%,1,0,0,,Found in private communication about integrative LIHC analysis
+NRAS,BLCA,NRAS_BLCA,oncogene,official,2.07%,2.68%,1.5,1.5,0,,0
+NRAS,UCEC,NRAS_UCEC,oncogene,official,3.28%,2.68%,1.5,1.5,0,,0
+NRAS,LGG,NRAS_LGG,oncogene,official,0.78%,2.68%,2.5,2.5,0,,0
+NRAS,OV,NRAS_OV,oncogene,official,1.23%,2.68%,2.5,2.5,0,,0
+NRAS,COADREAD,NRAS_COADREAD,oncogene,official,6.01%,2.68%,3,2,0,,Found in 22810696
+NRAS,THYM,NRAS_THYM,possible oncogene,official,2.48%,2.68%,3,3,0,,Found in private communication about integrative THYM analysis
+NRAS,TGCT,NRAS_TGCT,oncogene,official,3.45%,2.68%,3.5,3.07,0,,Found in private communication about integrative TGCT analysis
+NRAS,PANCAN,NRAS_PANCAN,oncogene,official,NA,2.68%,5,4.48,0,,Found in 24132290
+NRAS,SKCM,NRAS_SKCM,oncogene,official,27.73%,2.68%,5,4.54,0,,Found in 26091043
+NRAS,THCA,NRAS_THCA,oncogene,official,7.93%,2.68%,5,4.56,0,,Found in 25417114
+NSD1,ESCA,NSD1_ESCA,tsg,official,4.07%,3.17%,2,2,0,,0
+NSD1,PANCAN,NSD1_PANCAN,tsg,official,NA,3.17%,2.5,1.98,0,,Found in 24132290
+NSD1,HNSC,NSD1_HNSC,tsg,official,11.35%,3.17%,4.5,3.41,0,,Found in 25631445
+NUP133,LIHC,NUP133_LIHC,possible tsg,official,3.67%,1.26%,1.5,1.5,1,,0
+NUP93,THCA,NUP93_THCA,possible tsg,official,0.81%,0.84%,2,2,0,,0
+PAX5,PANCAN,PAX5_PANCAN,,rescued,NA,0.82%,0,#N/A,0,Evidence from OncoIMPACT (SNV result),#N/A
+PBRM1,UCEC,PBRM1_UCEC,tsg,official,5.81%,3.73%,1.5,1.5,0,,0
+PBRM1,PANCAN,PBRM1_PANCAN,tsg,official,NA,3.73%,2.5,1.98,0,,Found in 24132290
+PBRM1,CHOL,PBRM1_CHOL,tsg,official,17.65%,3.73%,3.5,2.32,0,,0
+PBRM1,KIRC,PBRM1_KIRC,tsg,official,42.12%,3.73%,5,3.26,0,,Found in 23792563
+PCBP1,PANCAN,PCBP1_PANCAN,oncogene,official,NA,0.68%,2.5,2.5,0,,Found in 24132290
+PCBP1,COADREAD,PCBP1_COADREAD,oncogene,official,5.38%,0.68%,3.5,3.5,0,,0
+PDGFRA,GBM,PDGFRA_GBM,possible oncogene,official,4.18%,2.43%,1,0,0,,Found in 24120142
+PDS5B,UCEC,PDS5B_UCEC,tsg,official,6.31%,1.41%,1.5,1.5,1,,0
+PGR,PANCAN,PGR_PANCAN,possible tsg,official,NA,1.49%,2,2,1,,0
+PHF6,LAML,PHF6_LAML,possible tsg,rescued,2.16%,0.75%,0.5,0,0,"Poor Variant Calling in liquid tumor, from manuscript, not in original 258 list.",#N/A
+PIK3CA,KIRC,PIK3CA_KIRC,possible oncogene,official,1.63%,11.75%,1.5,1.5,0,,Found in 23792563
+PIK3CA,KIRP,PIK3CA_KIRP,oncogene,official,1.09%,11.75%,1.5,1.5,0,,0
+PIK3CA,TGCT,PIK3CA_TGCT,oncogene,official,2.07%,11.75%,2,2,0,,0
+PIK3CA,GBM,PIK3CA_GBM,oncogene,official,10.93%,11.75%,2.5,2,0,,Found in 24120142
+PIK3CA,LIHC,PIK3CA_LIHC,oncogene,official,3.39%,11.75%,2.5,2.5,0,,Found in private communication about integrative LIHC analysis
+PIK3CA,PRAD,PIK3CA_PRAD,oncogene,official,2.52%,11.75%,2.5,2.5,0,,0
+PIK3CA,ESCA,PIK3CA_ESCA,oncogene,official,9.88%,11.75%,3,3,0,,0
+PIK3CA,BLCA,PIK3CA_BLCA,oncogene,official,21.24%,11.75%,3.5,3.08,0,,Found in 24476821
+PIK3CA,LGG,PIK3CA_LGG,oncogene,official,8.04%,11.75%,3.5,2.7,0,,Found in 26061751
+PIK3CA,LUAD,PIK3CA_LUAD,oncogene,official,4.18%,11.75%,3.5,3,0,,Found in 25079552
+PIK3CA,UCEC,PIK3CA_UCEC,oncogene,official,45.71%,11.75%,3.5,3.2,0,,Found in 23636398
+PIK3CA,UCS,PIK3CA_UCS,oncogene,official,34.55%,11.75%,3.5,2.82,0,,Found in 28292439
+PIK3CA,COADREAD,PIK3CA_COADREAD,oncogene,official,23.10%,11.75%,4.5,4.5,0,,Found in 22810696
+PIK3CA,PANCAN,PIK3CA_PANCAN,oncogene,official,NA,11.75%,4.5,3.98,0,,Found in 24132290
+PIK3CA,STAD,PIK3CA_STAD,oncogene,official,10.64%,11.75%,4.5,4.5,0,,Found in 25079317
+PIK3CA,HNSC,PIK3CA_HNSC,oncogene,official,17.93%,11.75%,5,5,0,,Found in 25631445
+PIK3CA,LUSC,PIK3CA_LUSC,oncogene,official,12.50%,11.75%,5,4.53,0,,Found in 22960745
+PIK3CA,CESC,PIK3CA_CESC,oncogene,official,26.64%,11.75%,5.5,4.95,0,,Found in 28112728
+PIK3CA,BRCA,PIK3CA_BRCA,oncogene,official,34.40%,11.75%,6,4.42,0,,Found in 23000897
+PIK3CB,PANCAN,PIK3CB_PANCAN,,rescued,NA,1.23%,0,#N/A,0,Evidence from OncoImpact/DriverNET overlap (SNV result),#N/A
+PIK3CG,PANCAN,PIK3CG_PANCAN,possible oncogene,rescued,NA,2.64%,0,#N/A,0,Evidence from OncoImpact/DriverNET overlap (SNV result),#N/A
+PIK3R1,BRCA,PIK3R1_BRCA,possible oncogene,official,2.70%,3.21%,1.5,1.02,0,,Found in 23000897
+PIK3R1,LGG,PIK3R1_LGG,possible oncogene,official,4.51%,3.21%,3.5,2.7,0,,Found in 26061751
+PIK3R1,UCS,PIK3R1_UCS,possible tsg,official,10.91%,3.21%,3.5,2.82,0,,Found in 28292439
+PIK3R1,PANCAN,PIK3R1_PANCAN,tsg,official,NA,3.21%,4,3.48,0,,Found in 24132290
+PIK3R1,UCEC,PIK3R1_UCEC,tsg,official,29.80%,3.21%,4.5,4.2,0,,Found in 23636398
+PIK3R1,GBM,PIK3R1_GBM,possible tsg,official,10.29%,3.21%,5,3.4,0,,Found in 24120142
+PIK3R2,PANCAN,PIK3R2_PANCAN,oncogene,official,NA,0.93%,1.5,1.5,0,,0
+PIK3R2,UCEC,PIK3R2_UCEC,oncogene,official,5.30%,0.93%,3,3,0,,0
+PIM1,DLBC,PIM1_DLBC,oncogene,official,27.03%,0.56%,3,2.2,0,,0
+PLCB4,UVM,PLCB4_UVM,oncogene,official,2.50%,2.73%,1,0,1,,Found in private communication about integrative UVM analysis
+PLCG1,LGG,PLCG1_LGG,oncogene,official,0.78%,1.33%,1,0,0,,Found in 26061751
+PLXNB2,PANCAN,PLXNB2_PANCAN,possible oncogene,official,NA,2.63%,1.5,1.5,1,,0
+PMS1,PANCAN,PMS1_PANCAN,possible oncogene,rescued,NA,0.96%,0,#N/A,0,Involved in hypermutator phenotype,#N/A
+PMS2,PANCAN,PMS2_PANCAN,possible tsg,rescued,NA,1.05%,0,#N/A,0,Involved in hypermutator phenotype,#N/A
+POLE,PANCAN,POLE_PANCAN,,rescued,NA,2.37%,0,#N/A,0,Evidence from DriverNet (SNV result) and OncoImpact (SNV result),#N/A
+POLQ,PANCAN,POLQ_PANCAN,,official,NA,3.03%,0.5,0,0,,Found in 24132290
+POLRMT,CESC,POLRMT_CESC,oncogene,official,2.19%,0.99%,1.5,1.5,1,,0
+PPM1D,THCA,PPM1D_THCA,,official,0.81%,0.66%,1.5,1.5,0,,Found in 25417114
+PPP2R1A,PANCAN,PPP2R1A_PANCAN,oncogene,official,NA,1.77%,3.5,2.98,0,,Found in 24132290
+PPP2R1A,UCEC,PPP2R1A_UCEC,oncogene,official,16.41%,1.77%,3.5,3.2,0,,Found in 23636398
+PPP2R1A,UCS,PPP2R1A_UCS,oncogene,official,27.27%,1.77%,5.5,4.82,0,,Found in 28292439
+PPP6C,SKCM,PPP6C_SKCM,oncogene,official,7.11%,0.68%,2,2,0,,Found in 26091043
+PRKAR1A,ACC,PRKAR1A_ACC,tsg,official,5.56%,0.64%,1,0,0,,Found in 27505681
+PSIP1,BLCA,PSIP1_BLCA,tsg,official,4.92%,0.99%,2,2,0,,0
+PSIP1,PANCAN,PSIP1_PANCAN,tsg,official,NA,0.99%,2,1.48,0,,0
+PTCH1,PANCAN,PTCH1_PANCAN,possible tsg,official,NA,1.82%,1.5,1.5,0,,0
+PTCH1,ESCA,PTCH1_ESCA,tsg,official,3.49%,1.82%,2,2,0,,0
+PTEN,BLCA,PTEN_BLCA,tsg,official,3.63%,7.47%,2.5,2.11,0,,0
+PTEN,STAD,PTEN_STAD,possible tsg,official,4.20%,7.47%,2.5,2.5,0,,0
+PTEN,COADREAD,PTEN_COADREAD,tsg,official,4.43%,7.47%,3,3,0,,0
+PTEN,KICH,PTEN_KICH,tsg,official,9.23%,7.47%,3,2.09,0,,Found in 25155756
+PTEN,CESC,PTEN_CESC,tsg,official,9.12%,7.47%,4,2.91,0,,Found in 28112728
+PTEN,HNSC,PTEN_HNSC,tsg,official,2.39%,7.47%,4.5,3.41,0,,0
+PTEN,LUSC,PTEN_LUSC,tsg,official,11.21%,7.47%,4.5,4.5,0,,Found in 22960745
+PTEN,PRAD,PTEN_PRAD,possible tsg,official,3.77%,7.47%,4.5,2.98,0,,Found in 26544944
+PTEN,SKCM,PTEN_SKCM,tsg,official,9.72%,7.47%,4.5,4.5,0,,Found in 26091043
+PTEN,UCEC,PTEN_UCEC,tsg,official,59.85%,7.47%,4.5,4.2,0,,Found in 23636398
+PTEN,UCS,PTEN_UCS,tsg,official,16.36%,7.47%,4.5,2.73,0,,Found in 28292439
+PTEN,BRCA,PTEN_BRCA,tsg,official,5.78%,7.47%,5,3.42,0,,Found in 23000897
+PTEN,GBM,PTEN_GBM,tsg,official,32.48%,7.47%,5,3.4,0,,Found in 24120142
+PTEN,KIRC,PTEN_KIRC,possible tsg,official,4.08%,7.47%,5,3.26,0,,Found in 23792563
+PTEN,LGG,PTEN_LGG,possible tsg,official,4.71%,7.47%,5,3.07,0,,Found in 26061751
+PTEN,PANCAN,PTEN_PANCAN,tsg,official,NA,7.47%,5,4.48,0,,Found in 24132290
+PTMA,PANCAN,PTMA_PANCAN,possible tsg,official,NA,0.72%,1.5,1.5,1,,0
+PTMA,TGCT,PTMA_TGCT,possible tsg,official,5.52%,0.72%,2,2,1,,0
+PTPDC1,LAML,PTPDC1_LAML,oncogene,official,2.88%,0.76%,1.5,1.5,1,,0
+PTPN11,LAML,PTPN11_LAML,possible oncogene,official,2.88%,0.89%,0.5,0,0,,Found in 23634996
+PTPN11,LGG,PTPN11_LGG,possible oncogene,official,1.37%,0.89%,0.5,0,0,,Found in 26061751
+PTPN11,PANCAN,PTPN11_PANCAN,oncogene,official,NA,0.89%,1.5,1.5,0,,Found in 24132290
+PTPRC,PANCAN,PTPRC_PANCAN,possible oncogene,rescued,NA,3.02%,0,#N/A,0,Evidence from DriverNet (SNV result) and OncoImpact (SNV result),#N/A
+PTPRD,BRCA,PTPRD_BRCA,,official,2.18%,4.86%,0.5,0,0,,Found in 23000897
+RAC1,HNSC,RAC1_HNSC,oncogene,official,2.59%,0.74%,2.5,2.5,0,,0
+RAC1,PANCAN,RAC1_PANCAN,oncogene,official,NA,0.74%,3.5,2.98,0,,0
+RAC1,SKCM,RAC1_SKCM,oncogene,official,4.98%,0.74%,3.5,3.5,0,,Found in 26091043
+RAD21,LAML,RAD21_LAML,,rescued,0.00%,1.08%,0,#N/A,0,"Poor Variant Calling in liquid tumor, from manuscript",#N/A
+RAF1,PANCAN,RAF1_PANCAN,,rescued,NA,0.68%,0,#N/A,0,Evidence from DriverNet (SNV result),#N/A
+RARA,PANCAN,RARA_PANCAN,,rescued,NA,0.69%,0,#N/A,0,Evidence from OncoImpact (CNA result),#N/A
+RASA1,STAD,RASA1_STAD,tsg,official,2.52%,1.80%,1,0,0,,Found in 25079317
+RASA1,HNSC,RASA1_HNSC,possible tsg,official,3.39%,1.80%,3.5,2.96,0,,0
+RASA1,LUSC,RASA1_LUSC,tsg,official,6.47%,1.80%,3.5,3.5,0,,0
+RASA1,PANCAN,RASA1_PANCAN,tsg,official,NA,1.80%,3.5,2.98,0,,0
+RB1,UCS,RB1_UCS,tsg,official,7.27%,3.70%,1,0,0,,Found in 28292439
+RB1,SKCM,RB1_SKCM,tsg,official,3.55%,3.70%,1.5,1.5,0,,Found in 26091043
+RB1,UCEC,RB1_UCEC,tsg,official,6.82%,3.70%,1.5,1.5,0,,0
+RB1,LIHC,RB1_LIHC,possible tsg,official,5.08%,3.70%,2.5,2.08,0,,Found in private communication about integrative LIHC analysis
+RB1,HNSC,RB1_HNSC,possible tsg,official,3.39%,3.70%,3,3,0,,0
+RB1,BLCA,RB1_BLCA,tsg,official,18.39%,3.70%,3.5,2.43,0,,Found in 24476821
+RB1,LUAD,RB1_LUAD,tsg,official,4.64%,3.70%,3.5,3.5,0,,Found in 25079552
+RB1,PANCAN,RB1_PANCAN,tsg,official,NA,3.70%,3.5,2.98,0,,Found in 24132290
+RB1,CESC,RB1_CESC,tsg,official,5.84%,3.70%,4,2.91,0,,0
+RB1,LUSC,RB1_LUSC,tsg,official,6.90%,3.70%,4,4,0,,Found in 22960745
+RB1,OV,RB1_OV,tsg,official,3.68%,3.70%,4,3.48,0,,Found in 21720365
+RB1,BRCA,RB1_BRCA,tsg,official,2.70%,3.70%,4.5,3.4,0,,Found in 23000897
+RB1,GBM,RB1_GBM,tsg,official,8.68%,3.70%,4.5,2.9,0,,Found in 24120142
+RB1,SARC,RB1_SARC,tsg,official,10.29%,3.70%,5,3.21,0,,Found in private communication about integrative SARC analysis
+RBM10,BLCA,RBM10_BLCA,tsg,official,4.40%,1.37%,2,1.35,0,,0
+RBM10,PANCAN,RBM10_PANCAN,tsg,official,NA,1.37%,2.5,1.98,0,,0
+RBM10,LUAD,RBM10_LUAD,tsg,official,6.96%,1.37%,4,4,0,,Found in 25079552
+RET,PCPG,RET_PCPG,oncogene,official,3.35%,2.06%,4.5,3.33,0,,Found in 28162975
+RFC1,UCS,RFC1_UCS,possible tsg,official,3.64%,0.94%,2,2,1,,0
+RHEB,PANCAN,RHEB_PANCAN,,rescued,NA,0.31%,0,#N/A,0,Supported by all 3 driver mutation approaches,#N/A
+RHOA,BLCA,RHOA_BLCA,oncogene,official,4.92%,1.01%,2.5,2.08,0,,Found in 24476821
+RHOA,HNSC,RHOA_HNSC,oncogene,official,1.99%,1.01%,2.5,2.5,0,,0
+RHOA,STAD,RHOA_STAD,oncogene,official,5.60%,1.01%,2.5,2.5,0,,Found in 25079317
+RHOA,PANCAN,RHOA_PANCAN,oncogene,official,NA,1.01%,3,2.48,0,,0
+RHOB,BLCA,RHOB_BLCA,oncogene,official,5.96%,0.67%,2,1.58,1,,Found in 24476821
+RIT1,LUAD,RIT1_LUAD,,official,2.09%,0.36%,1,0,0,,Found in 25079552
+RNF111,PANCAN,RNF111_PANCAN,tsg,official,NA,1.08%,1.5,1.5,1,,0
+RNF43,PANCAN,RNF43_PANCAN,tsg,official,NA,1.78%,2.5,1.98,0,,0
+RNF43,STAD,RNF43_STAD,possible tsg,official,3.36%,1.78%,2.5,1.97,0,,Found in 25079317
+RNF43,PAAD,RNF43_PAAD,tsg,official,5.81%,1.78%,4,2.63,0,,Found in private communication about integrative PAAD analysis
+RPL22,PANCAN,RPL22_PANCAN,possible tsg,official,NA,0.74%,1,0,0,,Found in 24132290
+RPL22,UCEC,RPL22_UCEC,,official,10.10%,0.74%,1,0,0,,Found in 23636398
+RPL5,PANCAN,RPL5_PANCAN,tsg,official,NA,0.67%,2,1.48,0,,Found in 24132290
+RPS6KA3,LIHC,RPS6KA3_LIHC,tsg,official,4.52%,0.94%,3.5,3.08,1,,Found in private communication about integrative LIHC analysis
+RQCD1,PANCAN,RQCD1_PANCAN,possible oncogene,official,NA,0.37%,1.5,1.5,1,,0
+RQCD1,SKCM,RQCD1_SKCM,oncogene,official,3.08%,0.37%,3,3,1,,Found in 26091043
+RRAS2,UCEC,RRAS2_UCEC,oncogene,official,1.52%,0.26%,1.5,1.5,1,,0
+RUNX1,PANCAN,RUNX1_PANCAN,tsg,official,NA,1.37%,3,2.48,0,,Found in 24132290
+RUNX1,BRCA,RUNX1_BRCA,tsg,official,5.01%,1.37%,5,3.42,0,,Found in 23000897
+RUNX1,LAML,RUNX1_LAML,tsg,official,6.47%,1.37%,5.5,3.89,0,,Found in 23634996
+RXRA,BLCA,RXRA_BLCA,oncogene,official,6.74%,0.99%,3.5,2.43,0,,Found in 24476821
+SCAF4,UCEC,SCAF4_UCEC,tsg,official,8.84%,1.64%,2,1.7,1,,0
+SCAF4,PANCAN,SCAF4_PANCAN,tsg,official,NA,1.64%,2.5,1.98,1,,0
+SETBP1,PANCAN,SETBP1_PANCAN,possible oncogene,rescued,NA,2.65%,0,#N/A,0,Expert curation,#N/A
+SETD2,KIRP,SETD2_KIRP,tsg,official,6.55%,3.38%,3,3,0,,Found in 26536169
+SETD2,LGG,SETD2_LGG,possible tsg,official,1.76%,3.38%,3,2.47,0,,0
+SETD2,LUAD,SETD2_LUAD,tsg,official,6.73%,3.38%,3,3,0,,Found in 25079552
+SETD2,MESO,SETD2_MESO,tsg,official,9.88%,3.38%,3,2.46,0,,0
+SETD2,PANCAN,SETD2_PANCAN,tsg,official,NA,3.38%,3,2.48,0,,Found in 24132290
+SETD2,KIRC,SETD2_KIRC,tsg,official,13.86%,3.38%,6,4.26,0,,Found in 23792563
+SF1,BLCA,SF1_BLCA,oncogene,official,2.85%,0.95%,1.5,1.5,0,,0
+SF1,PANCAN,SF1_PANCAN,possible oncogene,official,NA,0.95%,1.5,1.5,0,,0
+SF3B1,BLCA,SF3B1_BLCA,oncogene,official,5.44%,2.17%,1.5,1.5,0,,0
+SF3B1,LAML,SF3B1_LAML,oncogene,official,3.60%,2.17%,1.5,1.5,0,,0
+SF3B1,PANCAN,SF3B1_PANCAN,oncogene,official,NA,2.17%,2,2,0,,Found in 24132290
+SF3B1,BRCA,SF3B1_BRCA,oncogene,official,2.05%,2.17%,3.5,3.5,0,,Found in 23000897
+SF3B1,UVM,SF3B1_UVM,oncogene,official,22.50%,2.17%,5.5,3.65,0,,Found in private communication about integrative UVM analysis
+SIN3A,PANCAN,SIN3A_PANCAN,possible tsg,official,NA,1.65%,1,0,0,,Found in 24132290
+SIN3A,UCEC,SIN3A_UCEC,tsg,official,8.08%,1.65%,2,2,0,,0
+SMAD2,STAD,SMAD2_STAD,possible tsg,official,1.40%,0.82%,1,0,0,,Found in 25079317
+SMAD2,COADREAD,SMAD2_COADREAD,possible tsg,official,3.48%,0.82%,2,2,0,,Found in 22810696
+SMAD2,PANCAN,SMAD2_PANCAN,possible tsg,official,NA,0.82%,2,1.48,0,,Found in 24132290
+SMAD4,CESC,SMAD4_CESC,possible tsg,official,3.65%,2.29%,3,1.91,0,,0
+SMAD4,ESCA,SMAD4_ESCA,possible tsg,official,6.40%,2.29%,3.5,2.93,0,,Found in 28052061
+SMAD4,COADREAD,SMAD4_COADREAD,tsg,official,12.03%,2.29%,4.5,3.43,0,,Found in 22810696
+SMAD4,PANCAN,SMAD4_PANCAN,tsg,official,NA,2.29%,4.5,3.98,0,,Found in 24132290
+SMAD4,PAAD,SMAD4_PAAD,tsg,official,23.23%,2.29%,5,3,0,,Found in private communication about integrative PAAD analysis
+SMAD4,STAD,SMAD4_STAD,oncogene,official,7.84%,2.29%,5,4.47,0,,Found in 25079317
+SMARCA1,PANCAN,SMARCA1_PANCAN,tsg,official,NA,1.53%,2,1.48,1,,0
+SMARCA4,LIHC,SMARCA4_LIHC,possible oncogene,official,2.82%,3.29%,1.5,1.5,0,,0
+SMARCA4,PANCAN,SMARCA4_PANCAN,possible oncogene,official,NA,3.29%,2,2,0,,0
+SMARCA4,LGG,SMARCA4_LGG,possible oncogene,official,4.90%,3.29%,2.5,1.7,0,,Found in 26061751
+SMARCA4,LUAD,SMARCA4_LUAD,possible tsg,official,7.19%,3.29%,3,3,0,,Found in 25079552
+SMARCB1,KIRP,SMARCB1_KIRP,possible oncogene,official,2.18%,0.64%,1,0,0,,Found in 26536169
+SMC1A,UCEC,SMC1A_UCEC,oncogene,official,5.30%,1.39%,1.5,1.5,0,,0
+SMC1A,LAML,SMC1A_LAML,oncogene,official,2.88%,1.39%,2.5,2.5,0,,Found in 23634996
+SMC3,LAML,SMC3_LAML,possible oncogene,rescued,0.72%,1.09%,0,#N/A,0,"Poor Variant Calling in liquid tumor, from manuscript",#N/A
+SOS1,PANCAN,SOS1_PANCAN,oncogene,official,NA,1.45%,1.5,1.5,0,,0
+SOS1,UCEC,SOS1_UCEC,oncogene,official,4.29%,1.45%,3,3,0,,0
+SOX17,PANCAN,SOX17_PANCAN,possible oncogene,official,NA,0.82%,1,0,0,,Found in 24132290
+SOX17,UCEC,SOX17_UCEC,possible oncogene,official,4.80%,0.82%,1.5,1.2,0,,0
+SOX9,PANCAN,SOX9_PANCAN,possible tsg,official,NA,1.43%,1,0,0,,Found in 24132290
+SOX9,COADREAD,SOX9_COADREAD,tsg,official,12.97%,1.43%,3,3,0,,Found in 22810696
+SPOP,PANCAN,SPOP_PANCAN,oncogene,official,NA,1.62%,1.5,1.5,0,,Found in 24132290
+SPOP,UCEC,SPOP_UCEC,oncogene,official,9.34%,1.62%,2,1.7,0,,0
+SPOP,PRAD,SPOP_PRAD,oncogene,official,11.53%,1.62%,3.5,2.99,0,,Found in 26544944
+SPTA1,GBM,SPTA1_GBM,possible tsg,official,9.00%,8.81%,0.5,0,1,,Found in 24120142
+SPTAN1,BLCA,SPTAN1_BLCA,tsg,official,13.21%,2.72%,2,1.58,1,,0
+SRSF2,UVM,SRSF2_UVM,,official,3.75%,0.57%,1.5,0.79,0,,Found in private communication about integrative UVM analysis
+STAG2,PANCAN,STAG2_PANCAN,tsg,official,NA,2.41%,2.5,1.98,0,,Found in 24132290
+STAG2,BLCA,STAG2_BLCA,tsg,official,15.54%,2.41%,3.5,2.43,0,,Found in 24476821
+STAG2,GBM,STAG2_GBM,tsg,official,4.18%,2.41%,4,2.91,0,,Found in 24120142
+STK11,CESC,STK11_CESC,tsg,official,5.11%,1.39%,2,2,0,,0
+STK11,PANCAN,STK11_PANCAN,tsg,official,NA,1.39%,2.5,1.98,0,,Found in 24132290
+STK11,LUAD,STK11_LUAD,tsg,official,16.24%,1.39%,5.5,5,0,,Found in 25079552
+TAF1,UCEC,TAF1_UCEC,oncogene,official,12.12%,2.64%,2.5,2.2,0,,0
+TBL1XR1,PANCAN,TBL1XR1_PANCAN,possible tsg,rescued,NA,1.05%,0,#N/A,0,Evidence from OncoImpact (CNA result),#N/A
+TBX3,PANCAN,TBX3_PANCAN,possible tsg,official,NA,1.38%,1,0,0,,Found in 24132290
+TBX3,BRCA,TBX3_BRCA,possible tsg,official,3.08%,1.38%,2.5,2.02,0,,Found in 23000897
+TCEB1,KIRC,TCEB1_KIRC,possible tsg,official,1.09%,0.19%,1.5,1.5,0,,Found in 23792563
+TCF12,GBM,TCF12_GBM,possible tsg,official,1.61%,1.06%,2,2,0,,0
+TCF12,PANCAN,TCF12_PANCAN,tsg,official,NA,1.06%,2.5,1.98,0,,0
+TCF12,LGG,TCF12_LGG,possible tsg,official,2.75%,1.06%,3,2.2,0,,Found in 26061751
+TCF7L2,COADREAD,TCF7L2_COADREAD,tsg,official,10.13%,1.29%,3.5,3.5,0,,Found in 22810696
+TET2,LAML,TET2_LAML,,rescued,0.00%,1.93%,0,#N/A,0,"Poor Variant Calling in liquid tumor, from manuscript",#N/A
+TGFBR2,CESC,TGFBR2_CESC,possible tsg,official,3.28%,1.51%,2,2,0,,Found in 28112728
+TGFBR2,PAAD,TGFBR2_PAAD,tsg,official,4.52%,1.51%,3,2.45,0,,Found in private communication about integrative PAAD analysis
+TGFBR2,HNSC,TGFBR2_HNSC,possible tsg,official,4.78%,1.51%,4,3.46,0,,Found in 25631445
+TGFBR2,PANCAN,TGFBR2_PANCAN,tsg,official,NA,1.51%,4,3.48,0,,Found in 24132290
+TGIF1,COADREAD,TGIF1_COADREAD,possible tsg,official,4.11%,0.66%,2,2,0,,0
+THRAP3,PANCAN,THRAP3_PANCAN,tsg,official,NA,1.17%,2,1.48,0,,0
+TLR4,PANCAN,TLR4_PANCAN,,rescued,NA,2.96%,0,#N/A,0,Evidence from DriverNet (SNV result),#N/A
+TMSB4X,DLBC,TMSB4X_DLBC,possible tsg,official,18.92%,0.31%,2,1.2,1,,0
+TNFAIP3,DLBC,TNFAIP3_DLBC,tsg,official,16.22%,1.01%,3,2.2,0,,0
+TP53,THYM,TP53_THYM,possible tsg,official,2.48%,37.53%,1,0,0,,Found in private communication about integrative THYM analysis
+TP53,DLBC,TP53_DLBC,tsg,official,13.51%,37.53%,2,2,0,,0
+TP53,LAML,TP53_LAML,possible tsg,official,6.47%,37.53%,2.5,1.86,0,,Found in 23634996
+TP53,KIRC,TP53_KIRC,possible tsg,official,3.26%,37.53%,3.5,2.93,0,,Found in 23792563
+TP53,UCEC,TP53_UCEC,possible tsg,official,40.91%,37.53%,3.5,3.2,0,,Found in 23636398
+TP53,ACC,TP53_ACC,tsg,official,17.78%,37.53%,4.5,2.82,0,,Found in 27165744
+TP53,BLCA,TP53_BLCA,possible tsg,official,48.45%,37.53%,4.5,3.43,0,,Found in 24476821
+TP53,MESO,TP53_MESO,tsg,official,17.28%,37.53%,4.5,2.65,0,,0
+TP53,PANCAN,TP53_PANCAN,tsg,official,NA,37.53%,4.5,3.98,0,,Found in 24132290
+TP53,CESC,TP53_CESC,possible tsg,official,6.93%,37.53%,5,3.36,0,,0
+TP53,KICH,TP53_KICH,tsg,official,32.31%,37.53%,5,3.01,0,,Found in 25155756
+TP53,SKCM,TP53_SKCM,tsg,official,11.37%,37.53%,5,5,0,,Found in 26091043
+TP53,LUAD,TP53_LUAD,possible tsg,official,46.87%,37.53%,5.5,5,0,,Found in 25079552
+TP53,LUSC,TP53_LUSC,tsg,official,86.85%,37.53%,5.5,5.03,0,,Found in 22960745
+TP53,STAD,TP53_STAD,tsg,official,52.38%,37.53%,5.5,4.97,0,,Found in 25079317
+TP53,BRCA,TP53_BRCA,tsg,official,33.76%,37.53%,6,4.42,0,,Found in 23000897
+TP53,COADREAD,TP53_COADREAD,tsg,official,72.78%,37.53%,6,4.43,0,,Found in 22810696
+TP53,ESCA,TP53_ESCA,tsg,official,87.79%,37.53%,6,4.98,0,,Found in 28052061
+TP53,GBM,TP53_GBM,possible oncogene,official,29.26%,37.53%,6,4.4,0,,Found in 24120142
+TP53,HNSC,TP53_HNSC,tsg,official,70.92%,37.53%,6,4.91,0,,Found in 25631445
+TP53,LIHC,TP53_LIHC,tsg,official,31.36%,37.53%,6,5.03,0,,Found in private communication about integrative LIHC analysis
+TP53,OV,TP53_OV,tsg,official,91.18%,37.53%,6,5.48,0,,Found in 21720365
+TP53,PRAD,TP53_PRAD,possible oncogene,official,11.95%,37.53%,6,4.48,0,,Found in 26544944
+TP53,LGG,TP53_LGG,possible oncogene,official,48.63%,37.53%,6.5,4.57,0,,Found in 26061751
+TP53,PAAD,TP53_PAAD,tsg,official,68.39%,37.53%,6.5,4.5,0,,Found in private communication about integrative PAAD analysis
+TP53,SARC,TP53_SARC,tsg,official,34.31%,37.53%,6.5,4.71,0,,Found in private communication about integrative SARC analysis
+TP53,UCS,TP53_UCS,tsg,official,92.73%,37.53%,6.5,4.73,0,,Found in 28292439
+TRAF3,PANCAN,TRAF3_PANCAN,tsg,official,NA,0.82%,2,1.48,0,,0
+TSC1,PANCAN,TSC1_PANCAN,tsg,official,NA,1.52%,2.5,1.98,0,,0
+TSC1,BLCA,TSC1_BLCA,tsg,official,9.33%,1.52%,3.5,2.43,0,,Found in 24476821
+TSC2,LIHC,TSC2_LIHC,tsg,official,3.39%,2.11%,3.5,3.5,0,,0
+TXNIP,BLCA,TXNIP_BLCA,possible tsg,official,4.15%,0.94%,0.5,0,0,,Found in 24476821
+U2AF1,UCEC,U2AF1_UCEC,oncogene,official,2.78%,0.84%,1.5,1.5,0,,0
+U2AF1,LAML,U2AF1_LAML,oncogene,official,3.60%,0.84%,2.5,2.5,0,,Found in 23634996
+U2AF1,PAAD,U2AF1_PAAD,oncogene,official,1.94%,0.84%,2.5,2.5,0,,0
+U2AF1,PANCAN,U2AF1_PANCAN,oncogene,official,NA,0.84%,3.5,2.98,0,,Found in 24132290
+U2AF1,LUAD,U2AF1_LUAD,oncogene,official,3.25%,0.84%,4,3.5,0,,Found in 25079552
+UNCX,PANCAN,UNCX_PANCAN,possible oncogene,official,NA,0.21%,1.5,1.5,1,,0
+USP9X,PANCAN,USP9X_PANCAN,tsg,official,NA,2.81%,2,1.48,0,,Found in 24132290
+VHL,PANCAN,VHL_PANCAN,tsg,official,NA,2.22%,4.5,3.98,0,,Found in 24132290
+VHL,KIRC,VHL_KIRC,tsg,official,46.20%,2.22%,5.5,3.76,0,,Found in 23792563
+WHSC1,LIHC,WHSC1_LIHC,oncogene,official,2.54%,1.56%,1.5,1.5,0,,0
+WT1,PANCAN,WT1_PANCAN,possible oncogene,official,NA,1.41%,1,0,0,,Found in 24132290
+WT1,LAML,WT1_LAML,possible tsg,official,2.16%,1.41%,1.5,1.5,0,,0
+XPO1,LIHC,XPO1_LIHC,oncogene,official,1.69%,1.00%,1.5,1.5,0,,0
+ZBTB20,LGG,ZBTB20_LGG,possible tsg,official,4.12%,1.91%,1,0,1,,Found in 26061751
+ZBTB7B,UCS,ZBTB7B_UCS,tsg,official,10.91%,1.06%,3.5,2.82,1,,Found in 28292439
+ZC3H12A,PANCAN,ZC3H12A_PANCAN,,official,NA,0.86%,1.5,1.5,1,,0
+ZCCHC12,LGG,ZCCHC12_LGG,oncogene,official,1.57%,0.88%,1,0,1,,Found in 26061751
+ZFHX3,UCEC,ZFHX3_UCEC,possible tsg,official,19.95%,4.46%,2.5,2.2,0,,0
+ZFP36L1,BLCA,ZFP36L1_BLCA,possible tsg,official,9.59%,1.84%,1.5,1.5,0,,Found in 24476821
+ZFP36L2,COADREAD,ZFP36L2_COADREAD,possible tsg,official,3.80%,0.98%,2,2,0,,0
+ZFP36L2,PANCAN,ZFP36L2_PANCAN,possible tsg,official,NA,0.98%,2,2,0,,0
+ZMYM2,UCEC,ZMYM2_UCEC,tsg,official,6.57%,1.23%,1.5,1.5,0,,0
+ZMYM3,PRAD,ZMYM3_PRAD,tsg,official,1.68%,1.85%,1,0,1,,Found in 26544944
+ZNF133,OV,ZNF133_OV,oncogene,official,2.94%,0.61%,1.5,1.5,1,,Found in 21720365
+ZNF750,PANCAN,ZNF750_PANCAN,possible tsg,official,NA,1.15%,1.5,1.5,0,,0
+ZNF750,ESCA,ZNF750_ESCA,possible tsg,official,6.98%,1.15%,2.5,2.5,0,,Found in 28052061
+ZNF750,HNSC,ZNF750_HNSC,possible tsg,official,3.78%,1.15%,2.5,2.5,0,,0

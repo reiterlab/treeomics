@@ -792,7 +792,7 @@ class HTMLReport(object):
         pdf_filepath = self.filepath.replace('.html', '.pdf')
 
         options = {
-            'zoom': 2.6,
+            'zoom': settings.ZOOM,
             'dpi': 400,
             # 'print-media-type': '',
             'page-size': 'Letter',

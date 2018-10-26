@@ -307,6 +307,7 @@ def read_table(filename, variant_key_column_names, variant_key_pattern, data_col
                 key = ''
                 for key_idx, pat in zip_longest(key_columns, variant_key_pattern, fillvalue=''):
                     key += row[key_idx] + pat
+                    # key += ('{:.0f}'.format(row[key_idx]) if isinstance(row[key_idx], float) else row[key_idx]) + pat
 
                 if sample:
                     data[key][row[sample_column]] = [row[data_idx] for data_idx in data_columns]

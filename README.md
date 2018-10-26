@@ -29,6 +29,7 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
 * Treeomics 1.7.8 2017-10-06: Fixed problem with ete3 visualization of detected subclones. Added additional command line parameters: path to CSV file to highlight given genes in inferred phylogeny and set the maximal number of used threads by CPLEX.
 * Treeomics 1.7.9 2017-10-10: Configure the number of top ranked solution trees that are plotted.
 * Treeomics 1.7.10 2018-05-15: Improved PDF-report generation. Added support for structural variants. Added support for providing externally estimated sample purities via ```--purities <SAMPLE NAMES>```. Added ```--verbose``` option to run Treeomics in DEBUG logging level. Fixed VCF parsing error thanks to Frank's bug report.
+* Treeomics 1.7.11 2018-10-26: Added TCGA consensus driver gene list from Bailey et al., Cell 2018. Added Zoom parameter to ```settings.py``` to better configure PDF report appearance. 
 
 ### <a name="installation"> Installation
 1. Open a terminal and clone the repository from GitHub with ```git clone https://github.com/johannesreiter/treeomics.git```
@@ -93,6 +94,9 @@ $ python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d
 - ```--no_plots``` Disables generation of X11 depending plots (useful for benchmarking; default plots are generated ```plots```)
 - ```--no_tikztrees``` Disables generation of latex trees which do not depend on X11 (default latex trees are generated ```tikztrees```)
 - ```--benchmarking``` Generates mutation matrix and mutation pattern files that can be used for automatic benchmarking of silico data (default ```False```)
+- ```--include``` Provide a list of sample names that should be analyzed (e.g., ```--include PT1 PT2 PT3 PT4```)
+- ```--purities``` Provide a list of externally estimated sample purities (e.g., ```--purities 0.7 0.3 0.9 0.8```). Requires ```--include``` argument with the same ordering of samples.
+
 
 Default parameter values as well as output directory can be changed in ```treeomics/src/treeomics/settings.py```.
 Moreover, the ```settings.py``` provides more options an annotation of driver genes and configuration of plot output names. 
@@ -112,18 +116,9 @@ of 5 distinct liver metastases, 3 distinct lung metastases, and 2 samples of the
 
 Example 2:
 ```shell
-$ python treeomics -r input/Bashashati2013/Case5_mutant_reads.txt -s input/Bashashati2013/Case5_coverage.txt -e 0.01 -O
+$ python treeomics -r input/Bashashati2013/Case5_mutant_reads.txt -s input/Bashashati2013/Case5_coverage.txt -e 0.005 -O
 ```
 Reconstructs the phylogeny of the high-grade serous ovarian cancer of Case 5 in Bashashati et al. (2013).
-
-Example 3:
-```shell
-$ python -v input/example.vcf -O
-```
-Reconstructs the phylogeny of a simulated cancer with 6 metastases from a given VCF file (see [src/input/example.vcf](src/input/example.vcf)).
-Regarding the VCF file input format, Treeomics expects the standard columns: #CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT as well as for each considered sample an additional column.
-Minimally AD (Allelic depth) has to be provided in the FORMAT column and then the actually observed number of reference and alternate alleles in each sample in their corresponding columns).
-The generated output can be found in ```src/output/example_output``` and the corresponding Treeomics report at [src/output/example_output/example_6_e=0_01_c0=0_5_af=0_05_report.pdf](src/output/example_output/example_6_e=0_01_c0=0_5_af=0_05_report.pdf).
 
 ========
 

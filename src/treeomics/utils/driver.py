@@ -361,13 +361,13 @@ def read_driver_file(driver_list_path, cancer_type=None):
 
                 if hasattr(DriverEntry, 'Sources'):
                     sources = driver.Sources.split(';')
-                    if len(sources) > 0:
-                        d.sources = sources
+                    if len(sources) > 0 and (len(sources) > 1 or sources[0] != ''):
+                        d.sources = set(sources)
 
         logger.info("Read {} entries in driver list file {}{}. ".format(
             len(driver_dict), driver_list_path,
-            ' of cancery type '+cancer_type if (cancer_type is not None
-                                                and hasattr(DriverEntry, 'CancerType')) else ''))
+            ' of cancer type '+cancer_type if (cancer_type is not None
+                                               and hasattr(DriverEntry, 'CancerType')) else ''))
 
         return driver_dict
 

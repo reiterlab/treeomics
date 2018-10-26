@@ -63,8 +63,10 @@ CGC_PATH = 'input/cancer_gene_census_grch37_v80.csv'
 # drivers specific to pancreatic cancer
 # DRIVER_PATH = 'input/PDAC_drivers.csv'
 
+# TCGA consensus driver gene list from Bailey et al, Cell 2018
+DRIVER_PATH = 'input/BaileyDing2018_driverconsensus.csv'
 # union of driver lists inferred by 20/20plus, TUSON and MutsigCV in Tokheim et al, PNAS, 2016
-DRIVER_PATH = 'input/Tokheim_drivers_union.csv'
+# DRIVER_PATH = 'input/Tokheim_drivers_union.csv'
 # DRIVER_PATH = 'input/mCRC/mCRC_drivers.csv'
 
 # only necessary to predict the mutation type (silent, intronic, etc)
@@ -79,6 +81,9 @@ COMMON_VARS_FILE = 'input/ExAC/ExAC_sites_0_001.csv'
 
 # ########################## OUTPUT CONFIGURATIONS #################################
 OUTPUT_FOLDER = 'output'    # path to output folder for all files
+
+# depending on various display settings, one has to play with the zoom to get a PDF report with a decent font size
+ZOOM = 1.0
 
 # output file prefix
 incomp_mps_plot_suffix = '_incomp_mps_table'    # mutation table plot of incompatible mutation patterns

@@ -111,6 +111,9 @@ def get_log_p0(n, k, e, c0, pseudo_alpha=None, pseudo_beta=None, cutoff_f=None):
         raise RuntimeError('Error rate e={} can not be higher than the calculated cutoff absent frequency {}'.format(
             e, cutoff_f))
 
+    if k > n:
+        raise RuntimeError('Number of variant reads cannot be higher than the sequencing depth: {} <= {}'.format(k, n))
+
     if pseudo_alpha is None:
         pseudo_alpha = def_sets.PSEUDO_ALPHA
     if pseudo_beta is None:
