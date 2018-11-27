@@ -141,11 +141,11 @@ class Phylogeny(object):
         # create simplified JSON tree
         out_ids = dict()
         out_tree = nx.DiGraph()
-        for out_id, node in enumerate(tree.nodes_iter()):
+        for out_id, node in enumerate(tree.nodes()):
             out_ids[node] = out_id
             out_tree.add_node(out_id, name=tree.node[node]['name'])
 
-        for u, v in tree.edges_iter():
+        for u, v in tree.edges():
             out_tree.add_edge(out_ids[u], out_ids[v], value=len(tree.edge[u][v]['muts']))
 
         # create json output from reconstructed phylogeny
@@ -212,7 +212,7 @@ def create_conflict_graph(nodes, weights=None):
                 cf_graph.add_edge(node1, node2)
 
     logger.info('Created conflict graph with {} nodes of weight {:.2f} and {} evolutionary conflicts.'.format(
-        cf_graph.order(), sum(data['weight'] for _, data in cf_graph.nodes_iter(data=True)), cf_graph.size()))
+        cf_graph.order(), sum(data['weight'] for _, data in cf_graph.nodes(data=True)), cf_graph.size()))
 
     return cf_graph
 

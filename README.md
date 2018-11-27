@@ -30,6 +30,8 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
 * Treeomics 1.7.9 2017-10-10: Configure the number of top ranked solution trees that are plotted.
 * Treeomics 1.7.10 2018-05-15: Improved PDF-report generation. Added support for structural variants. Added support for providing externally estimated sample purities via ```--purities <SAMPLE NAMES>```. Added ```--verbose``` option to run Treeomics in DEBUG logging level. Fixed VCF parsing error thanks to Frank's bug report.
 * Treeomics 1.7.11 2018-10-26: Added TCGA consensus driver gene list from Bailey et al., Cell 2018. Added Zoom parameter to ```settings.py``` to better configure PDF report appearance. 
+* Treeomics 1.7.12 2018-11-26: Replaced 'nodes_iter()' and 'edges_iter()' calls with 'nodes()' and 'edges()' calls because networkx 2.0+ has no backward compatibility: https://stackoverflow.com/questions/33734836/graph-object-has-no-attribute-nodes-iter-in-networkx-module-python
+
 
 ### <a name="installation"> Installation
 1. Open a terminal and clone the repository from GitHub with ```git clone https://github.com/johannesreiter/treeomics.git```
@@ -37,7 +39,7 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
   - Install Python 3.4 ([https://www.python.org/downloads](https://www.python.org/downloads))
   - Install NumPy ([http://www.numpy.org](http://www.numpy.org)), 
     SciPy ([http://www.numpy.org](http://www.numpy.org))
-  - Install networkx ([https://networkx.github.io/](https://networkx.github.io/))
+  - Install networkx 2.0 or above ([https://networkx.github.io/](https://networkx.github.io/))
   - Install matplotlib 1.4 or 1.5 (matplotlib 2 can cause various problems with the layout; [http://matplotlib.org](http://matplotlib.org/))
   - Install pandas ([http://pandas.pydata.org/](http://pandas.pydata.org/))
   - Install seaborn ([http://seaborn.pydata.org/](http://seaborn.pydata.org/))

@@ -190,7 +190,7 @@ def _write_tikz_tree(tree, cur_node, latex_file, level, patient, pg,
         # Calculate number of acquired mutations in this sample
         # and compare it to the reported number
         root = None
-        for node in tree.nodes_iter():
+        for node in tree.nodes():
             if node == TREE_ROOT or tree.node[node]['name'] == TREE_ROOT:
                 root = node
         path = nx.shortest_path(tree, source=root, target=cur_node)

@@ -4,7 +4,7 @@ __author__ = 'Johannes REITER'
 
 
 # Treeomics version number
-VERSION = (1, 7, 10)     # 'beta'
+VERSION = (1, 7, 12)     # 'beta'
 
 # ##### DEFAULT PARAMETER VALUES #####
 # maximal number variants to show in a mutation table plot

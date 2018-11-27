@@ -177,7 +177,7 @@ def _generate_ete_tree(tree, cur_node, ete_cur_node, level, patient, pg,
         # Calculate number of acquired mutations in this sample
         # and compare it to the classified number
         root = None
-        for node in tree.nodes_iter():
+        for node in tree.nodes():
             if node == TREE_ROOT or tree.node[node]['name'] == TREE_ROOT:
                 root = node
         path = nx.shortest_path(tree, source=root, target=cur_node)

@@ -746,7 +746,7 @@ def create_conflict_graph(reliability_scores):
                 cf_graph.add_edge(node1, node2)
 
     logger.info('Created conflict graph with {} nodes of weight {:.2f} and {} evolutionary conflicts.'.format(
-        cf_graph.order(), sum(data['weight'] for _, data in cf_graph.nodes_iter(data=True)), cf_graph.size()))
+        cf_graph.order(), sum(data['weight'] for _, data in cf_graph.nodes(data=True)), cf_graph.size()))
 
     return cf_graph
 

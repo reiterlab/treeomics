@@ -120,7 +120,7 @@ def create_mutation_links_file(links_filename, phylogeny, mut_pos):
         links_file.write('# chr1 start1 end1 chr2 start2 end2 [options]\n')
 
         # run through all edges of conflicting mutation patterns
-        for source, sink in phylogeny.cf_graph.edges_iter():
+        for source, sink in phylogeny.cf_graph.edges():
 
             if source not in phylogeny.patient.mps or sink not in phylogeny.patient.mps:
                 # only generate the conflict links among the present and absent mutation patterns
@@ -533,7 +533,7 @@ def _create_cfg_links_file(cfg_links_filename, phylogeny, cfg_nodes):
         links_file.write('# n1 start1 end1 n2 start2 end2 [options]\n')
 
         # run through all edges of conflicting clones
-        for source, sink in phylogeny.cf_graph.edges_iter():
+        for source, sink in phylogeny.cf_graph.edges():
 
             if source not in cfg_nodes or sink not in cfg_nodes:
                 # logger.debug('Edge endnode is not shown in the circos file and hence the link is also not depicted.')

@@ -65,7 +65,7 @@ class Solution:
         self.incompatible_nodes = set()
         conflicting_mutations_weight = 0
 
-        for col_idx, (node, data) in enumerate(cf_graph.nodes_iter(data=True)):
+        for col_idx, (node, data) in enumerate(cf_graph.nodes(data=True)):
 
             # if round(sol.get_values(str(node)), 5) == 0:
             if round(sol_values[col_idx], 5) == 0:              # compatible
@@ -77,7 +77,7 @@ class Solution:
         if rank is not None and rank <= 30:
             logger.debug('Solution values: '
                          + ', '.join('{}: {:.1f} (w:{:.2e})'.format(node, sol_values[col_idx], data['weight'])
-                                     for col_idx, (node, data) in enumerate(cf_graph.nodes_iter(data=True))))
+                                     for col_idx, (node, data) in enumerate(cf_graph.nodes(data=True))))
 
         assert round(conflicting_mutations_weight, 4) == round(self.obj_val / Solution.SCALING_FACTOR, 4), \
             "As long as weights are given by the number of mutations: {} == {}".format(

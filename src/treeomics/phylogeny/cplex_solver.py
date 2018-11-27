@@ -42,7 +42,7 @@ def solve_conflicting_phylogeny(cf_graph, no_muts, pool_size, no_plotted_solutio
 
     # the number of columns in the ILP is given by the number of nodes in the conflict graph
     # weighting of the mutation patterns corresponds to the number of mutation which are conflicting
-    objective_function = [data['weight'] for _, data in cf_graph.nodes_iter(data=True)]
+    objective_function = [data['weight'] for _, data in cf_graph.nodes(data=True)]
 
     logger.debug('Objective function: ' + ', '.join(
         '{}: {:.1e}'.format(var_idx, weight) for var_idx, weight in enumerate(objective_function, 1)))
@@ -59,7 +59,7 @@ def solve_conflicting_phylogeny(cf_graph, no_muts, pool_size, no_plotted_solutio
     # add column names to the ILP
     cnames = []
     ilp_col_mps = []
-    for col_idx, node in enumerate(cf_graph.nodes_iter(), 0):
+    for col_idx, node in enumerate(cf_graph.nodes(), 0):
         cnames.append(str(node))
         ilp_col_mps.append(node)
 
@@ -83,7 +83,7 @@ def solve_conflicting_phylogeny(cf_graph, no_muts, pool_size, no_plotted_solutio
     # add evolutionary constraints
     constraints = []    # LHS (left hand side) of the rows in the ILP
     row_names = []      # names of the rows (constraints)
-    for constraint_idx, (source, sink) in enumerate(cf_graph.edges_iter(), 1):
+    for constraint_idx, (source, sink) in enumerate(cf_graph.edges(), 1):
         constraint = [[str(source), str(sink)], [1, 1]]
 
         constraints.append(constraint)
@@ -296,7 +296,7 @@ def bootstrapping_solving(cf_graph, mp_weights, idx_to_mp, no_samples):
     ilp_col_names = []
     ilp_col_mps = []
     ilp_cols = dict()
-    for col_idx, node in enumerate(cf_graph.nodes_iter(), 0):
+    for col_idx, node in enumerate(cf_graph.nodes(), 0):
         ilp_col_names.append(str(node))
         ilp_cols[node] = col_idx
         ilp_col_mps.append(node)
@@ -307,7 +307,7 @@ def bootstrapping_solving(cf_graph, mp_weights, idx_to_mp, no_samples):
     # add evolutionary constraints
     constraints = []    # LHS (left hand side) of the rows in the ILP
     row_names = []      # names of the rows (constraints)
-    for constraint_idx, (source, sink) in enumerate(cf_graph.edges_iter(), 1):
+    for constraint_idx, (source, sink) in enumerate(cf_graph.edges(), 1):
         constraint = [[str(source), str(sink)], [1, 1]]
         constraints.append(constraint)
         row_names.append(str(source)+'-'+str(sink))
@@ -413,7 +413,7 @@ def solve_downsampled_nodes(cf_graph, mp_weights, col_ids_mp, no_replications):
     # add evolutionary constraints
     constraints = []    # LHS (left hand side) of the rows in the ILP
     row_names = []      # names of the rows (constraints)
-    for constraint_idx, (source, sink) in enumerate(cf_graph.edges_iter(), 1):
+    for constraint_idx, (source, sink) in enumerate(cf_graph.edges(), 1):
         constraint = [[str(source), str(sink)], [1, 1]]
         constraints.append(constraint)
         row_names.append(str(source)+'-'+str(sink))
@@ -512,7 +512,7 @@ def solve_downsampled_binary_nodes(cf_graph, mut_pattern_scores, shared_mutation
     # add column names to the ILP
     var_names = []
     node_indices = dict()   # map nodes (mutation patterns) to column id in the ILP
-    for col_idx, (node, data) in enumerate(cf_graph.nodes_iter(data=True), 0):
+    for col_idx, (node, data) in enumerate(cf_graph.nodes(data=True), 0):
 
         var_names.append(str(node))
         objective_function.append(data['weight'])
@@ -530,7 +530,7 @@ def solve_downsampled_binary_nodes(cf_graph, mut_pattern_scores, shared_mutation
     # add evolutionary constraints
     constraints = []    # LHS (left hand side) of the rows in the ILP
     row_names = []      # names of the rows (constraints)
-    for constraint_idx, (source, sink) in enumerate(cf_graph.edges_iter(), 1):
+    for constraint_idx, (source, sink) in enumerate(cf_graph.edges(), 1):
         constraint = [[str(source), str(sink)], [1, 1]]
         constraints.append(constraint)
         row_names.append(str(source)+'-'+str(sink))
@@ -584,7 +584,7 @@ def solve_downsampled_binary_nodes(cf_graph, mut_pattern_scores, shared_mutation
             # logger.debug('Column solution values: ' + ', '.join(
             #     '{}: {}'.format(var_idx, status) for var_idx, status in enumerate(solution_values, 1)))
 
-            for node in cf_graph.nodes_iter():
+            for node in cf_graph.nodes():
                 if round(sol.get_values(str(node)), 5) == 0 and 1 < len(node) < no_samples:
                     node_frequencies[100-removed_fraction][node] += 1
 
