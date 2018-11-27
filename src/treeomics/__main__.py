@@ -282,7 +282,7 @@ def main():
                         help="minimum median mutant allele frequency of a sample",
                         type=float, default=settings.MAF_THRESHOLD)
 
-    parser.add_argument("-g", "--ref_genome",
+    parser.add_argument('-g', "--ref_genome",
                         help="to which reference genome was the sequencing data aligned",
                         type=str, default=settings.REF_GENOME)
 

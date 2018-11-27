@@ -70,6 +70,7 @@ DRIVER_PATH = 'input/BaileyDing2018_driverconsensus.csv'
 # DRIVER_PATH = 'input/mCRC/mCRC_drivers.csv'
 
 # only necessary to predict the mutation type (silent, intronic, etc)
+# supporting grch36 (for hg18), grch37 (for hg19) and grch38 (for hg38)
 REF_GENOME = 'grch37'
 # REF_GENOME = None
 

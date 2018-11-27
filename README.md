@@ -87,6 +87,7 @@ $ python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d
 - *-p <false positive rate>:* False-positive rate of conventional binary classification (only relevant for artifact comparison)
 - *-i <false discovery rate>:* Targeted false-discovery rate of conventional binary classification  (only relevant for artifact comparison)
 - *-y <min absent coverage>:* Minimum coverage for a powered absent variant  (only relevant for artifact comparison)
+- *-g <reference genome>:* provide used reference genome for mutation consequence annotation; supporting grch37 (for hg19; default), grch36 (for hg18), and grch38 (for hg38); E.g. ```-g grch38```
 - *-t <time limit>:* Maximum running time for CPLEX to solve the MILP (in seconds, default ```None```). If not ```None```, the obtained solution is no longer guaranteed to be optimal
 - ```--threads=<N>``` Maximal number of parallel threads that will be invoked by CPLEX (```0```: default, let CPLEX decide; ```1```: single threaded; ```N```: uses up to N threads)
 
