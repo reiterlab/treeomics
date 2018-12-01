@@ -56,7 +56,8 @@ MIN_VAR_READS = 0
 # path to a list of all cancer gene census from COSMIC in a comma separated value file
 # if not available, provide None
 # hg18 (GRCh36) is not available, hg19 corresponds to GRCh37, hg38 corresponds to GRCh38
-CGC_PATH = 'input/cancer_gene_census_grch37_v80.csv'
+CGC_PATH = 'input/cancer_gene_census_grch37_v84.csv'
+# CGC_PATH = 'input/cancer_gene_census_grch38_v84.csv'
 # CGC_PATH = None
 
 # additional gene names list to be highlighted in mutation table and inferred phylogeny independent of the COSMIC list

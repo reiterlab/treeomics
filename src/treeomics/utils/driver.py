@@ -277,8 +277,9 @@ def get_drivers(cgc_path, user_driver_path, reference_genome):
 
     # is path to file with cancer census gene set provided?
     if cgc_path is not None and os.path.isfile(cgc_path):
-        assert reference_genome in cgc_path, "Is CGC file {} for reference genome {}?".format(
-            cgc_path, reference_genome)
+        if reference_genome not in cgc_path:
+            logger.error('Given the name of the Cancer Gene Consensus file , the genomic coordinates '
+                         'may not match the given reference genome {}: {}'.format(reference_genome, cgc_path))
         cgc_drivers = read_driver_file(cgc_path)
     else:
         cgc_drivers = dict()
