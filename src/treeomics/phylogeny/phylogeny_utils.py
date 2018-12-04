@@ -112,7 +112,7 @@ class Phylogeny(object):
             tree.node[cur_node]['muts'] = acquired_mutations
 
             # add meaningful names to internal nodes
-            if len(tree.successors(cur_node)):      # internal node
+            if len(list(tree.successors(cur_node))):      # internal node
 
                 if subclone_idx == 0:
                     tree.node[cur_node]['name'] = 'Germline'+' '+self.patient.name

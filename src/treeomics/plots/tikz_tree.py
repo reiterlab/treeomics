@@ -115,7 +115,7 @@ def _write_tikz_tree(tree, cur_node, latex_file, level, patient, pg,
     # calculate indentation dependent on the level of the node
     pre = ''.join('\t' for _ in range(level))
 
-    if len(tree.neighbors(cur_node)) > 0 or \
+    if len(list(tree.neighbors(cur_node))) > 0 or \
             ('name' in tree.node[cur_node] and (cur_node == TREE_ROOT or tree.node[cur_node]['name'] == TREE_ROOT)):
 
         if tree.node[cur_node]['name'] == TREE_ROOT or cur_node == TREE_ROOT:

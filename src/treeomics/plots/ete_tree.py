@@ -113,7 +113,7 @@ def _generate_ete_tree(tree, cur_node, ete_cur_node, level, patient, pg,
 
     tree.node[cur_node]['level'] = level
 
-    if len(tree.neighbors(cur_node)) > 0 or \
+    if len(list(tree.neighbors(cur_node))) > 0 or \
             ('name' in tree.node[cur_node] and (cur_node == TREE_ROOT or tree.node[cur_node]['name'] == TREE_ROOT)):
 
         # generate children and information about the acquired mutations

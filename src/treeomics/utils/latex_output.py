@@ -150,7 +150,7 @@ def add_branch_mut_info(filename, phylogeny, tree):
                                      for m in tree[parent][child]['muts'] if m not in driver_pathways)))
                     latex_file.write('\n\n')
 
-                if len(tree.successors(child)):
+                if len(list(tree.successors(child))):
                     # add edges to queue in level order
                     for grandchild in tree.successors(child):
                         fifo_queue.append((child, grandchild))
