@@ -61,14 +61,14 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
   - two tab-delimited text files -- one for variant read data and one for coverage data. Please see the files ```input/Makohon2017/Pam03_mutant_reads.txt``` and ```input/Makohon2017/Pam03_phredcoverage.txt``` included in this repository for examples.
   - VCF-files of all samples
 2. Go into the new folder with ```cd treeomics/src```
-3. Type the following command to run the simulation: ```python treeomics -r <mut-reads table> -s <coverage table> -O``` 
+3. Type the following command to run the simulation: ```python treeomics -r <mut-reads table> -s <coverage table> -o``` 
 where ```<mut-reads table>``` is the path to a tab-separated-value file with the number of 
 reads reporting a variant (row) in each sample (column) and ```<coverage table>``` is the path to a tab-separated-value 
 file with the sequencing depth at the position of this variant in each sample.
 
 ##### Usage: 
 ```shell
-$ python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf file directory> -O
+$ python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf file directory> -o
 ```
 
 ##### Optional parameters:
@@ -113,14 +113,14 @@ All plots, analysis and logging files, and the HTML report will be in this outpu
 ### <a name="examples"> Examples
 Example 1:
 ```shell
-$ python treeomics -r input/Makohon2017/Pam03_1-10_mutant_reads.txt -s input/Makohon2017/Pam03_1-10_phredcoverage.txt -n Pam03N3 -e 0.005 -O
+$ python treeomics -r input/Makohon2017/Pam03_1-10_mutant_reads.txt -s input/Makohon2017/Pam03_1-10_phredcoverage.txt -n Pam03N3 -e 0.005 -o
 ```
 Reconstructs the phylogeny of pancreatic cancer patient Pam03 based on targeted sequencing data 
 of 5 distinct liver metastases, 3 distinct lung metastases, and 2 samples of the primary tumor.
 
 Example 2:
 ```shell
-$ python treeomics -r input/Bashashati2013/Case5_mutant_reads.txt -s input/Bashashati2013/Case5_coverage.txt -e 0.005 -O
+$ python treeomics -r input/Bashashati2013/Case5_mutant_reads.txt -s input/Bashashati2013/Case5_coverage.txt -e 0.005 -o
 ```
 Reconstructs the phylogeny of the high-grade serous ovarian cancer of Case 5 in Bashashati et al. (2013).
 
