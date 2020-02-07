@@ -3,6 +3,8 @@
 
 import logging
 import math
+import numpy as np
+import pandas as pd
 import utils.int_settings as def_sets
 from utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
 
@@ -127,15 +129,19 @@ def calculate_bi_genetic_similarity(patient):
 
     bi_sim_coeff = [[0.0 for _ in range(patient.n)] for _ in range(patient.n)]
     bi_gen_dist = [[0 for _ in range(patient.n)] for _ in range(patient.n)]
+    bi_sim_coeff_dict = dict()
+    bi_gen_dist_dict = dict()
 
     # log probability to be classified with at least the given confidence threshold
     conf_clas_lpth = math.log(def_sets.CLA_CONFID_TH)
 
-    for s1_idx in range(len(patient.data[0])):
+    # for s1_idx in range(len(patient.data[0])):
+    for s1_idx, sample_name in enumerate(patient.sample_names):
         for s2_idx in range(s1_idx+1):
 
             if s1_idx == s2_idx:
-                bi_sim_coeff[s1_idx][s2_idx] = 1.0
+                bi_sim_coeff[s1_idx][s2_idx] = np.nan
+                bi_gen_dist[s1_idx][s2_idx] = np.nan
                 continue
 
             no_present_vars = 0
@@ -163,5 +169,11 @@ def calculate_bi_genetic_similarity(patient):
             #     patient.sample_names[s1_idx], patient.sample_names[s2_idx], bi_sim_coeff[s1_idx][s2_idx]))
             # logger.debug('Genetic distance of {} and {}: {:.0f}'.format(
             #     patient.sample_names[s1_idx], patient.sample_names[s2_idx], bi_gen_dist[s1_idx][s2_idx]))
+
+        bi_sim_coeff_dict[sample_name] = bi_sim_coeff[s1_idx]
+        bi_gen_dist_dict[sample_name] = bi_gen_dist[s1_idx]
+
+    patient.df_bi_sim_coeff = pd.DataFrame(bi_sim_coeff_dict, index=patient.sample_names)
+    patient.df_bi_gen_dist = pd.DataFrame(bi_gen_dist_dict, index=patient.sample_names)
 
     return bi_gen_dist, bi_sim_coeff

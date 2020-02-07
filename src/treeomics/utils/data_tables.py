@@ -57,11 +57,13 @@ def read_mutation_table(filename, normal_sample=None, excluded_columns=set(), co
         gene_names = dict()
         sample_names = []
 
-        for row in f_tsv:
+        for line_number, row in enumerate(f_tsv):
             if len(row) == 0 or row[0].startswith('#'):
                 # skip comments
                 continue
-            elif row[0].startswith('Chr') or row[0].startswith('Gene'):                # process data table header
+
+            # process data table header
+            elif headers is None and (row[0].startswith('Chr') or row[0].startswith('Gene')):
                 headers = [p_replace.sub('_', p_remove.sub('', e)) for e in row]
 
                 logger.debug('Header: {}'.format(headers))
@@ -91,6 +93,10 @@ def read_mutation_table(filename, normal_sample=None, excluded_columns=set(), co
 
             else:                                       # process variants
                 var = named_row(*row)
+
+                if any(var[sa_idx] == '' for sa_idx, sample_name in enumerate(headers[first_sa_col:], first_sa_col)):
+                    logger.warning('Missing values in row {}.'.format(line_number))
+                    continue
 
                 for sa_idx, sample_name in enumerate(headers[first_sa_col:], first_sa_col):
 

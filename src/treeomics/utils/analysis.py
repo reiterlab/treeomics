@@ -20,18 +20,19 @@ __author__ = 'Johannes REITER'
 logger = logging.getLogger('treeomics')
 
 
-def analyze_data(patient, post_table_filepath=None, jsc_filepath=None, vep_filepath=None, cravat_filepath=None):
+def analyze_data(patient, post_table_filepath=None, vep_filepath=None, cravat_filepath=None):
     """
     Process data and write posterior table
     Possibility of apply various filters
     :param patient: data structure around sequencing data of a subject
     :param post_table_filepath: file path for generating a table with posterior probabilities
-    :param jsc_filepath: output path to file where Jaccard similarity matrix will be stored
+    :param fp_jsc: output path to file where Jaccard similarity matrix will be stored
+    :param fp_gendist: output path to file where genetic distance matrix will be stored
     :param vep_filepath: output file path to write all substitution variants in a format acceptable to Ensembl VEP
     :param cravat_filepath: output file path to write all substitution variants in a format acceptable to CHASM/CRAVAT
     """
 
-    # Possibility to implement filters!!!
+    # Possibility to implement filters!
     # Look at the average/median frequency of founder mutations
     # Filter mutations out with less than half of the average founder mutation frequency
     # data_utils.remove_contradicting_mutations(patient.data)
@@ -70,7 +71,7 @@ def analyze_data(patient, post_table_filepath=None, jsc_filepath=None, vep_filep
     patient.gen_dis, patient.sim_coeff, patient.sim_coeff_ex = calculate_genetic_similarity(patient)
     patient.bi_gen_dis, patient.bi_sim_coeff = calculate_bi_genetic_similarity(patient)
 
-    patient.sharing_status = determine_sharing_status(patient, jsc_filepath=jsc_filepath)
+    patient.sharing_status = determine_sharing_status(patient)
     assert (len(patient.mut_keys) == len(patient.sharing_status)), 'Error inferring sharing status with BI model'
 
     # keep list of mutations present in some of the used samples
@@ -86,11 +87,10 @@ def analyze_data(patient, post_table_filepath=None, jsc_filepath=None, vep_filep
     patient.calculate_no_present_vars()
 
 
-def determine_sharing_status(patient, jsc_filepath=None):
+def determine_sharing_status(patient):
     """
     Determine which samples share the various mutations based on the Bayesian inference model
     :param patient: data structure around sequencing data of a subject
-    :param jsc_filepath: output path to file where Jaccard similarity matrix will be stored
     """
 
     pres_lp = math.log(0.5)  # log probability of 50%
@@ -210,57 +210,26 @@ def determine_sharing_status(patient, jsc_filepath=None):
 
     logger.info('Total number of distinct mutation patterns: {}'.format(len(patient.mps)))
 
-    if jsc_filepath is not None:
-
-        # write analysis to file
-        with open(jsc_filepath, 'w') as similarity_file:
-
-            csvwriter = csv.writer(similarity_file)
-            jscs = [patient.bi_sim_coeff[sa1_idx][sa2_idx] for sa1_idx in range(patient.n) for sa2_idx in
-                    range(sa1_idx)]
-
-            similarity_file.write(
-                '# {}: Probabilistic Jaccard similarity coefficient between'.format(patient.name) +
-                ' all pairs of samples (median: {:.2f}; mean: {:.2f}; classification threshold: {:.0%}).\n'.format(
-                    np.median(jscs), np.mean(jscs), def_sets.CLA_CONFID_TH))
-
-            col_names = ['Sample'] + patient.sample_names
-
-            # write header
-            csvwriter.writerow(col_names)
-
-            # build up output data sequentially
-            for sa1_idx, sample_name in enumerate(patient.sample_names):
-
-                row = list()
-                row.append(sample_name.replace('_', ' '))
-
-                for sa2_idx in range(len(patient.sample_names)):
-                    row.append('{:.2f}'.format(patient.bi_sim_coeff[sa1_idx][sa2_idx]))
-
-                # write row to file
-                csvwriter.writerow(row)
-
     return sharing_status
 
 
 def get_present_mutations(log_p01):
-        """
-        Return list of mutations which are present in a least one sample
-        :param log_p01: list of tuple posterior (log probability that VAF = 0, log probability that VAF > 0)
-                        for each variant
-        :return: list of indices of present variants
-        """
+    """
+    Return list of mutations which are present in a least one sample
+    :param log_p01: list of tuple posterior (log probability that VAF = 0, log probability that VAF > 0)
+                    for each variant
+    :return: list of indices of present variants
+    """
 
-        # indices list of the present mutations
-        present_mutations = []
-        pres_lp = math.log(0.5)  # log probability of 50%
-        for mut_idx, ps in log_p01.items():
+    # indices list of the present mutations
+    present_mutations = []
+    pres_lp = math.log(0.5)  # log probability of 50%
+    for mut_idx, ps in log_p01.items():
 
-            if any(p1 > pres_lp for _, p1 in ps):
-                present_mutations.append(mut_idx)
+        if any(p1 > pres_lp for _, p1 in ps):
+            present_mutations.append(mut_idx)
 
-        return present_mutations
+    return present_mutations
 
 
 def create_analysis_file(patient, min_sa_cov, analysis_filepath, phylogeny=None, comp_node_frequencies=None,

@@ -176,7 +176,12 @@ class Patient(object):
         self.bi_gen_dis = None         # genetic distance between any pair of samples
         self.bi_sim_coeff = None        # Jaccard similarity coefficient between any pair of samples
 
+        # same as above just in the form of a pandas dataframe
+        self.df_bi_gen_dist = None      # genetic distance between any pair of samples
+        self.df_bi_jsc = None           # Jaccard similarity coefficient between any pair of samples
+
     def process_raw_data(self, false_positive_rate, false_discovery_rate, min_absent_cov, min_sa_cov, min_sa_maf,
+                         mut_reads_normal_th, vaf_normal_th,
                          var_table=None, cov_table=None, csv_file=None, normal_sample=None, excluded_columns=set(),
                          considered_samples=None, wes_filtering=False, artifacts=None):
         """
@@ -186,6 +191,8 @@ class Patient(object):
         :param min_absent_cov: minimum coverage at a non-significantly mutated position for absence classification
         :param min_sa_cov: minimum median coverage per sample
         :param min_sa_maf: minimum median mutant allele frequency per sample
+        :param mut_reads_normal_th: exclude variants reaching this number of mutant reads with a given VAF in the normal
+        :param vaf_normal_th: exclude variants reaching this VAF with a given number of mutant reads in the normal
         :param var_table: path to file with mutant reads
         :param cov_table: path to file with phred coverage
         :param csv_file: path to CSV file with sequencing data of all samples
@@ -258,10 +265,11 @@ class Patient(object):
 
             # check if variant is present in the normal sample
             if normal_sample is not None:
-                if norm_var[mut_key] >= 3 and float(norm_var[mut_key]) / norm_cov[mut_key] > 0.02:
-                    logger.debug('Excluded variant {} ({}) present at a VAF of {:.1%} ({}/{}) in the normal sample.'
-                                 .format(gene_names[mut_key], mut_key, float(norm_var[mut_key]) / norm_cov[mut_key],
-                                         norm_var[mut_key], norm_cov[mut_key]))
+                if (norm_var[mut_key] >= mut_reads_normal_th
+                        and float(norm_var[mut_key]) / norm_cov[mut_key] >= vaf_normal_th):
+                    logger.warning('Excluded variant {} ({}) present at a VAF of {:.1%} ({}/{}) in the normal sample.'
+                                   .format(gene_names[mut_key], mut_key, float(norm_var[mut_key]) / norm_cov[mut_key],
+                                           norm_var[mut_key], norm_cov[mut_key]))
                     putative_sequencing_artifacts += 1
                     # exclude these variants
                     del self.mut_reads[mut_key]
@@ -1209,7 +1217,22 @@ def get_variant_details(mut_key):
     else:
         chrom = var[0]  # chromosome
     start_pos = int(var[1])
-    ref, alt = var[2].split('>')
+    if '>' in var[2]:
+        ref, alt = var[2].split('>')
+
+    # insertion/duplication
+    elif 'dup' in var[2] or 'ins' in var[2]:
+        ref = '-'
+        alt = var[2][var[2].find('dup') + 3:]
+
+    # deletion
+    elif 'del' in var[2]:
+        alt = '-'
+        ref = var[2][var[2].find('del') + 3:]
+    else:
+        ref = alt = var[2]
+        logger.warning('Change format not supported: {}'.format(var[2]))
+
     end_pos = start_pos + (len(ref) if ref != '-' else 0) - 1
 
     return chrom, start_pos, end_pos, ref, alt

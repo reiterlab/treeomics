@@ -4,6 +4,7 @@ import sys
 import os
 import argparse
 from collections import Counter
+import numpy as np
 import csv
 from utils.driver import get_drivers, potential_driver, Driver
 from patient import Patient
@@ -94,7 +95,8 @@ def get_patients_name(name):
 
 def get_output_fn_template(name, total_no_samples, subclone_detection=False, fpr=None, fdr=None,
                            min_absent_coverage=None, min_sa_coverage=None, min_sa_vaf=None,
-                           bi_e=None, bi_c0=None, max_absent_vaf=None, no_boot=None, mode=None, max_no_mps=None):
+                           bi_e=None, bi_c0=None, max_absent_vaf=None, no_boot=None, mode=None, max_no_mps=None,
+                           suffix=None):
     """
     Generate common name template for output files
     :param name: subject name or id
@@ -111,6 +113,7 @@ def get_output_fn_template(name, total_no_samples, subclone_detection=False, fpr
     :param no_boot: number of bootstrapping samples
     :param mode: mode of Treeomics
     :param max_no_mps: maximal number of considered most likely distinct mutation patterns per variant
+    :param suffix: add given suffix to output filenames
     :return: output filename pattern
     """
 
@@ -127,7 +130,8 @@ def get_output_fn_template(name, total_no_samples, subclone_detection=False, fpr
                ('_af={}'.format(max_absent_vaf) if max_absent_vaf is not None else '') +
                ('_mps={}'.format(max_no_mps) if max_no_mps is not None else '') +
                ('_b={}'.format(no_boot) if (no_boot is not None) and no_boot > 0 else '') +
-               ('_s' if mode is not None and mode == 2 else ''))
+               ('_s' if mode is not None and mode == 2 else '') +
+               ('_' + suffix if suffix is not None else ''))
 
     # replace points with commas because latex cannot handle points in file names (interprets it as file type)
     pattern = pattern.replace('.', '_')
@@ -253,6 +257,8 @@ def main():
     parser.add_argument("-n", "--normal", help="names of normal samples (excluded from analysis)", type=str, nargs='*',
                         default=None)
 
+    parser.add_argument("--suffix", help="suffix for output files", type=str, default=None)
+
     parser.add_argument("-x", "--exclude", help="names of samples to exclude of analysis", type=str, nargs='*',
                         default=None)
     parser.add_argument("--include", help="names of samples to include in analysis", type=str, nargs='*',
@@ -287,6 +293,14 @@ def main():
                         type=str, default=settings.REF_GENOME)
 
     parser.add_argument('--wes_filtering', action='store_true', help="Remove intronic and intergenic variants?")
+
+    # settings for filtering potential germline variants
+    parser.add_argument(
+        "--mut_reads_normal_th", type=float, default=settings.MUT_READS_NORMAL_TH,
+        help="variants are excluded if they reach this number of mutant reads with a given VAF in the normal sample")
+    parser.add_argument(
+        "--vaf_normal_th", type=float, default=settings.VAF_NORMAL_TH,
+        help="variants are excluded if they reach this VAF with a given number of mutant reads in the normal sample")
 
     parser.add_argument('--driver_genes', type=str, default=settings.DRIVER_PATH,
                         help='path to CSV file with names of putative driver genes highlighted in inferred phylogeny')
@@ -496,7 +510,8 @@ def main():
                           pat_name=patient_name, min_absent_cov=min_absent_cov, reference_genome=ref_genome,
                           purities=purities)
         read_no_samples = patient.process_raw_data(
-            fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf, var_table=args.mut_reads,
+            fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf,
+            mut_reads_normal_th=args.mut_reads_normal_th, vaf_normal_th=args.vaf_normal_th, var_table=args.mut_reads,
             cov_table=args.coverage, normal_sample=normal_sample_name, excluded_columns=excluded_samples,
             considered_samples=included_samples, wes_filtering=args.wes_filtering, artifacts=common_vars)
 
@@ -510,7 +525,8 @@ def main():
                           pat_name=patient_name, min_absent_cov=min_absent_cov, reference_genome=ref_genome,
                           purities=purities)
         read_no_samples = patient.process_raw_data(
-            fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf, csv_file=args.csv_file,
+            fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf,
+            mut_reads_normal_th=args.mut_reads_normal_th, vaf_normal_th=args.vaf_normal_th, csv_file=args.csv_file,
             normal_sample=normal_sample_name, excluded_columns=excluded_samples, considered_samples=included_samples)
 
     elif args.vcf_file:      # take path to the input VCF file
@@ -573,31 +589,63 @@ def main():
         cgc_filepath = None
 
     put_driver_genes, put_driver_vars, unlikely_driver_mut_effects = characterize_drivers(
-        patient, ref_genome, driver_filepath, cgc_filepath, output_filepath=os.path.join(
-            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_putativedrivers')
+        patient, ref_genome, driver_filepath, cgc_filepath,
+        output_filepath=os.path.join(
+            output_directory, get_output_fn_template(patient.name, read_no_samples, suffix=args.suffix))
+        + '_putativedrivers')
 
     # create output filename pattern
     fn_pattern = get_output_fn_template(
         patient.name, read_no_samples, mode=args.mode, min_sa_coverage=args.min_median_coverage,
         min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0,
-        max_absent_vaf=patient.max_absent_vaf)
+        max_absent_vaf=patient.max_absent_vaf, suffix=args.suffix)
 
     # do basic analysis on provided input data
     # create output file path for present posterior probabilities of the variants
     post_filepath = os.path.join(output_directory, get_output_fn_template(
         patient.name, read_no_samples, min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf,
-        bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf) + '_posterior.txt')
-    # write matrix with Jaccard similarity coefficients in CSV format
-    jsc_filepath = os.path.join(
-            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_jsc-matrix.csv'
+        bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf, suffix=args.suffix)
+        + '_posterior.txt')
 
     # output file path to write all variants in a format acceptable to Ensembl VEP and CHASM/CRAVAT
-    vep_filepath = os.path.join(
-            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_func_variants_vep.tsv'
-    cravat_filepath = os.path.join(
-            output_directory, get_output_fn_template(patient.name, read_no_samples)) + '_func_variants_cravat.tsv'
-    analyze_data(patient, post_table_filepath=post_filepath, jsc_filepath=jsc_filepath,
+    vep_filepath = (os.path.join(
+        output_directory, get_output_fn_template(patient.name, read_no_samples, suffix=args.suffix))
+        + '_func_variants_vep.tsv')
+    cravat_filepath = (os.path.join(
+        output_directory, get_output_fn_template(patient.name, read_no_samples, suffix=args.suffix))
+        + '_func_variants_cravat.tsv')
+    analyze_data(patient, post_table_filepath=post_filepath,
                  vep_filepath=vep_filepath, cravat_filepath=cravat_filepath)
+
+    # write matrix with Jaccard similarity coefficients in CSV format
+    fp_jsc = os.path.join(
+        output_directory,
+        get_output_fn_template(patient.name, read_no_samples,
+                               min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf,
+                               bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf,
+                               suffix=args.suffix)) + '_jsc.csv'
+    with open(fp_jsc, 'w') as f_jsc:
+        jsc_title = \
+            ('# {}: Probabilistic Jaccard similarity coefficient between'.format(patient.name)
+             + ' all pairs of samples (median: {:.2f}; mean: {:.2f}; classification threshold: {:.0%}).\n'.format(
+             np.nanmedian(patient.df_bi_sim_coeff), np.nanmean(patient.df_bi_sim_coeff), def_sets.CLA_CONFID_TH))
+        f_jsc.write(jsc_title)
+    patient.df_bi_sim_coeff.to_csv(fp_jsc, index=True, mode='a')
+
+    # write matrix with genetic distances in CSV format
+    fp_gen_dist = os.path.join(
+        output_directory,
+        get_output_fn_template(patient.name, read_no_samples,
+                               min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf,
+                               bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf,
+                               suffix=args.suffix)) + '_gendist.csv'
+    with open(fp_gen_dist, 'w') as f_gen_dist:
+        gen_dist_title = \
+            ('# {}: Probabilistic genetic distance between'.format(patient.name)
+             + ' all pairs of samples (median: {:.2f}; mean: {:.2f}; classification threshold: {:.0%}).\n'.format(
+             np.nanmedian(patient.df_bi_gen_dist), np.nanmean(patient.df_bi_gen_dist), def_sets.CLA_CONFID_TH))
+        f_gen_dist.write(gen_dist_title)
+    patient.df_bi_gen_dist.to_csv(fp_gen_dist, index=True, mode='a')
 
     if plots_report:   # deactivate plot generation for debugging and benchmarking
 
@@ -613,7 +661,7 @@ def main():
                 (get_output_fn_template(
                     patient.name, read_no_samples, min_sa_coverage=args.min_median_coverage,
                     min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0,
-                    max_absent_vaf=patient.max_absent_vaf)+'_bayesian_data_table')
+                    max_absent_vaf=patient.max_absent_vaf, suffix=args.suffix)+'_bayesian_data_table')
 
             plts.bayesian_hinton(patient.log_p01, output_directory, mut_table_name,
                                  row_labels=patient.sample_names, column_labels=col_labels,
@@ -642,7 +690,7 @@ def main():
     fn_pattern = get_output_fn_template(
         patient.name, read_no_samples, mode=args.mode, min_sa_coverage=args.min_median_coverage,
         min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0,
-        max_absent_vaf=patient.max_absent_vaf, max_no_mps=args.max_no_mps)
+        max_absent_vaf=patient.max_absent_vaf, max_no_mps=args.max_no_mps, suffix=args.suffix)
 
     # create HTML analysis report
     html_report = HTMLReport(os.path.join(output_directory, fn_pattern+'_report.html'), patient_name)
@@ -671,11 +719,12 @@ def main():
                 patient.name, read_no_samples, subclone_detection=args.subclone_detection,
                 min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf, no_boot=args.boot,
                 max_no_mps=args.max_no_mps, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0,
-                max_absent_vaf=patient.max_absent_vaf, mode=args.mode)
+                max_absent_vaf=patient.max_absent_vaf, mode=args.mode, suffix=args.suffix)
             fn_matrix = get_output_fn_template(
                 patient.name, read_no_samples, subclone_detection=args.subclone_detection,
                 min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf, max_no_mps=args.max_no_mps,
-                bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf, mode=args.mode)
+                bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf, mode=args.mode,
+                suffix=args.suffix)
 
             # create mutation matrix and mutation patterns output file for automatic benchmarking
             if args.benchmarking:
@@ -712,7 +761,7 @@ def main():
                 fn_mp_plot = get_output_fn_template(
                     patient.name, read_no_samples, min_sa_coverage=args.min_median_coverage, max_no_mps=args.max_no_mps,
                     min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0,
-                    max_absent_vaf=patient.max_absent_vaf, mode=args.mode)
+                    max_absent_vaf=patient.max_absent_vaf, mode=args.mode, suffix=args.suffix)
 
                 if args.subclone_detection:
                     pg = ti.create_max_lh_tree(
@@ -836,6 +885,7 @@ def main():
                            max_no_mps=args.max_no_mps)
 
     logger.info('Treeomics finished evolutionary analysis.')
+
 
 if __name__ == '__main__':
 

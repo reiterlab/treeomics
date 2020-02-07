@@ -174,6 +174,8 @@ def _create_tree_plots(solution, mlh_pg, mlh_tree, plots, tikztrees, tree_filepa
                     pdflatex_cmd = 'pdflatex {}'.format(tikz_file)
 
                 fnull = open(os.devnull, 'w')
+                logger.info('Attempting to execute command to create pdf trees through latex/tikz: {}'.format(
+                    pdflatex_cmd))
                 return_code = call(pdflatex_cmd, shell=True, cwd=tikz_path, stdout=fnull)
 
                 if return_code == 0:

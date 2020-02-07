@@ -1,10 +1,9 @@
-"""Prediction mutation effects by using VarCode"""
+""" Prediction mutation effects by using VarCode """
 import logging
 from itertools import chain
 import sys
 import traceback
 
-# from pyensembl import ensembl_grch37
 from varcode.effects import predict_variant_effect_on_transcript
 from varcode.effects.effect_classes import *        # https://github.com/hammerlab/varcode
 
@@ -13,7 +12,7 @@ __date__ = 'March 2, 2017'
 
 
 # get logger for application
-logger = logging.getLogger('treeomics')
+logger = logging.getLogger(__name__)
 
 
 class EffectTypes:

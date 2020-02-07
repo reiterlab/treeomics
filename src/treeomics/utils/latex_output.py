@@ -175,7 +175,6 @@ def add_artifact_info(file_path, phylogeny):
     """
 
     try:
-
         with open(file_path, 'a') as latex_file:
 
             latex_file.write('\n')
