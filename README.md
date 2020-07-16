@@ -32,30 +32,26 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
 * Treeomics 1.7.11 2018-10-26: Added TCGA consensus driver gene list from Bailey et al., Cell 2018. Added Zoom parameter to ```settings.py``` to better configure PDF report appearance. 
 * Treeomics 1.7.12 2018-11-26: Replaced 'nodes_iter()' and 'edges_iter()' calls with 'nodes()' and 'edges()' calls because networkx 2.0+ has no backward compatibility: https://stackoverflow.com/questions/33734836/graph-object-has-no-attribute-nodes-iter-in-networkx-module-python
 * Treeomics 1.7.13 2020-02-04: Create output files with genetic distance and Jaccard similarity coefficients for sample pairs.
+* Treeomics 1.8.0 2020-03-13: Major refactoring to create a proper package for easier installation and usability.
+* Treeomics 1.8.1 2020-07-15: Updated wkhtmltopdf package requires option 'enable-local-file-access' to generate a pdf report.
 
 ### <a name="installation"> Installation
-1. Open a terminal and clone the repository from GitHub with ```git clone https://github.com/johannesreiter/treeomics.git```
-2. Install required packages:
-  - Install Python 3.4 ([https://www.python.org/downloads](https://www.python.org/downloads))
-  - Install NumPy ([http://www.numpy.org](http://www.numpy.org)), 
-    SciPy ([http://www.numpy.org](http://www.numpy.org))
-  - Install networkx 2.0 or above ([https://networkx.github.io/](https://networkx.github.io/))
-  - Install matplotlib 1.4 or 1.5 (matplotlib 2 can cause various problems with the layout; [http://matplotlib.org](http://matplotlib.org/))
-  - Install pandas ([http://pandas.pydata.org/](http://pandas.pydata.org/))
-  - Install seaborn ([http://seaborn.pydata.org/](http://seaborn.pydata.org/))
-  - Install the IBM ILOG CPLEX Optimization Studio 12.6.3 (or higher) ([http://www-01.ibm.com/support/docview.wss?uid=swg21444285](http://www-01.ibm.com/support/docview.wss?uid=swg21444285))
+1. Easiest is to install Mini anaconda and create a new python environment in a terminal window with ```conda create --name py34 python=3.4``` and activate it with ```conda activate py34```
+2. Clone the repository from GitHub with ```git clone https://github.com/johannesreiter/treeomics.git```
+3. If you want to have system-wide access, create distribution packages by going into the main folder with ```cd <TREEOMICS_DIRECTORY>```, run ```python3 setup.py clean sdist bdist_wheel``` and install treeomics to your python environment by executing ```pip3 install -e <TREEOMICS_DIRECTORY>```
+4. Install the IBM ILOG CPLEX Optimization Studio 12.6.3 (or higher) ([http://www-01.ibm.com/support/docview.wss?uid=swg21444285](http://www-01.ibm.com/support/docview.wss?uid=swg21444285))
     and then setup the Python API ([https://www.ibm.com/support/knowledgecenter/en/SSSA5P_12.6.3/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html](https://www.ibm.com/support/knowledgecenter/en/SSSA5P_12.6.3/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html));
     An IBM Academic License to freely download CPLEX can be obtained here: [http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative](http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative). 
     In the new version 12.7.1 apparently Python 3.4 is no longer officially supported, however, cplex seems to work nicely after updating two files and changing the version check from ```(3, 5, 0)``` to ```(3, 4, 0)``` in both the ```setup.py``` (in MacOS here: ```Applications/IBM/ILOG/CPLEX_Studio1271/cplex/python/3.5/x86-64_osx/```) to install cplex in Python 3.4 as well as in your miniconda installation ```miniconda3/lib/python3.4/site-packages/cplex/_internal/_pycplex_platform.py```. You will see where an exception is thrown if you test your installation with ```python3 -c 'import cplex'```.
-    You may also need to add cplex to your ```PYTHONPATH``` with: ```export PYTHONPATH="~/Applications/IBM/ILOG/CPLEX_Studio1271/cplex/python/3.5/x86-64_osx/:$PYTHONPATH"```
-
-3. Install optional packages:
-  - To create a PDF from the HTML report, install wkhtmltopdf ([https://wkhtmltopdf.org](https://wkhtmltopdf.org)) and pdfkit ([https://github.com/JazzCore/python-pdfkit](https://github.com/JazzCore/python-pdfkit))
+    You may also need to add cplex to your ```PYTHONPATH``` with: ```export PYTHONPATH="~/Applications/CPLEX_Studio1271/cplex/python/3.5/x86-64_osx/:$PYTHONPATH"```
+5. Install optional packages:
   - To automatically generate evolutionary conflict graphs, install circos (with ```circos``` in your ```PATH``` environment variable; [http://circos.ca/software/installation](http://circos.ca/software/installation))
   - For automatically generating evolutionary tree plots, install LaTeX/TikZ (with ```pdflatex``` in your ```PATH``` environment variable;
     [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html)) and/or ETE3 [https://github.com/etetoolkit/ete](https://github.com/etetoolkit/ete) (installing ETE3 can be very frustrating, in particular in Python 3.5+ as it  requires Qt4; we recommend using Python 3.4 and Miniconda [https://www.continuum.io](https://www.continuum.io): ```conda install python=3.4 qt=4``` and then install ete3 ```conda install -c etetoolkit ete3 ete3_external_apps```. You can test your installation with ```python3 -c 'from ete3 import TreeStyle'```.
   - For annotating only non-synonymous variants in driver genes, install pyensembl ([https://github.com/hammerlab/pyensembl](https://github.com/hammerlab/pyensembl)) and varcode ([https://github.com/hammerlab/varcode](https://github.com/hammerlab/varcode))
-    
+6. Test installation with ```python3 -c 'import treeomics'``` and ```python3 -m unittest discover <TREEOMICS_DIRECTORY>/tests/```
+7. To uninstall the package use ```pip3 uninstall treeomics``` or ```conda remove treeomics```
+
 ### <a name="getting"> Getting started with Treeomics
 1. Input files: The input to ```__main__.py``` is either
   - two tab-delimited text files -- one for variant read data and one for coverage data. Please see the files ```input/Makohon2017/Pam03_mutant_reads.txt``` and ```input/Makohon2017/Pam03_phredcoverage.txt``` included in this repository for examples.
@@ -68,7 +64,7 @@ file with the sequencing depth at the position of this variant in each sample.
 
 ##### Usage: 
 ```shell
-$ python treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf file directory> -O
+$ treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf file directory> -O
 ```
 
 ##### Optional parameters:
@@ -128,10 +124,10 @@ Example 3:
 ```shell
 $ python -v input/example.vcf -O
 ```
-Reconstructs the phylogeny of a simulated cancer with 6 metastases from a given VCF file (see [src/input/example.vcf](src/input/example.vcf)).
+Reconstructs the phylogeny of a simulated cancer with 6 metastases from a given VCF file (see [src/input/example.vcf](input/example.vcf)).
 Regarding the VCF file input format, Treeomics expects the standard columns: #CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT as well as for each considered sample an additional column.
 Minimally AD (Allelic depth) has to be provided in the FORMAT column and then the actually observed number of reference and alternate alleles in each sample in their corresponding columns).
-The generated output can be found in ```src/output/example_output``` and the corresponding Treeomics report at [src/output/example_output/example_6_e=0_01_c0=0_5_af=0_05_report.pdf](src/output/example_output/example_6_e=0_01_c0=0_5_af=0_05_report.pdf).
+The generated output can be found in ```src/output/example_output``` and the corresponding Treeomics report at [src/output/example_output/example_6_e=0_01_c0=0_5_af=0_05_report.pdf](output/example_output/example_6_e=0_01_c0=0_5_af=0_05_report.pdf).
 
 ========
 
