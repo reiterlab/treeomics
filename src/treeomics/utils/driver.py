@@ -45,6 +45,8 @@ class Driver:
         self.sources = set() if sources is None else sources
         self.mutation_effect = mutation_effect
         self.genomic_location = None
+        self.mutation_location = None
+        self.mutation_change = None
 
         if cgc_driver is not None:
             self.cgc_driver = cgc_driver
@@ -96,7 +98,17 @@ class Driver:
         return Driver.Colors
 
 
-def potential_driver(gene_name, user_drivers, variant=None, cgc_drivers=None):
+def _check_gene_match(patient_mut_location, user_drivers):
+    pat_chrom, pat_pos, _ = patient_mut_location
+    for driver in user_drivers.values():
+        driver_chrom, driver_pos = driver.mutation_location
+        if pat_chrom == driver_chrom and pat_pos == driver_pos:
+            return True
+    return False
+
+
+
+def potential_driver(gene_name, patient_mut_location, user_drivers, variant=None, cgc_drivers=None):
     """
     Checks if gene name is in set among potential driver genes
     Moreover, if VarCode is installed, it checks for non-synonymous mutations and variants that affect splicing
@@ -109,10 +121,8 @@ def potential_driver(gene_name, user_drivers, variant=None, cgc_drivers=None):
     :return: variant in a driver gene, potential mutation effect, in CGC, mutation effect
     """
 
-    if gene_name in user_drivers:
-        driver_gene = True
-    else:
-        driver_gene = False
+    # driver_gene = gene_name in user_drivers
+    driver_gene = _check_gene_match(patient_mut_location, user_drivers)
 
     if driver_gene and variant is not None and VARCODE:
         mut_effect = get_top_effect_name(variant)
@@ -364,6 +374,13 @@ def read_driver_file(driver_list_path, cancer_type=None):
                     sources = driver.Sources.split(';')
                     if len(sources) > 0 and (len(sources) > 1 or sources[0] != ''):
                         d.sources = set(sources)
+
+                if hasattr(DriverEntry, 'Mutation_Location'):
+                    chrom, position = driver.Mutation_Location.split(':', 1)
+                    d.mutation_location = (chrom, int(position))
+
+                if hasattr(DriverEntry, 'Change'):
+                    d.mutation_change = driver.Change
 
         logger.info("Read {} entries in driver list file {}{}. ".format(
             len(driver_dict), driver_list_path,

@@ -161,10 +161,13 @@ def characterize_drivers(patient, ref_genome, driver_filepath, cgc_filepath, out
     if patient.gene_names is not None or patient.ensembl_data is not None:
 
         for mut_idx, mut_pos in enumerate(patient.mut_positions):
+            variant = patient.vc_variants[mut_idx] if patient.vc_variants is not None else None
 
             driver_gene, put_driver, cgc_driver, mut_effect = potential_driver(
-                patient.gene_names[mut_idx], user_drivers.keys(),
-                variant=(patient.vc_variants[mut_idx] if patient.vc_variants is not None else None),
+                patient.gene_names[mut_idx],
+                patient.mut_positions[mut_idx],
+                user_drivers,
+                variant=variant,
                 cgc_drivers=cgc_drivers)
 
             if driver_gene and not put_driver:
@@ -799,7 +802,6 @@ def main():
 
         # find evolutionary incompatible mutation patterns based on standard binary classification
         elif args.mode == 2:
-
             phylogeny = ti.infer_max_compatible_tree(os.path.join(output_directory, fn_pattern+'_btree.tex'),
                                                      patient, drivers=put_driver_genes)
 
