@@ -939,12 +939,15 @@ class Patient(object):
                 # infer gene name if not given
                 if self.gene_names[-1] == 'unknown':
                     # query missing data from Ensembl data
-                    if len(variant.gene_names) == 1:
-                        self.gene_names[-1] = variant.gene_names[0]
-                    elif len(variant.gene_names) > 1:
-                        self.gene_names[-1] = ','.join(g for g in variant.gene_names)
-                        # else:
-                        # No gene name could be inferred
+                    try:
+                        if len(variant.gene_names) == 1:
+                            self.gene_names[-1] = variant.gene_names[0]
+                        elif len(variant.gene_names) > 1:
+                            self.gene_names[-1] = ','.join(g for g in variant.gene_names)
+                            # else:
+                            # No gene name could be inferred
+                    except ValueError as ve:
+                        logger.debug(f'Could not infer gene name: {ve}')
 
                 self.vc_variants.append(variant)
                 self.mut_types.append(get_top_effect_name(variant))

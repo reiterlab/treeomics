@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 rcParams['font.family'] = 'sans-serif'
 rcParams['font.sans-serif'] = ['Arial']
-sns.set_style("whitegrid", {'grid.color': '0.8', "axes.edgecolor": "0.0"})
+# sns.set_style("whitegrid", {'grid.color': '0.8'})  # , "axes.edgecolor": "0.0"
 
 
 def bayesian_hinton(log_p01, output_directory, filename, row_labels=None, column_labels=None,
@@ -403,7 +403,7 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
     x_length += x_space + cb_width
 
     # create new figure
-    fig = plt.figure(figsize=(x_length / 20.0, y_length / 20.0), dpi=150)
+    fig = plt.figure(figsize=(x_length / 20.0, y_length / 20.0))
 
     ax = plt.axes([0, 1, (x_length-cb_width-x_space)/x_length, 1])
     ax.axis('off')
@@ -439,30 +439,31 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
             maf_color = plt.cm.Blues(2.0 * raw_maf if raw_maf < 0.5 else 1.0)
             cov_color = plt.cm.Greens(math.log(cov, 10)/3 if 0 < cov < 1000 else 0.0 if cov <= 0.0 else 1.0)
 
-            rect_maf = plt.Rectangle([(x_pos * width * 3) + 0,
-                                      (height+y_spacing) * (len(patient.data[mut_idx]) - sa_idx - 1)],
+            rect_maf_pos = [(x_pos * width * 3) + 0, (height+y_spacing) * (len(patient.data[mut_idx]) - sa_idx - 1)]
+            rect_maf = plt.Rectangle(rect_maf_pos,
                                      width, height, linewidth=0, facecolor=maf_color)
-            rect_cov = plt.Rectangle([(x_pos * width * 3) + 1,
-                                      (height+y_spacing) * (len(patient.data[mut_idx]) - sa_idx - 1)],
+            rect_cov_pos = [(x_pos * width * 3) + 1, (height+y_spacing) * (len(patient.data[mut_idx]) - sa_idx - 1)]
+            rect_cov = plt.Rectangle(rect_cov_pos,
                                      width, height, linewidth=0, facecolor=cov_color)
-            box = plt.Rectangle([(x_pos * width * 3), (height+y_spacing) * (len(patient.data[mut_idx]) - sa_idx - 1)],
+            box_pos = [(x_pos * width * 3), (height+y_spacing) * (len(patient.data[mut_idx]) - sa_idx - 1)]
+            box = plt.Rectangle(box_pos,
                                 width*2, height, linewidth=4, facecolor=None, edgecolor=class_color, clip_on=False)
             ax.add_patch(box)
             ax.add_patch(rect_maf)
             ax.add_patch(rect_cov)
 
             if isinstance(phylogeny, MaxLHPhylogeny):
+
+                rect_af_pos = [(x_pos * width * 3), (height + y_spacing) * (len(patient.data[mut_idx]) - sa_idx - 1)]
                 if mut_idx in opt_sol.false_positives.keys() and \
                         sa_idx in opt_sol.false_positives[mut_idx]:
 
-                    af = plt.Rectangle([(x_pos * width * 3), (height+y_spacing) *
-                                        (len(patient.data[mut_idx]) - sa_idx - 1)],
+                    af = plt.Rectangle(rect_af_pos,
                                        width*2, height/2, facecolor=absent_color, linewidth=0)
                     ax.add_patch(af)
 
                 elif mut_idx in opt_sol.false_negatives.keys() and sa_idx in opt_sol.false_negatives[mut_idx]:
-                    af = plt.Rectangle([(x_pos * width * 3), (height+y_spacing) *
-                                        (len(patient.data[mut_idx]) - sa_idx - 1)],
+                    af = plt.Rectangle(rect_af_pos,
                                        width*2, height/2, facecolor=present_color, linewidth=0)
                     ax.add_patch(af)
 
@@ -480,22 +481,29 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
                     rotation='vertical', horizontalalignment='center', verticalalignment='bottom', fontsize=8)
 
     # draw colorbar legend to MAFs
-    ax1 = fig.add_axes([(x_length-cb_width)/x_length+(cb_width/4/x_length), 1.05, 0.04, 0.9])
+    # dimensions [left, bottom, width, height] of the new axes.
+    # All quantities are in fractions of figure width and height
+    # ax_vaf_pos = [(x_length-cb_width)/x_length+(cb_width/4/x_length), 1.05, 0.04, 0.9]
+    ax_vaf_pos = [ax.get_position().x1 + 0.08, 0.99, 0.03, 0.99]
+    ax_vaf = fig.add_axes(ax_vaf_pos)
     # Set the colormap and norm to correspond to the data for which the colorbar will be used.
     cmap = cm.Blues
     norm = mpl.colors.Normalize(vmin=0, vmax=0.5)
 
-    cb1 = mpl.colorbar.ColorbarBase(ax1, cmap=cmap, norm=norm, orientation='vertical')
+    cb1 = mpl.colorbar.ColorbarBase(ax_vaf, cmap=cmap, norm=norm, orientation='vertical')
     cb1.ax.tick_params(labelsize=8)
     cb1.ax.yaxis.set_ticks_position('left')
     cb1.set_label('VAF')
 
     # draw colorbar legend to MAFs
-    ax2 = fig.add_axes([(x_length-(cb_width/2))/x_length+(cb_width/4/x_length), 1.05, 0.04, 0.9])
+    # ax_cov_pos = [(x_length-(cb_width/2))/x_length+(cb_width/4/x_length), 1.05, 0.04, 0.9]
+    ax_cov_pos = [ax_vaf.get_position().x1 + 0.1, 0.99, 0.03, 0.99]
+    ax_cov = fig.add_axes(ax_cov_pos)
     # Set the colormap and norm to correspond to the data for which the colorbar will be used.
     cmap = cm.Greens
 
-    cb2 = mpl.colorbar.ColorbarBase(ax2, cmap=cmap, norm=mpl.colors.LogNorm(vmin=1, vmax=1000), orientation='vertical')
+    cb2 = mpl.colorbar.ColorbarBase(ax_cov, cmap=cmap, norm=mpl.colors.LogNorm(vmin=1, vmax=1000),
+                                    orientation='vertical')
     cb2.ax.tick_params(labelsize=8)
     cb2.ax.yaxis.set_ticks_position('left')
     cb2.set_label('Coverage')
@@ -504,7 +512,7 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
 
     plt.savefig(filename+'.pdf', dpi=150, bbox_inches='tight', transparent=True)
     plt.savefig(filename+'.png', bbox_inches='tight', transparent=True)
-    plt.close()
+
     logger.info('Generated illustrative mutation table plot of incompatible mutation patterns: {}'.format(
         filename+'.pdf'))
 

@@ -35,7 +35,7 @@ def read_mutation_table(filename, normal_sample=None, excluded_columns=set(), co
     :return: dictionary of the data per variant and sample, dictionary of the gene names per variant
     """
 
-    with open(filename, 'rU') as data_file:
+    with open(filename) as data_file:
 
         logger.debug('Reading data file {}'.format(filename))
         f_tsv = csv.reader(data_file, delimiter='\t')
@@ -64,9 +64,10 @@ def read_mutation_table(filename, normal_sample=None, excluded_columns=set(), co
 
             # process data table header
             elif headers is None and (row[0].startswith('Chr') or row[0].startswith('Gene')):
+                print(row)
                 headers = [p_replace.sub('_', p_remove.sub('', e)) for e in row]
 
-                logger.debug('Header: {}'.format(headers))
+                logger.info('Header: {}'.format(headers))
                 named_row = namedtuple('variant', headers)
 
                 # determine where the sample columns start
@@ -417,7 +418,7 @@ def write_vep_input(filepath, patient):
     """
 
     if patient.ensembl_data is not None and any(var is not None for var in patient.vc_variants):
-        from utils.driver import is_functional
+        from treeomics.utils.driver import is_functional
 
         with open(filepath, 'w') as file:
             logger.debug('Write substitution variants to VEP input file: {}'.format(filepath))
@@ -450,7 +451,7 @@ def write_cravat_input(filepath, patient):
     """
 
     if patient.ensembl_data is not None and any(var is not None for var in patient.vc_variants):
-        from utils.driver import is_functional
+        from treeomics.utils.driver import is_functional
 
         with open(filepath, 'w') as file:
             logger.debug('Write substitution variants to CRAVAT/CHASM input file: {}'.format(filepath))

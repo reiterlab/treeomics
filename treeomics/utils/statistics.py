@@ -2,7 +2,7 @@
 import logging
 import math
 from scipy.stats import binom
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 from scipy.special import betainc
 from scipy.special import gammaln
 import numbers

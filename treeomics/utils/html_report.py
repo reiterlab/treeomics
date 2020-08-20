@@ -211,9 +211,11 @@ class HTMLReport(object):
 
             # number of supporting sources
             if Driver.MaxSourceSupport > 0:
-                r, g, b, _ = Driver.colors()[len(driver.sources)]
+                # r, g, b, _ = Driver.colors()[len(driver.sources)]
+                r, g, b = Driver.colors()[len(driver.sources)]
             else:
                 r, g, b = (0.8, 0.2, 0.2)
+
             c = 'color:#{0:02x}{1:02x}{2:02x};'.format(_clamp(r*255), _clamp(g*255), _clamp(b*255))
             tag = '<font style="{}">{}{}</font>'.format(c, gene_name, '' if suffix is None else suffix)
             if driver.cgc_driver:   # is driver in CGC list

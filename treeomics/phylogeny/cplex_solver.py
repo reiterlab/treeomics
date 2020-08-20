@@ -4,7 +4,7 @@ import math
 from collections import defaultdict, Counter
 from random import sample
 import numpy as np
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 import cplex as cp
 import heapq
 from itertools import islice

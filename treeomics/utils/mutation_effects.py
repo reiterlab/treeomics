@@ -4,8 +4,8 @@ from itertools import chain
 import sys
 import traceback
 
-from treeomics.varcode.effects import predict_variant_effect_on_transcript
-from treeomics.varcode.effects.effect_classes import *        # https://github.com/hammerlab/varcode
+from varcode.effects import predict_variant_effect_on_transcript
+from varcode.effects.effect_classes import *        # https://github.com/hammerlab/varcode
 
 __author__ = 'Johannes REITER'
 __date__ = 'March 2, 2017'

@@ -243,7 +243,7 @@ def usage():
 
 
 # -------------------------------- main function ---------------------------------
-def main():
+def main(raw_args=None):
 
     parser = argparse.ArgumentParser(description='Infers the evolution of cancer.')
 
@@ -358,7 +358,7 @@ def main():
                                 help="Is subclone detection disabled?")
     parser.set_defaults(subclone_detection=settings.SUBCLONE_DETECTION)
 
-    args = parser.parse_args()
+    args = parser.parse_args(raw_args)
 
     if args.verbose:
         logger.setLevel(logging.DEBUG)

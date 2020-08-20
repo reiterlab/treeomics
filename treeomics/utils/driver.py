@@ -1,4 +1,5 @@
 """Classify observed variants as cancer """
+
 import logging
 import csv
 import sys
