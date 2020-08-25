@@ -1,0 +1,7 @@
+Gene_Symbol,Sources,CGCv80,CancerType
+APC,20/20+;MutsigCV;TUSON,True,colon
+ARID1A,20/20+;MutsigCV;TUSON,True,pancancer
+CDKN2A,20/20+;MutsigCV;TUSON,True,pancancer
+KRAS,20/20+;MutsigCV;TUSON,True,pancancer
+MBD6,,False,pancancer
+TP53,20/20+;MutsigCV;TUSON,True,pancancer
