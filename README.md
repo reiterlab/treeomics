@@ -38,7 +38,7 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
 
 ### <a name="installation"> Installation
 1. Easiest is to install Mini anaconda and create a new python environment in a terminal window with ```conda create --name treeomics python=3.6``` and activate it with ```conda activate treeomics```
-2. Clone the repository from GitHub with ```git clone https://github.com/johannesreiter/treeomics.git```
+2. Clone the repository from GitHub with ```git clone https://github.com/reiterlab/treeomics.git```
 3. If you want to have system-wide access, create distribution packages by going into the main folder with ```cd <TREEOMICS_DIRECTORY>```, run ```python setup.py clean sdist bdist_wheel -O``` and install treeomics to your python environment by executing ```pip3 install -e <TREEOMICS_DIRECTORY>```
 4. Install the IBM ILOG CPLEX Optimization Studio 12.10 ([http://www-01.ibm.com/support/docview.wss?uid=swg21444285](http://www-01.ibm.com/support/docview.wss?uid=swg21444285))
     and then setup the Python API ([https://www.ibm.com/support/knowledgecenter/en/SSSA5P_12.10.0/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html](https://www.ibm.com/support/knowledgecenter/en/SSSA5P_12.10.0/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html));
