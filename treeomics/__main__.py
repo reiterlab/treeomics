@@ -97,6 +97,7 @@ def get_patients_name(name):
 
 def get_output_fn_template(name, total_no_samples, subclone_detection=False, fpr=None, fdr=None,
                            min_absent_coverage=None, min_sa_coverage=None, min_sa_vaf=None,
+                           min_vaf=None, min_var_reads=None, min_var_cov=None,
                            bi_e=None, bi_c0=None, max_absent_vaf=None, no_boot=None, mode=None, max_no_mps=None,
                            suffix=None):
     """
@@ -109,6 +110,9 @@ def get_output_fn_template(name, total_no_samples, subclone_detection=False, fpr
     :param min_absent_coverage: minimum coverage such that variant can be classified as absent in the classical model
     :param min_sa_coverage: minimum median coverage per sample
     :param min_sa_vaf: minimum median variant allele frequency per sample
+    :param min_var_reads: minimum variant allele frequency in at least one sample
+    :param min_var_reads: minimum number of variant reads in at least one sample
+    :param min_var_cov: minimum coverage of a variant across all samples
     :param bi_e: sequencing error for bayesian inference
     :param bi_c0: prior mixture parameter of delta function and uniform distribution for bayesian inference
     :param max_absent_vaf: maximal absent VAF before considering estimated purity
@@ -122,11 +126,11 @@ def get_output_fn_template(name, total_no_samples, subclone_detection=False, fpr
     pattern = ('{}_{}{}'.format(name, total_no_samples, '_SC' if subclone_detection else '') +
                ('_st={}'.format(min_sa_coverage) if min_sa_coverage is not None and min_sa_coverage > 0 else '') +
                ('_mf={}'.format(min_sa_vaf) if min_sa_vaf is not None and min_sa_vaf > 0 else '') +
+               ('_mvaf={}'.format(min_vaf) if min_vaf is not None and min_vaf > 0 else '') +
+               ('_mvr={}'.format(min_var_reads) if min_var_reads is not None and min_var_reads > 0 else '') +
+               ('_mvc={}'.format(min_var_cov) if min_var_cov is not None and min_var_cov > 0 else '') +
                ('_fpr={:.1e}_fdr={:.2f}'.format(fpr, fdr) if fpr is not None or fdr is not None else '') +
                ('_at={}'.format(min_absent_coverage) if min_absent_coverage is not None else '') +
-               ('_vaf={}'.format(settings.MIN_VAF) if settings.MIN_VAF is not None and settings.MIN_VAF > 0 else '') +
-               ('_var={}'.format(settings.MIN_VAR_READS) if settings.MIN_VAR_READS is not None and
-                                                            settings.MIN_VAR_READS > 0 else '') +
                ('_e={}'.format(bi_e) if bi_e is not None else '') +
                ('_c0={}'.format(bi_c0) if bi_c0 is not None else '') +
                ('_af={}'.format(max_absent_vaf) if max_absent_vaf is not None else '') +
@@ -289,6 +293,13 @@ def main(raw_args=None):
     parser.add_argument("-f", "--min_median_vaf",
                         help="minimum median mutant allele frequency of a sample",
                         type=float, default=settings.MAF_THRESHOLD)
+
+    parser.add_argument('--min_vaf', help='minimal number of reads supporting a variant in at least one sample',
+                        type=float, default=settings.MIN_VAF)
+    parser.add_argument('--min_var_reads', help='minimum number of variant reads in at least one sample',
+                        type=int, default=settings.MIN_VAR_READS)
+    parser.add_argument('--min_var_cov', help='minimum coverage of a variant across all samples',
+                        type=int, default=settings.MIN_VAR_COV)
 
     parser.add_argument('-g', "--ref_genome",
                         help="to which reference genome was the sequencing data aligned",
@@ -510,26 +521,27 @@ def main(raw_args=None):
         logger.debug('Patient name: {}'.format(patient_name))
         patient = Patient(error_rate=args.error_rate, c0=args.prob_zero, max_absent_vaf=args.max_absent_vaf,
                           pat_name=patient_name, min_absent_cov=min_absent_cov, reference_genome=ref_genome,
+                          min_vaf=args.min_vaf, min_var_reads=args.min_var_reads, min_var_cov=args.min_var_cov,
                           purities=purities)
         read_no_samples = patient.process_raw_data(
             fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf,
             mut_reads_normal_th=args.mut_reads_normal_th, vaf_normal_th=args.vaf_normal_th, var_table=args.mut_reads,
             cov_table=args.coverage, normal_sample=normal_sample_name, excluded_columns=excluded_samples,
             considered_samples=included_samples, wes_filtering=args.wes_filtering, artifacts=common_vars)
-
-    elif args.csv_file:
-
-        patient_name = get_patients_name(args.csv_file)
-        if patient_name.find('_') != -1:
-            patient_name = patient_name[:patient_name.find('_')]
-        logger.debug('Patient name: {}'.format(patient_name))
-        patient = Patient(error_rate=args.error_rate, c0=args.prob_zero, max_absent_vaf=args.max_absent_vaf,
-                          pat_name=patient_name, min_absent_cov=min_absent_cov, reference_genome=ref_genome,
-                          purities=purities)
-        read_no_samples = patient.process_raw_data(
-            fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf,
-            mut_reads_normal_th=args.mut_reads_normal_th, vaf_normal_th=args.vaf_normal_th, csv_file=args.csv_file,
-            normal_sample=normal_sample_name, excluded_columns=excluded_samples, considered_samples=included_samples)
+    #
+    # elif args.csv_file:
+    #
+    #     patient_name = get_patients_name(args.csv_file)
+    #     if patient_name.find('_') != -1:
+    #         patient_name = patient_name[:patient_name.find('_')]
+    #     logger.debug('Patient name: {}'.format(patient_name))
+    #     patient = Patient(error_rate=args.error_rate, c0=args.prob_zero, max_absent_vaf=args.max_absent_vaf,
+    #                       pat_name=patient_name, min_absent_cov=min_absent_cov, reference_genome=ref_genome,
+    #                       purities=purities)
+    #     read_no_samples = patient.process_raw_data(
+    #         fpr, fdr, min_absent_cov, args.min_median_coverage, args.min_median_vaf,
+    #         mut_reads_normal_th=args.mut_reads_normal_th, vaf_normal_th=args.vaf_normal_th, csv_file=args.csv_file,
+    #         normal_sample=normal_sample_name, excluded_columns=excluded_samples, considered_samples=included_samples)
 
     elif args.vcf_file:      # take path to the input VCF file
         vcf_file = args.vcf_file
@@ -541,6 +553,7 @@ def main(raw_args=None):
         if patient_name.find('_') != -1:
             patient_name = patient_name[:patient_name.find('_')]
         patient = Patient(error_rate=args.error_rate, c0=args.prob_zero, max_absent_vaf=args.max_absent_vaf,
+                          min_vaf=args.min_vaf, min_var_reads=args.min_var_reads, min_var_cov=args.min_var_cov,
                           pat_name=patient_name, reference_genome=ref_genome, purities=purities)
         read_no_samples = patient.read_vcf_file(
             vcf_file, fpr, fdr, min_sa_cov=args.min_median_coverage, min_sa_maf=args.min_median_vaf,
@@ -559,6 +572,7 @@ def main(raw_args=None):
         patient_name = get_patients_name(
             vcf_directory[:-1] if vcf_directory.endswith('/') else vcf_directory)
         patient = Patient(error_rate=args.error_rate, c0=args.prob_zero, max_absent_vaf=args.max_absent_vaf,
+                          min_vaf=args.min_vaf, min_var_reads=args.min_var_reads, min_var_cov=args.min_var_cov,
                           pat_name=patient_name, reference_genome=ref_genome, purities=purities)
         read_no_samples = patient.read_vcf_directory(
             vcf_directory, args.min_median_coverage, args.min_median_vaf, fpr, fdr, min_absent_cov,
@@ -600,6 +614,7 @@ def main(raw_args=None):
     fn_pattern = get_output_fn_template(
         patient.name, read_no_samples, mode=args.mode, min_sa_coverage=args.min_median_coverage,
         min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0,
+        min_vaf=args.min_vaf, min_var_reads=args.min_var_reads, min_var_cov=args.min_var_cov,
         max_absent_vaf=patient.max_absent_vaf, suffix=args.suffix)
 
     # do basic analysis on provided input data
@@ -624,6 +639,7 @@ def main(raw_args=None):
         output_directory,
         get_output_fn_template(patient.name, read_no_samples,
                                min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf,
+                               min_vaf=args.min_vaf, min_var_reads=args.min_var_reads, min_var_cov=args.min_var_cov,
                                bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf,
                                suffix=args.suffix)) + '_jsc.csv'
     with open(fp_jsc, 'w') as f_jsc:
@@ -639,6 +655,7 @@ def main(raw_args=None):
         output_directory,
         get_output_fn_template(patient.name, read_no_samples,
                                min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf,
+                               min_vaf=args.min_vaf, min_var_reads=args.min_var_reads, min_var_cov=args.min_var_cov,
                                bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0, max_absent_vaf=patient.max_absent_vaf,
                                suffix=args.suffix)) + '_gendist.csv'
     with open(fp_gen_dist, 'w') as f_gen_dist:
@@ -663,6 +680,7 @@ def main(raw_args=None):
                 (get_output_fn_template(
                     patient.name, read_no_samples, min_sa_coverage=args.min_median_coverage,
                     min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0,
+                    min_vaf=args.min_vaf, min_var_reads=args.min_var_reads, min_var_cov=args.min_var_cov,
                     max_absent_vaf=patient.max_absent_vaf, suffix=args.suffix)+'_bayesian_data_table')
 
             plts.bayesian_hinton(patient.log_p01, output_directory, mut_table_name,
@@ -690,8 +708,10 @@ def main(raw_args=None):
 
     # create output filename pattern
     fn_pattern = get_output_fn_template(
-        patient.name, read_no_samples, mode=args.mode, min_sa_coverage=args.min_median_coverage,
-        min_sa_vaf=args.min_median_vaf, bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0,
+        patient.name, read_no_samples, mode=args.mode,
+        min_sa_coverage=args.min_median_coverage, min_sa_vaf=args.min_median_vaf,
+        min_vaf=args.min_vaf, min_var_reads=args.min_var_reads, min_var_cov=args.min_var_cov,
+        bi_e=patient.bi_error_rate, bi_c0=patient.bi_c0,
         max_absent_vaf=patient.max_absent_vaf, max_no_mps=args.max_no_mps, suffix=args.suffix)
 
     # create HTML analysis report

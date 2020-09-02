@@ -11,6 +11,7 @@ from collections import Counter
 from treeomics.version import __version__
 import treeomics.utils.int_settings as def_sets
 from treeomics.utils.driver import Driver
+from treeomics.utils.filtering import Filter
 import treeomics.settings as settings
 
 
@@ -170,20 +171,9 @@ class HTMLReport(object):
             len(patient.mutations)))
 
         if patient.variant_stats is not None:
-            if patient.variant_stats[-5] > 0:
-                self.file.write(self._inds[self._ind]+'Variants removed due to common variants filter: {} </br>\n'
-                                .format(patient.variant_stats[-5]))
-            if patient.variant_stats[-2] + patient.variant_stats[-3] + patient.variant_stats[-4] > 0:
-                self.file.write(
-                    self._inds[self._ind]+'Removed intronic/intergenic variants due to WES filter: {} </br>\n'.format(
-                        patient.variant_stats[-2] + patient.variant_stats[-3] + patient.variant_stats[-4]))
-            if patient.variant_stats[-1] > 0:
-                self.file.write(
-                    self._inds[self._ind]+'Variants removed due to never reaching significant level: {} </br>\n'.format(
-                        patient.variant_stats[-1]))
-            if patient.variant_stats[-6] > 0:
-                self.file.write(self._inds[self._ind]+'Variants removed due to detection in normal sample: {} </br>\n'
-                                .format(patient.variant_stats[-6]))
+            for key, value in patient.variant_stats.items():
+                if key != Filter.PASSED and value > 0:
+                    self.file.write(self._inds[self._ind]+f'{value} variants excluded due to: {key} </br>\n')
 
         self.file.write(self._inds[self._ind]+'Variants classified as present in at least one of the samples '
                                               'that passed the filtering: {} </br>\n'.format(

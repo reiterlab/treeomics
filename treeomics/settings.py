@@ -47,10 +47,12 @@ MIN_ABSENT_COVERAGE = 100   # minimum coverage to call a variant powered absent 
 SAMPLE_COVERAGE_THRESHOLD = 0   # samples with a lower median coverage are discarded
 MAF_THRESHOLD = 0.0             # samples with a lower median mutant allele frequency are discarded
 
-# Minimum VAF of a variant in at least one of the provided samples (DEFAULT: 0.0)
+# Minimum VAF of a variant in at least one of the provided samples with a minimum number of variant reads (DEFAULT: 0.0)
 MIN_VAF = 0.0
-# Minimum number of reads reporting a variant in at least one of the provided samples (DEFAULT: 0)
 MIN_VAR_READS = 0
+
+# minimum coverage of a variant across all samples
+MIN_VAR_COV = 0
 
 # Variants are excluded if they reach the below number of mutant reads and the variant allele frequency in normal sample
 MUT_READS_NORMAL_TH = 3     # DEFAULT: 3
