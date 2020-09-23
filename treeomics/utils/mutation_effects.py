@@ -43,10 +43,10 @@ def get_top_effect_name(variant):
         # return get_variant_effect_longest_transcript(variant)
 
     except BaseException as e:
-        logger.error('Error: {}'.format(str(e)))
-        if logger.getEffectiveLevel() == logging.DEBUG:
-            traceback.print_tb(sys.exc_info()[2])
-        logger.warning('Mutation effect for variant {} could not be inferred.'.format(variant.short_description))
+        # logger.error('Error: {}'.format(str(e)))
+        # if logger.getEffectiveLevel() == logging.DEBUG:
+        #     traceback.print_tb(sys.exc_info()[2])
+        # logger.warning('Mutation effect for variant {} could not be inferred.'.format(variant.short_description))
         return 'unknown'
 
 

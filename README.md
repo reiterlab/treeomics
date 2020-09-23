@@ -35,14 +35,15 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
 * Treeomics 1.8.0 2020-03-13: Major refactoring to create a proper package for easier installation and usability.
 * Treeomics 1.8.1 2020-07-15: Updated wkhtmltopdf package requires option 'enable-local-file-access' to generate a pdf report.
 * Treeomics 1.9.0 2020-08-20: Upgraded the treeomics package to python 3.6 and fixed issue related to negative dimensions for mutation plot.
+* Treeomics 1.9.1 2020-09-01: Implemented additional filters.
 
 ### <a name="installation"> Installation
 1. Easiest is to install Mini anaconda and create a new python environment in a terminal window with ```conda create --name treeomics python=3.6``` and activate it with ```conda activate treeomics```
 2. Clone the repository from GitHub with ```git clone https://github.com/reiterlab/treeomics.git```
-3. If you want to have system-wide access, create distribution packages by going into the main folder with ```cd <TREEOMICS_DIRECTORY>```, run ```python setup.py clean sdist bdist_wheel -O``` and install treeomics to your python environment by executing ```pip3 install -e <TREEOMICS_DIRECTORY>```
+3. Create distribution packages by going into the main folder with ```cd <TREEOMICS_DIRECTORY>```, run ```python setup.py clean sdist bdist_wheel``` and install treeomics to your python environment by executing ```pip install -e <TREEOMICS_DIRECTORY>```
 4. Install the IBM ILOG CPLEX Optimization Studio 12.10 ([http://www-01.ibm.com/support/docview.wss?uid=swg21444285](http://www-01.ibm.com/support/docview.wss?uid=swg21444285))
     and then setup the Python API ([https://www.ibm.com/support/knowledgecenter/en/SSSA5P_12.10.0/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html](https://www.ibm.com/support/knowledgecenter/en/SSSA5P_12.10.0/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html));
-    An IBM Academic License to freely download CPLEX can be obtained here: [http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative](http://www-304.ibm.com/ibm/university/academic/pub/page/academic_initiative). 
+    An IBM Academic License to freely download CPLEX can be obtained here: [https://www.ibm.com/academic/home](https://www.ibm.com/academic/home). 
     To install the cplex python package in MacOS go to ```cd /Applications/CPLEX_Studio1210/cplex/python/3.6/x86-64_osx/``` and run ```python setup.py install```. Test your installation with ```python -c 'import cplex'```.
     You may also need to add cplex to your ```PYTHONPATH``` with: ```export PYTHONPATH="~/Applications/CPLEX_Studio1210/cplex/python/3.6/x86-64_osx/:$PYTHONPATH"```
 5. Install optional packages:
@@ -50,7 +51,7 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
   - For automatically generating evolutionary tree plots, install LaTeX/TikZ (with ```pdflatex``` in your ```PATH``` environment variable;
     [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html)) and/or ETE3 [https://github.com/etetoolkit/ete](https://github.com/etetoolkit/ete) (installing ETE3 can be very frustrating, in particular in Python 3+ as it requires Qt; we recommend using Miniconda [https://www.continuum.io](https://www.continuum.io): ```conda install python=3.6 qt=5``` and then install ete3 ```conda install -c etetoolkit ete3 ```. You can test your installation with ```python -c 'from ete3 import TreeStyle'```.
   - For annotating only non-synonymous variants in driver genes, install pyensembl ([https://github.com/hammerlab/pyensembl](https://github.com/hammerlab/pyensembl)) and varcode ([https://github.com/hammerlab/varcode](https://github.com/hammerlab/varcode)) with ```pip install varcode``` and ```pyensembl install --release 75 76```
-6. Test installation with ```python -c 'import treeomics'``` and ```python -m unittest discover <TREEOMICS_DIRECTORY>/tests/```
+6. Test installation with ```python -c 'import treeomics'```, and ```cd <TREEOMICS_DIRECTORY>``` and ```python -m unittest discover tests/```
 7. To uninstall the package use ```pip uninstall treeomics``` or ```conda remove treeomics```
 
 ### <a name="getting"> Getting started with Treeomics
@@ -87,7 +88,7 @@ $ treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf f
 - *-t <time limit>:* Maximum running time for CPLEX to solve the MILP (in seconds, default ```None```). If not ```None```, the obtained solution is no longer guaranteed to be optimal
 - ```--threads=<N>``` Maximal number of parallel threads that will be invoked by CPLEX (```0```: default, let CPLEX decide; ```1```: single threaded; ```N```: uses up to N threads)
 
-- *-l <max no MPS>:* Maximum number of considered mutation patterns per variant (default ```None```). If not ```None```, the obtained solution is no longer guaranteed to be optimal
+- ```-l <max no MPS>:``` Maximum number of considered mutation patterns per variant (default ```None```). If not ```None```, the obtained solution is no longer guaranteed to be optimal
 - ```--driver_genes=<path to file>``` Path to CSV file with names of putative driver genes highlighted in inferred phylogeny (default ```--driver_genes=../input/Tokheim_drivers_union.csv```)
 - ```--wes_filtering``` Removes intronic and intergenic variants in WES data (default ```False```)
 - ```--common_vars_file``` Path to file with common variants in normal samples and therefore removed from analysis (default ```None```)
@@ -96,7 +97,8 @@ $ treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf f
 - ```--benchmarking``` Generates mutation matrix and mutation pattern files that can be used for automatic benchmarking of silico data (default ```False```)
 - ```--include``` Provide a list of sample names that should be analyzed (e.g., ```--include PT1 PT2 PT3 PT4```)
 - ```--purities``` Provide a list of externally estimated sample purities (e.g., ```--purities 0.7 0.3 0.9 0.8```). Requires ```--include``` argument with the same ordering of samples.
-
+- ```--min_var_reads <>``` and/or ```--min_vaf <>``` Minimum VAF of a variant in at least one of the provided samples with a minimum number of variant reads
+- ```--min_var_cov <>``` minimum coverage of a variant across all samples, otherwise the variant is excluded
 
 Default parameter values as well as output directory can be changed in ```treeomics/src/treeomics/settings.py```.
 Moreover, the ```settings.py``` provides more options an annotation of driver genes and configuration of plot output names. 
@@ -132,7 +134,7 @@ The generated output can be found in ```src/output/example_output``` and the cor
 ========
 
 ### Problems?
-If you have any questions, you can contact us ([https://github.com/johannesreiter](https://github.com/johannesreiter)) and we will try to help.
+If you have any questions, you can contact us ([https://reiterlab.stanford.edu](https://reiterlab.stanford.edu)) and we will try to help.
 
 
 ### License

@@ -6,7 +6,7 @@ __author__ = 'Johannes REITER'
 
 # Explore the solution space to assess the support of the inferred branches
 POOL_SIZE = 1000            # number of best solutions explored by ILP solver
-NO_PLOTTED_SOLUTIONS = 5   # number of best ranked solution trees that will be plotted (cannot be larger than the pool)
+NO_PLOTTED_SOLUTIONS = 1    # number of best ranked solution trees that will be plotted (cannot be larger than the pool)  # @lsf
 
 # number of bootstrapping samples
 NO_BOOTSTRAP_SAMPLES = 0
@@ -47,10 +47,12 @@ MIN_ABSENT_COVERAGE = 100   # minimum coverage to call a variant powered absent 
 SAMPLE_COVERAGE_THRESHOLD = 0   # samples with a lower median coverage are discarded
 MAF_THRESHOLD = 0.0             # samples with a lower median mutant allele frequency are discarded
 
-# Minimum VAF of a variant in at least one of the provided samples (DEFAULT: 0.0)
+# Minimum VAF of a variant in at least one of the provided samples with a minimum number of variant reads (DEFAULT: 0.0)
 MIN_VAF = 0.0
-# Minimum number of reads reporting a variant in at least one of the provided samples (DEFAULT: 0)
 MIN_VAR_READS = 0
+
+# minimum coverage of a variant across all samples
+MIN_VAR_COV = 0
 
 # Variants are excluded if they reach the below number of mutant reads and the variant allele frequency in normal sample
 MUT_READS_NORMAL_TH = 3     # DEFAULT: 3

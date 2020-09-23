@@ -368,7 +368,7 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
     y_spacing = 1
     label_x_pos = -2
     label_y_pos = 0
-    cb_width = 30.0
+    cb_width = 10.0  # width for both colorbars
     x_space = 5.0
 
     # log probability to be classified with at least the given confidence threshold
@@ -483,8 +483,8 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
     # draw colorbar legend to MAFs
     # dimensions [left, bottom, width, height] of the new axes.
     # All quantities are in fractions of figure width and height
-    # ax_vaf_pos = [(x_length-cb_width)/x_length+(cb_width/4/x_length), 1.05, 0.04, 0.9]
-    ax_vaf_pos = [ax.get_position().x1 + 0.08, 0.99, 0.03, 0.99]
+    ax_vaf_pos = [(x_length-2*cb_width)/x_length, 0.99, cb_width/4/x_length, 0.99]
+    # ax_vaf_pos = [ax.get_position().x1 + 0.08, 0.99, 0.03, 0.99]
     ax_vaf = fig.add_axes(ax_vaf_pos)
     # Set the colormap and norm to correspond to the data for which the colorbar will be used.
     cmap = cm.Blues
@@ -495,9 +495,10 @@ def create_incompatible_mp_table(patient, filename, phylogeny, row_labels=None, 
     cb1.ax.yaxis.set_ticks_position('left')
     cb1.set_label('VAF')
 
-    # draw colorbar legend to MAFs
-    # ax_cov_pos = [(x_length-(cb_width/2))/x_length+(cb_width/4/x_length), 1.05, 0.04, 0.9]
-    ax_cov_pos = [ax_vaf.get_position().x1 + 0.1, 0.99, 0.03, 0.99]
+    # draw colorbar legend for coverage
+    ax_cov_pos = [(x_length-(cb_width/2))/x_length+(cb_width/4/x_length), 0.99, cb_width/4/x_length, 0.99]
+    # ax_cov_pos = [ax.get_position().x1 + 0.1, 0.99, 0.03, 0.99]
+    # ax_cov_pos = [ax_vaf.get_position().x1 + 0.1, 0.99, 0.03, 0.99]
     ax_cov = fig.add_axes(ax_cov_pos)
     # Set the colormap and norm to correspond to the data for which the colorbar will be used.
     cmap = cm.Greens

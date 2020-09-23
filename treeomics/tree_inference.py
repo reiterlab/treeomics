@@ -201,7 +201,6 @@ def infer_max_compatible_tree(filepath, patient, drivers=set(), time_limit=None)
     :param time_limit: time limit for MILP solver in seconds
     :return: evolutionary tree as graph
     """
-
     phylogeny = SimplePhylogeny(patient, patient.mps)
 
     # infer the tree which as to ignore the least number of mutation

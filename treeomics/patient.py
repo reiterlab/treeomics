@@ -7,11 +7,10 @@ import heapq
 import numpy as np
 import math
 
-import treeomics.settings as settings
 import treeomics.utils.int_settings as def_sets
 from treeomics.utils.int_settings import NEG_UNKNOWN, POS_UNKNOWN
 from treeomics.utils.vcf_parser import read_vcf_files, read_vcf_file
-from treeomics.utils.filtering import is_intronic, is_incompletetranscript, is_intergenic
+from treeomics.utils.filtering import is_intronic, is_incompletetranscript, is_intergenic, Filter
 from treeomics.utils.data_tables import read_mutation_table, read_csv_file
 from treeomics.utils.statistics import calculate_present_pvalue, find_significant_mutations
 from treeomics.utils.vaf_data import calculate_p_values
@@ -41,7 +40,7 @@ class Patient(object):
     """
 
     def __init__(self, error_rate, c0, max_absent_vaf, pat_name='Patient', min_absent_cov=0, reference_genome='grch37',
-                 purities=None):
+                 min_vaf=0, min_var_reads=0, min_var_cov=0, purities=None):
         """
         Initialize patient
         :param error_rate:
@@ -50,6 +49,11 @@ class Patient(object):
         :param pat_name:
         :param min_absent_cov:
         :param reference_genome: reference genome name, see https://github.com/hammerlab/pyensembl
+        :param min_vaf: minimum VAF of a variant in at least one of the provided samples with a minimum number
+                        of variant reads (DEFAULT: 0.0)
+        :param min_var_reads: minimum VAF of a variant in at least one of the provided samples with a minimum number
+                              of variant reads (DEFAULT: 0.0)
+        :param min_var_cov: minimum coverage of a variant across all samples
         :param purities: dictionary of externally estimated purities for each included sample
         """
 
@@ -57,6 +61,18 @@ class Patient(object):
 
         # minimum coverage for an absent variant
         self.min_absent_cov = min_absent_cov
+
+        self.min_vaf = min_vaf
+        if self.min_vaf > 0:
+            logger.info(f'Exclude variants that do not reach a VAF of {self.min_vaf:.1%} in at least one sample.')
+        self.min_var_reads = min_var_reads
+        if self.min_var_reads > 0:
+            logger.info(f'Exclude variants that are not supported by at least {self.min_var_reads} variant reads '
+                        + 'in  at least one sample.')
+        self.min_var_cov = min_var_cov
+        if self.min_var_cov > 0:
+            logger.info(f'Exclude variants that are not covered by at least {self.min_var_cov} reads across '
+                        + 'all samples.')
 
         # observed Variant Allele Frequency
         self.vafs = None
@@ -240,44 +256,48 @@ class Patient(object):
         low_vaf_artifacts = 0
         # #################### APPLY FILTERS ###################
         self.variant_stats = Counter()
+
+        def remove_mutations(mutation_key, filter_enum):
+            """Exclude this mutation"""
+            logger.debug(f'Variant {gene_names[mutation_key]} ({mutation_key}) excluded: {filter_enum}')
+            del self.mut_reads[mutation_key]
+            del self.coverage[mutation_key]
+            del gene_names[mutation_key]
+            self.variant_stats[filter_enum] += 1
+
         for mut_key in list(self.mut_reads.keys()):
 
-            # check for minimum VAF in at least on of the samples
-            if all(float(self.mut_reads[mut_key][sample_name]) / self.coverage[mut_key][sample_name] <
-                   settings.MIN_VAF for sample_name in self.mut_reads[mut_key].keys()
-                   if self.mut_reads[mut_key][sample_name] >= max(1, settings.MIN_VAR_READS)):
+            # check for minimum VAF with minimum variant reads in at least one of the samples
+            if all(self.mut_reads[mut_key][sample_name] < self.min_var_reads
+                   or float(self.mut_reads[mut_key][sample_name]) / self.coverage[mut_key][sample_name] < self.min_vaf
+                   for sample_name in self.mut_reads[mut_key].keys() if self.coverage[mut_key][sample_name] > 0):
 
-                vafs = [float(self.mut_reads[mut_key][sample_name]) / self.coverage[mut_key][sample_name]
-                        for sample_name in self.mut_reads[mut_key].keys()
-                        if self.mut_reads[mut_key][sample_name] >= max(1, settings.MIN_VAR_READS)]
-                if len(vafs) == 0:
-                    logger.debug('Excluded variant {} ({}) as it has in no sample at least {} variant reads.'
-                                 .format(gene_names[mut_key], mut_key, max(1, settings.MIN_VAR_READS)))
+                # exclude this variant
+                if all(self.mut_reads[mut_key][sample_name] < self.min_var_reads
+                       for sample_name in self.mut_reads[mut_key].keys() if self.coverage[mut_key][sample_name] > 0):
+                    remove_mutations(mut_key, Filter.MIN_VAR_READS)
                 else:
-                    logger.debug('Excluded variant {} ({}) present with highest VAF of {:.1%}.'
-                                 .format(gene_names[mut_key], mut_key, max(vafs)))
-                low_vaf_artifacts += 1
+                    low_vaf_artifacts += 1
+                    remove_mutations(mut_key, Filter.MIN_VAF)
 
-                # exclude these variants
-                del self.mut_reads[mut_key]
-                del self.coverage[mut_key]
-                del gene_names[mut_key]
-                self.variant_stats[-1] += 1
+                continue
+
+            # check for minimum coverage of a variant across all samples
+            if not all(self.coverage[mut_key][sample_name] >= self.min_var_cov
+                       for sample_name in self.mut_reads[mut_key].keys()):
+
+                # exclude this variant
+                remove_mutations(mut_key, Filter.MIN_VAR_COV)
                 continue
 
             # check if variant is present in the normal sample
             if normal_sample is not None:
                 if (norm_var[mut_key] >= mut_reads_normal_th
                         and float(norm_var[mut_key]) / norm_cov[mut_key] >= vaf_normal_th):
-                    logger.warning('Excluded variant {} ({}) present at a VAF of {:.1%} ({}/{}) in the normal sample.'
-                                   .format(gene_names[mut_key], mut_key, float(norm_var[mut_key]) / norm_cov[mut_key],
-                                           norm_var[mut_key], norm_cov[mut_key]))
+
                     putative_sequencing_artifacts += 1
-                    # exclude these variants
-                    del self.mut_reads[mut_key]
-                    del self.coverage[mut_key]
-                    del gene_names[mut_key]
-                    self.variant_stats[-6] += 1
+                    # exclude this variant
+                    remove_mutations(mut_key, Filter.NORMAL)
                     continue
 
             # remove intronic and intergenic variants due to frequent artifacts in whole exome sequencing data
@@ -290,51 +310,32 @@ class Patient(object):
                 if wes_filtering:
                     # remove intronic variants
                     if is_intronic(variant):
-                        logger.debug('Excluded intronic variant {} ({}).'.format(gene_names[mut_key], mut_key))
                         # exclude this variant
-                        del self.mut_reads[mut_key]
-                        del self.coverage[mut_key]
-                        del gene_names[mut_key]
-                        self.variant_stats[-2] += 1
+                        remove_mutations(mut_key, Filter.INTRONIC)
                         continue
 
                     # remove intergenic variants
                     elif is_intergenic(variant):
-                        logger.debug('Excluded intergenic variant {} ({}).'.format(gene_names[mut_key], mut_key))
                         # exclude this variant
-                        del self.mut_reads[mut_key]
-                        del self.coverage[mut_key]
-                        del gene_names[mut_key]
-                        self.variant_stats[-3] += 1
+                        remove_mutations(mut_key, Filter.INTERGENIC)
                         continue
 
                     # remove variants with incomplete transcript annotation (likely introns)
                     elif is_incompletetranscript(variant):
-                        logger.debug('Excluded variant with incomplete transcript annotation {} ({}).'.format(
-                            gene_names[mut_key], mut_key))
                         # exclude this variant
-                        del self.mut_reads[mut_key]
-                        del self.coverage[mut_key]
-                        del gene_names[mut_key]
-                        self.variant_stats[-4] += 1
+                        remove_mutations(mut_key, Filter.INCOMPL_TRANSCRIPT)
                         continue
 
                 if mut_key in artifacts.keys():
-                    logger.debug('Excluded variant {} ({}) from analysis as it was found in the common variant list.'
-                                 .format(mut_key, artifacts[mut_key][1]))
                     # exclude this variant
-                    del self.mut_reads[mut_key]
-                    del self.coverage[mut_key]
-                    del gene_names[mut_key]
-                    self.variant_stats[-5] += 1
+                    remove_mutations(mut_key, Filter.SNP)
                     continue
 
                 vc_vars[mut_key] = variant
 
             # variant passed all filters
-            self.variant_stats[1] += 1
+            self.variant_stats[Filter.PASSED] += 1
             for sample_name in self.mut_reads[mut_key].keys():
-
                 if self.coverage[mut_key][sample_name] >= 0:
                     self.sample_coverages[sample_name].append(self.coverage[mut_key][sample_name])
 
@@ -348,7 +349,7 @@ class Patient(object):
                 putative_sequencing_artifacts))
         if low_vaf_artifacts > 0:
             logger.warning('{} variants did not reach a VAF of {:.1%} and at least {} var reads in any of the samples.'
-                           .format(low_vaf_artifacts, settings.MIN_VAF, max(1, settings.MIN_VAR_READS)))
+                           .format(low_vaf_artifacts, self.min_vaf, max(1, self.min_var_reads)))
 
         self._print_filter_statistics()
         if wes_filtering and self.ensembl_data is None:
@@ -628,8 +629,9 @@ class Patient(object):
 
         return processed_samples
 
-    def read_vcf_file(self, vcf_file, false_positive_rate, false_discovery_rate, min_sa_cov=0, min_sa_maf=0.0,
-                      min_absent_cov=0, normal_sample_name=None, excluded_samples=None, considered_samples=None,
+    def read_vcf_file(self, vcf_file, false_positive_rate, false_discovery_rate,
+                      min_sa_cov=0, min_sa_maf=0.0, min_absent_cov=0,
+                      normal_sample_name=None, excluded_samples=None, considered_samples=None,
                       wes_filtering=False, artifacts=None):
         """
         Read allele frequencies for all variants in the samples in the given VCF file
@@ -882,8 +884,7 @@ class Patient(object):
         :param fpr: false positive rate of the used sequencing technology
         :param wes_filtering: remove intronic and intergenic variants due to frequent sequencing artifacts in whole
                               exome sequencing data
-        :return 1 if variant passed all filters, -1 if variant never reached a significant level,
-                -2 intronic, -3 intergenic, -4 incomplete transcript annotation
+        :return enum filter values
         """
 
         # process identical variants
@@ -891,6 +892,12 @@ class Patient(object):
                                          tmp_vars[0][0].REF, tmp_vars[0][0].ALT[0])
 
         self.gene_names.append(tmp_vars[0][0].GENE_NAME if tmp_vars[0][0].GENE_NAME is not None else 'unknown')
+
+        def exclude_variant(mutation_key, filter_enum):
+            """Exclude this mutation"""
+            logger.debug(f'Variant {self.gene_names[-1]} ({mutation_key}) excluded: {filter_enum}')
+            del self.gene_names[-1]
+            del tmp_vars[:]
 
         # generate varcode Variant class instance (useful to infer gene name and mutation effect)
         if self.ensembl_data is not None:
@@ -905,36 +912,26 @@ class Patient(object):
                 if wes_filtering:
                     # remove intronic variants
                     if is_intronic(variant):
-                        logger.debug('Excluded intronic variant in {} ({}).'.format(self.gene_names[-1], mut_key))
                         # exclude this variant
-                        del self.gene_names[-1]
-                        del tmp_vars[:]
-                        return -2
+                        exclude_variant(mut_key, Filter.INTRONIC)
+                        return Filter.INTRONIC
 
                     # remove intergenic variants
                     elif is_intergenic(variant):
-                        logger.debug('Excluded intergenic variant in {} ({}).'.format(self.gene_names[-1], mut_key))
                         # exclude this variant
-                        del self.gene_names[-1]
-                        del tmp_vars[:]
-                        return -3
+                        exclude_variant(mut_key, Filter.INTERGENIC)
+                        return Filter.INTERGENIC
 
                     # remove variants with incomplete transcript annotation (likely introns)
                     elif is_incompletetranscript(variant):
-                        logger.debug('Excluded variant with incomplete transcript annotation in {} ({}).'.format(
-                            self.gene_names[-1], mut_key))
                         # exclude this variant
-                        del self.gene_names[-1]
-                        del tmp_vars[:]
-                        return -4
+                        exclude_variant(mut_key, Filter.INCOMPL_TRANSCRIPT)
+                        return Filter.INCOMPL_TRANSCRIPT
 
                 if mut_key in artifacts.keys():
-                    logger.debug('Excluded variant {} ({}) from analysis as it was found in the provided artifact list.'
-                                 .format(mut_key, artifacts[mut_key][1]))
                     # exclude this variant
-                    del self.gene_names[-1]
-                    del tmp_vars[:]
-                    return -5
+                    exclude_variant(mut_key, Filter.SNP)
+                    return Filter.SNP
 
                 # infer gene name if not given
                 if self.gene_names[-1] == 'unknown':
@@ -978,8 +975,8 @@ class Patient(object):
                 self.sample_coverages[sample_name].append(var.DP)
                 # only consider variants with at least three supporting reads
                 # for median VAF calculation
-                if var.AD[1] > 2:
-                    self.sample_mafs[sample_name].append(var.BAF)
+                # if var.AD[1] > 2:
+                self.sample_mafs[sample_name].append(var.BAF)
 
                 if var.DP > 0:
                     self.present_p_values[sample_name][mut_key] = calculate_present_pvalue(var.AD[1], var.DP, fpr)
@@ -995,17 +992,12 @@ class Patient(object):
                 self.mut_reads[mut_key][sample_name] = -1       # -1 = unknown which is different from 0
                 self.coverage[mut_key][sample_name] = -1   # -1 = unknown which is different from 0
 
-        # check for minimum VAF in at least on of the samples
-        if all(float(self.mut_reads[mut_key][sample_name]) / self.coverage[mut_key][sample_name] <
-               settings.MIN_VAF for sample_name in self.mut_reads[mut_key].keys()
-               if self.mut_reads[mut_key][sample_name] >= max(1, settings.MIN_VAR_READS)):
+        def filter_variant(mutation_key, filter_enum):
+            """Exclude this mutation"""
+            logger.debug(f'Variant {self.gene_names[-1]} ({mutation_key}) excluded: {filter_enum}')
 
-            logger.debug('Variant {}{} did not pass filtering.'.format(
-                mut_key, ' ({})'.format(self.gene_names[-1]) if self.gene_names is not None else ''))
-
-            # exclude these variants
-            del self.mut_reads[mut_key]
-            del self.coverage[mut_key]
+            del self.mut_reads[mutation_key]
+            del self.coverage[mutation_key]
             del self.mut_keys[-1]
             del self.mut_positions[-1]
             del self.gene_names[-1]
@@ -1013,12 +1005,36 @@ class Patient(object):
                 del self.vc_variants[-1]
                 del self.mut_types[-1]
 
-            return -1
+            for sa_name in self.sample_names:
+                del self.sample_coverages[sa_name][-1]
+                del self.sample_mafs[sa_name][-1]
+
+        # check for minimum VAF with minimum variant reads in at least one of the samples
+        if all(self.mut_reads[mut_key][sample_name] < self.min_var_reads
+               or float(self.mut_reads[mut_key][sample_name]) / self.coverage[mut_key][sample_name] < self.min_vaf
+               for sample_name in self.mut_reads[mut_key].keys() if self.coverage[mut_key][sample_name] > 0):
+
+            # exclude this variant
+            if all(self.mut_reads[mut_key][sample_name] < self.min_var_reads
+                   for sample_name in self.mut_reads[mut_key].keys() if self.coverage[mut_key][sample_name] > 0):
+                filter_variant(mut_key, Filter.MIN_VAR_READS)
+                return Filter.MIN_VAR_READS
+            else:
+                filter_variant(mut_key, Filter.MIN_VAF)
+                return Filter.MIN_VAF
+
+        # check for minimum coverage of a variant across all samples
+        elif not all(self.coverage[mut_key][sample_name] >= self.min_var_cov
+                     for sample_name in self.mut_reads[mut_key].keys()):
+
+            # exclude this variants
+            filter_variant(mut_key, Filter.MIN_VAR_COV)
+            return Filter.MIN_VAR_COV
 
         else:
             # logger.debug('Variant {}{} passed filtering.'.format(
             #     mut_key, ' ({})'.format(self.gene_names[-1]) if self.gene_names is not None else ''))
-            return 1
+            return Filter.PASSED
 
     def _filter_samples(self, min_sa_cov, min_sa_maf):
 
@@ -1076,18 +1092,10 @@ class Patient(object):
         """
         Print statistics of the applied filters
         """
-        logger.info('{} variants passed filtering.'.format(self.variant_stats[1]))
-        if self.variant_stats[-1] > 0:
-            logger.info('{} variants did not reach a significant level.'.format(self.variant_stats[-1]))
-        if self.variant_stats[-2] > 0:
-            logger.info('{} variants were intronic and excluded.'.format(self.variant_stats[-2]))
-        if self.variant_stats[-3] > 0:
-            logger.info('{} variants were intergenic and excluded.'.format(self.variant_stats[-3]))
-        if self.variant_stats[-4] > 0:
-            logger.info('{} variants were excluded due to incomplete transcript annotation (likely introns).'.format(
-                self.variant_stats[-4]))
-        if self.variant_stats[-5] > 0:
-            logger.info('{} variants were in provided artifact list and excluded.'.format(self.variant_stats[-5]))
+        logger.info(f'{self.variant_stats[Filter.PASSED]} variants passed filtering.')
+        for key, value in self.variant_stats.items():
+            if key != Filter.PASSED and value > 0:
+                logger.info(f'{value} variants excluded due to: {key}')
 
     def get_cutoff_frequency(self, sample_name):
         """
