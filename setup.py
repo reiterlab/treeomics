@@ -10,7 +10,7 @@ setup(
       packages=['treeomics', 'tests'],  # 'treeomics.phylogeny', 'treeomics.plots', 'treeomics.utils'],
       version=__version__,
       description='Treeomics infers metastatic seeding patterns from DNA sequencing data.',
-      install_requires=['numpy', 'scipy', 'pandas', 'matplotlib<2.0', 'seaborn<10.0', 'networkx<2.0',
+      install_requires=['numpy', 'scipy', 'pandas', 'matplotlib=1.5', 'seaborn=10', 'networkx<2.0',
                         'wkhtmltopdf', 'pdfkit'],
       setup_requires=['pytest-runner', 'flake8'],
       tests_require=['pytest', 'pytest-cov'],
