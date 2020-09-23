@@ -108,7 +108,6 @@ def _check_gene_match(patient_mut_location, user_drivers):
     return False
 
 
-
 def potential_driver(gene_name, patient_mut_location, user_drivers, variant=None, cgc_drivers=None):
     """
     Checks if gene name is in set among potential driver genes
@@ -122,22 +121,29 @@ def potential_driver(gene_name, patient_mut_location, user_drivers, variant=None
     :return: variant in a driver gene, potential mutation effect, in CGC, mutation effect
     """
 
-    # driver_gene = gene_name in user_drivers
-    driver_gene = _check_gene_match(patient_mut_location, user_drivers)
+    # is_driver_gene = gene_name in user_drivers
+    if gene_name in user_drivers:
+        is_driver_gene = True
+    else:
+        is_driver_gene = False
 
-    if driver_gene and variant is not None and VARCODE:
+    # TODO: @Haochen, this function needs to check first whether the locations of driver gene mutations were provided
+    # otherwise, the driver.mutation_location tries to iterate over a None Object
+    # is_driver_gene = _check_gene_match(patient_mut_location, user_drivers)
+
+    if is_driver_gene and variant is not None and VARCODE:
         mut_effect = get_top_effect_name(variant)
         put_driver = is_functional(mut_effect)
 
         if not put_driver:
-            return driver_gene, put_driver, None, mut_effect
+            return is_driver_gene, put_driver, None, mut_effect
 
     else:   # we can't predict the mutation effect and hence has to assume there is one
-        put_driver = driver_gene
+        put_driver = is_driver_gene
         mut_effect = None
 
     if cgc_drivers is None:
-        return driver_gene, put_driver, None, mut_effect
+        return is_driver_gene, put_driver, None, mut_effect
 
     # are there known positions for this driver gene?
     if cgc_drivers is not None:
@@ -157,13 +163,13 @@ def potential_driver(gene_name, patient_mut_location, user_drivers, variant=None
             else:
                 cgc_driver = False
 
-            return driver_gene, put_driver, cgc_driver, mut_effect
+            return is_driver_gene, put_driver, cgc_driver, mut_effect
 
         else:   # gene name is not CGC
-            return driver_gene, put_driver, False, mut_effect
+            return is_driver_gene, put_driver, False, mut_effect
 
     else:       # no CGC provided, hence, we don't know if the variant is in the CGC
-        return driver_gene, put_driver, None, mut_effect
+        return is_driver_gene, put_driver, None, mut_effect
 
 
 def is_functional(effect_name):

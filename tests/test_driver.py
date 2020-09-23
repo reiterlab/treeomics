@@ -12,8 +12,9 @@ __date__ = 'May 15, 2018'
 class TestDriver(unittest.TestCase):
 
     def setUp(self):
-        self.driver_fp = os.path.join('tests', 'drivers_stub.csv')
-        print(os.getcwd())
+
+        self.directory = os.path.dirname(os.path.abspath(__file__))
+        self.driver_fp = os.path.join(self.directory, 'drivers_stub.csv')
 
     def tearDown(self):
         pass
