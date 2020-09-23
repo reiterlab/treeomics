@@ -241,6 +241,7 @@ class Solution:
                     fps.add(sa_idx)
 
                 if sa_idx in phylogeny.sc_sample_ids.keys():
+                    sc_idx = None
                     while sc_idx in phylogeny.sc_sample_ids.keys():
                         sc_idx = phylogeny.sc_sample_ids[sc_idx]
                     # if sc_idx in self.patient.mutations[mut_idx]:
