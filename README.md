@@ -1,3 +1,6 @@
+![build](https://github.com/reiterlab/treeomics/workflows/build/badge.svg)
+[![codecov](https://codecov.io/gh/reiterlab/treeomics/branch/master/graph/badge.svg)](https://codecov.io/gh/reiterlab/treeomics)
+
 ## Treeomics: Reconstructing metastatic seeding patterns of human cancers
 Developed by: JG Reiter, AP Makohon-Moore, JM Gerold, I Bozic, K Chatterjee, C Iacobuzio-Donahue, B Vogelstein, MA Nowak.
 
