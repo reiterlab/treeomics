@@ -51,7 +51,7 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
   - For automatically generating evolutionary tree plots, install LaTeX/TikZ (with ```pdflatex``` in your ```PATH``` environment variable;
     [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html)) and/or ETE3 [https://github.com/etetoolkit/ete](https://github.com/etetoolkit/ete) (installing ETE3 can be very frustrating, in particular in Python 3+ as it requires Qt; we recommend using Miniconda [https://www.continuum.io](https://www.continuum.io): ```conda install python=3.6 qt=5``` and then install ete3 ```conda install -c etetoolkit ete3 ```. You can test your installation with ```python -c 'from ete3 import TreeStyle'```.
   - For annotating only non-synonymous variants in driver genes, install pyensembl ([https://github.com/hammerlab/pyensembl](https://github.com/hammerlab/pyensembl)) and varcode ([https://github.com/hammerlab/varcode](https://github.com/hammerlab/varcode)) with ```pip install varcode``` and ```pyensembl install --release 75 76```
-6. Test installation with ```python -c 'import treeomics'```, and ```cd <TREEOMICS_DIRECTORY>``` and ```python -m unittest discover tests/```
+6. Test installation with ```python -c 'import treeomics'```, and ```cd <TREEOMICS_DIRECTORY>``` and ```pytest tests/```
 7. To uninstall the package use ```pip uninstall treeomics``` or ```conda remove treeomics```
 
 ### <a name="getting"> Getting started with Treeomics
@@ -72,7 +72,7 @@ $ treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf f
 - *-e <sequencing error rate>:* Sequencing error rate *e* in the Bayesian inference model (default 1.0%)
 - *-a <max absent VAF>:* Maximum VAF for an absent variant *f<sub>absent</sub>* before considering the estimated purity (default 5%)
 - *-z <prior absent probability>:* Prior probability for a variant being absent *c<sub>0</sub> (default 0.5).
-- *-o <output directory>:* Provide different output directory (default src/output)
+- *-o <output directory>:* Provide different output directory (default ```output```)
 - *-n <normal sample names>:* If a normal sample is provided, variants significantly present in the normal are removed. Additional normal samples can be provided via a space-separated enumeration. E.g. ```-n FIRSTNORMALSAMPLE SECONDNORMALSAMPLE ```
 - *-x <samples to exclude>:* Space-separated enumeration of sample names to exclude from the analysis. E.g. ```-x FIRSTEXCLUDEDSAMPLE SECONDEXCLUDEDSAMPLE ```
 - ```--pool_size``` *<Pool size of ILP solver>:* Number of best solutions explored by ILP solver to assess the support of the inferred branches (default 1000)
@@ -100,13 +100,13 @@ $ treeomics -r <mut-reads table> -s <coverage table> | -v <vcf file> | -d <vcf f
 - ```--min_var_reads <>``` and/or ```--min_vaf <>``` Minimum VAF of a variant in at least one of the provided samples with a minimum number of variant reads
 - ```--min_var_cov <>``` minimum coverage of a variant across all samples, otherwise the variant is excluded
 
-Default parameter values as well as output directory can be changed in ```treeomics/src/treeomics/settings.py```.
+Default parameter values as well as output directory can be changed in ```treeomics/settings.py```.
 Moreover, the ```settings.py``` provides more options an annotation of driver genes and configuration of plot output names. 
 All plots, analysis and logging files, and the HTML report will be in this output directory.
 
 ##### Optional input:
-- *Driver gene annotation:* Treeomics highlights any non-synonymous or splice-site variants (if VarCode is available, otherwise all) in putative driver genes given in a CSV-file under ```DRIVER_PATH``` in ```treeomics/src/treeomics/settings.py```. As default list, the union of reported driver genes by 20/20+, TUSON, and MutsigCV from Tokheim et al. (PNAS, 2016) is used (see ```treeomics/src/input/Tokheim_drivers_union.csv```). Any CSV-file can be used as long as there is column named 'Gene_Symbol'. Variants in these provided genes will be highlighted in the HTML report as well as in the inferred phylogeny.
-- *Cancer Gene Census (CGC) annotation:* Variants that have been identified as likely drivers in the provided genes (under ```DRIVER_PATH```) will be check if they occurred in the reported region in the given CSV-file (default ```treeomics/src/input/cancer_gene_census_grch37_v80.csv```; CGC version 80, reference genome hg19).
+- *Driver gene annotation:* Treeomics highlights any non-synonymous or splice-site variants (if VarCode is available, otherwise all) in putative driver genes given in a CSV-file under ```DRIVER_PATH``` in ```treeomics/settings.py```. As default list, the union of reported driver genes by 20/20+, TUSON, and MutsigCV from Tokheim et al. (PNAS, 2016) is used (see ```input/Tokheim_drivers_union.csv```). Any CSV-file can be used as long as there is column named 'Gene_Symbol'. Variants in these provided genes will be highlighted in the HTML report as well as in the inferred phylogeny.
+- *Cancer Gene Census (CGC) annotation:* Variants that have been identified as likely drivers in the provided genes (under ```DRIVER_PATH```) will be check if they occurred in the reported region in the given CSV-file (default ```input/cancer_gene_census_grch37_v80.csv```; CGC version 80, reference genome hg19).
 
 ### <a name="examples"> Examples
 Example 1:
@@ -126,10 +126,10 @@ Example 3:
 ```shell
 $ treeomics -v input/example.vcf
 ```
-Reconstructs the phylogeny of a simulated cancer with 6 metastases from a given VCF file (see [src/input/example.vcf](input/example.vcf)).
+Reconstructs the phylogeny of a simulated cancer with 6 metastases from a given VCF file (see [input/example.vcf](input/example.vcf)).
 Regarding the VCF file input format, Treeomics expects the standard columns: #CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT as well as for each considered sample an additional column.
 Minimally AD (Allelic depth) has to be provided in the FORMAT column and then the actually observed number of reference and alternate alleles in each sample in their corresponding columns).
-The generated output can be found in ```src/output/example_output``` and the corresponding Treeomics report at [src/output/example_output/example_6_e=0_01_c0=0_5_af=0_05_report.pdf](output/example_output/example_6_e=0_01_c0=0_5_af=0_05_report.pdf).
+The generated output can be found in ```output/example_output``` and the corresponding Treeomics report at [output/example_output/example_6_e=0_01_c0=0_5_af=0_05_report.pdf](output/example_output/example_6_e=0_01_c0=0_5_af=0_05_report.pdf).
 
 ========
 

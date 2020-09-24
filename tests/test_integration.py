@@ -2,7 +2,6 @@
 import pytest
 import os
 
-from treeomics.__main__ import main
 
 @pytest.fixture
 def input_dir():
@@ -19,7 +18,10 @@ def fp_pam01_cov(input_dir):
 
 def test_example1(fp_pam01_mr, fp_pam01_cov):
 
+    # check if cplex module is available as otherwise the integration test can not be run
     cplex = pytest.importorskip('cplex')
+
+    from treeomics.__main__ import main
 
     example1_args = ['-r', fp_pam01_mr,
                      '-s', fp_pam01_cov,
