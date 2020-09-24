@@ -910,6 +910,8 @@ def main(raw_args=None):
 
     logger.info('Treeomics finished evolutionary analysis.')
 
+    return True
+
 
 if __name__ == '__main__':
 

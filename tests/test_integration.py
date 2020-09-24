@@ -1,32 +1,30 @@
-import unittest
 
+import pytest
 import os
 
 from treeomics.__main__ import main
 
+@pytest.fixture
+def input_dir():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, 'input', 'Makohon2017')
 
-class IntegrationTest(unittest.TestCase):
+@pytest.fixture
+def fp_pam01_mr(input_dir):
+    return os.path.join(input_dir, 'Pam01_1-6_mutant_reads.txt')
 
-    def setUp(self):
-        self.directory = os.path.dirname(os.path.abspath(__file__))
-        self.input_dir = os.path.join(self.directory, os.pardir, 'input', 'Makohon2017')
-        self.fp_pam01_mr = os.path.join(self.input_dir, 'Pam01_1-6_mutant_reads.txt')
-        self.fp_pam01_cov = os.path.join(self.input_dir, 'Pam01_1-6_phredcoverage.txt')
-        print(os.getcwd())
-
-    def tearDown(self):
-        pass
-
-    def test_example1(self):
-
-        example1_args = ['-r', self.fp_pam01_mr,
-                         '-s', self.fp_pam01_cov,
-                         '-n', 'Pam01N3',
-                         '-e', '0.005']
-        main(example1_args)
-
-        self.assertEqual(True, True)
+@pytest.fixture
+def fp_pam01_cov(input_dir):
+    return os.path.join(input_dir, 'Pam01_1-6_phredcoverage.txt')
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_example1(fp_pam01_mr, fp_pam01_cov):
+
+    cplex = pytest.importorskip('cplex')
+
+    example1_args = ['-r', fp_pam01_mr,
+                     '-s', fp_pam01_cov,
+                     '-n', 'Pam01N3',
+                     '-e', '0.005']
+    return_value = main(example1_args)
+
+    assert return_value is True
