@@ -39,9 +39,10 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
 * Treeomics 1.8.1 2020-07-15: Updated wkhtmltopdf package requires option 'enable-local-file-access' to generate a pdf report.
 * Treeomics 1.9.0 2020-08-20: Upgraded the treeomics package to python 3.6 and fixed issue related to negative dimensions for mutation plot.
 * Treeomics 1.9.1 2020-09-01: Implemented additional filters.
+* Treeomics 1.9.2 2020-10-27: Updated dependencies and improved installation explanation.
 
 ### <a name="installation"> Installation
-1. Easiest is to install Mini anaconda and create a new python environment in a terminal window with ```conda create --name treeomics python=3.6``` and activate it with ```conda activate treeomics```
+1. Easiest is to install Miniconda [https://www.continuum.io](https://www.continuum.io) and create a new python environment in a terminal window with ```conda create --name treeomics python=3.6``` and activate it with ```conda activate treeomics```
 2. Clone the repository from GitHub with ```git clone https://github.com/reiterlab/treeomics.git```
 3. Create distribution packages by going into the main folder with ```cd <TREEOMICS_DIRECTORY>```, run ```python setup.py clean sdist bdist_wheel``` and install treeomics to your python environment by executing ```pip install -e <TREEOMICS_DIRECTORY>```
 4. Install the IBM ILOG CPLEX Optimization Studio 12.10 ([http://www-01.ibm.com/support/docview.wss?uid=swg21444285](http://www-01.ibm.com/support/docview.wss?uid=swg21444285))
@@ -50,10 +51,11 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
     To install the cplex python package in MacOS go to ```cd /Applications/CPLEX_Studio1210/cplex/python/3.6/x86-64_osx/``` and run ```python setup.py install```. Test your installation with ```python -c 'import cplex'```.
     You may also need to add cplex to your ```PYTHONPATH``` with: ```export PYTHONPATH="~/Applications/CPLEX_Studio1210/cplex/python/3.6/x86-64_osx/:$PYTHONPATH"```
 5. Install optional packages:
+  - To automatically generate annotated evolutionary tree plots, install ETE3 [https://github.com/etetoolkit/ete](https://github.com/etetoolkit/ete) which requires Qt: ```conda install python=3.6 qt=5``` and then install ete3 ```conda install -c etetoolkit ete3 ```. You can test your installation with ```python -c 'from ete3 import TreeStyle'```.
+  - To annotate only non-synonymous variants in driver genes, install pyensembl ([https://github.com/hammerlab/pyensembl](https://github.com/hammerlab/pyensembl)) and varcode ([https://github.com/hammerlab/varcode](https://github.com/hammerlab/varcode)) with ```pip install varcode``` and ```pyensembl install --release 75 76```
+  - To automatically generate less nicely visualized evolutionary trees than with ETE3, install LaTeX/TikZ (with ```pdflatex``` in your ```PATH``` environment variable;
+    [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html))
   - To automatically generate evolutionary conflict graphs, install circos (with ```circos``` in your ```PATH``` environment variable; [http://circos.ca/software/installation](http://circos.ca/software/installation))
-  - For automatically generating evolutionary tree plots, install LaTeX/TikZ (with ```pdflatex``` in your ```PATH``` environment variable;
-    [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html)) and/or ETE3 [https://github.com/etetoolkit/ete](https://github.com/etetoolkit/ete) (installing ETE3 can be very frustrating, in particular in Python 3+ as it requires Qt; we recommend using Miniconda [https://www.continuum.io](https://www.continuum.io): ```conda install python=3.6 qt=5``` and then install ete3 ```conda install -c etetoolkit ete3 ```. You can test your installation with ```python -c 'from ete3 import TreeStyle'```.
-  - For annotating only non-synonymous variants in driver genes, install pyensembl ([https://github.com/hammerlab/pyensembl](https://github.com/hammerlab/pyensembl)) and varcode ([https://github.com/hammerlab/varcode](https://github.com/hammerlab/varcode)) with ```pip install varcode``` and ```pyensembl install --release 75 76```
 6. Test installation with ```cd <TREEOMICS_DIRECTORY>``` and ```python setup.py test``` (or ```pytest tests/```) and ```python -c 'import treeomics'```
 7. To uninstall the package use ```pip uninstall treeomics``` or ```conda remove treeomics``` and delete the conda environment with ```conda env remove --name treeomics```
 
