@@ -64,7 +64,6 @@ def read_mutation_table(filename, normal_sample=None, excluded_columns=set(), co
 
             # process data table header
             elif headers is None and (row[0].startswith('Chr') or row[0].startswith('Gene')):
-                print(row)
                 headers = [p_replace.sub('_', p_remove.sub('', e)) for e in row]
 
                 logger.info('Header: {}'.format(headers))

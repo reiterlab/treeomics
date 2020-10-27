@@ -54,8 +54,8 @@ For more details, see our publication *Reconstructing metastatic seeding pattern
   - For automatically generating evolutionary tree plots, install LaTeX/TikZ (with ```pdflatex``` in your ```PATH``` environment variable;
     [https://www.tug.org/texlive/quickinstall.html](https://www.tug.org/texlive/quickinstall.html)) and/or ETE3 [https://github.com/etetoolkit/ete](https://github.com/etetoolkit/ete) (installing ETE3 can be very frustrating, in particular in Python 3+ as it requires Qt; we recommend using Miniconda [https://www.continuum.io](https://www.continuum.io): ```conda install python=3.6 qt=5``` and then install ete3 ```conda install -c etetoolkit ete3 ```. You can test your installation with ```python -c 'from ete3 import TreeStyle'```.
   - For annotating only non-synonymous variants in driver genes, install pyensembl ([https://github.com/hammerlab/pyensembl](https://github.com/hammerlab/pyensembl)) and varcode ([https://github.com/hammerlab/varcode](https://github.com/hammerlab/varcode)) with ```pip install varcode``` and ```pyensembl install --release 75 76```
-6. Test installation with ```python -c 'import treeomics'```, and ```cd <TREEOMICS_DIRECTORY>``` and ```pytest tests/```
-7. To uninstall the package use ```pip uninstall treeomics``` or ```conda remove treeomics```
+6. Test installation with ```cd <TREEOMICS_DIRECTORY>``` and ```python setup.py test``` (or ```pytest tests/```) and ```python -c 'import treeomics'```
+7. To uninstall the package use ```pip uninstall treeomics``` or ```conda remove treeomics``` and delete the conda environment with ```conda env remove --name treeomics```
 
 ### <a name="getting"> Getting started with Treeomics
 1. Input files: The input to ```__main__.py``` is either
