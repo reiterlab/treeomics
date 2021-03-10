@@ -1,13 +1,13 @@
-from setuptools import setup
+import setuptools
 
 
 __version__ = 'unknown'
 exec(open('treeomics/version.py').read())
 
-setup(
+setuptools.setup(
       name='treeomics',                                  # package name
-      # packages=find_packages(),
-      packages=['treeomics', 'tests'],  # 'treeomics.phylogeny', 'treeomics.plots', 'treeomics.utils'],
+      packages=setuptools.find_packages(),
+      #packages=['treeomics', 'tests'],  # 'treeomics.phylogeny', 'treeomics.plots', 'treeomics.utils'],
       version=__version__,
       description='Treeomics infers metastatic seeding patterns from DNA sequencing data.',
       install_requires=['numpy', 'scipy', 'pandas', 'matplotlib', 'seaborn', 'networkx<2.0',
