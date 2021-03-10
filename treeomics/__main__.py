@@ -1,4 +1,3 @@
-#!/usr/bin/python
 """Main file to run Treeomics and infer metastatic seeding patterns"""
 import logging
 import sys
