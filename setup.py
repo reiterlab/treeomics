@@ -1,10 +1,10 @@
-from setuptools import setup
+import setuptools
 
 
 __version__ = 'unknown'
 exec(open('treeomics/version.py').read())
 
-setup(
+setuptools.setup(
       name='treeomics',                                  # package name
       packages=setuptools.find_packages(),
       #packages=['treeomics', 'tests'],  # 'treeomics.phylogeny', 'treeomics.plots', 'treeomics.utils'],
